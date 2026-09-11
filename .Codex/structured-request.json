@@ -1,0 +1,16 @@
+{
+  "meta": {
+    "recorded_at": "2026-09-11T00:00:00+08:00",
+    "recorder": "Codex",
+    "source": "用户需求"
+  },
+  "objective": "将连涨榜项目开发为带密码保护、可刷新数据、支持直接浏览和 Docker 部署的在线服务。",
+  "scope": {
+    "in_scope": ["HTTP 首页", "密码登录", "刷新最新榜单按钮", "刷新接口", "Docker 镜像与 Compose 示例", "本地测试"],
+    "out_of_scope": ["修改外部数据源解析规则", "用户账号系统", "远程部署和 CI"]
+  },
+  "deliverables": ["src/gp/web.py", "模板刷新控件", "Dockerfile", "docker-compose.yml", "Web 测试", "README 部署说明"],
+  "dependencies": ["Flask", "Gunicorn", "现有 requests 数据源"],
+  "risks": ["外部站点不可用时刷新失败", "进程内缓存不跨容器实例共享", "长时间抓取占用请求线程"],
+  "questions": []
+}

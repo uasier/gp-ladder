@@ -1,0 +1,2184 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>连涨天梯榜单 - 股票连涨动能追踪</title>
+  <style>
+    /* =========================================================
+       1. 主题与全局设计变量 (支持暗黑 / 浅色无缝切换)
+       ========================================================= */
+    :root {
+      --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "PingFang SC", "HarmonyOS Sans", "Microsoft YaHei", sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --radius-xl: 18px;
+      --transition-fast: 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+      --transition-normal: 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* 暗黑主题 (默认) */
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #0b0f17;
+      --bg-gradient: radial-gradient(1000px circle at 15% -5%, rgba(56, 189, 248, 0.08), transparent 40%),
+                     radial-gradient(900px circle at 85% 10%, rgba(129, 140, 248, 0.08), transparent 45%),
+                     #0b0f17;
+      --surface: #121824;
+      --surface-card: #151d2c;
+      --surface-card-hover: #1b2436;
+      --surface-bar: rgba(18, 24, 36, 0.88);
+      --surface-input: #0e131d;
+      --surface-subtle: rgba(255, 255, 255, 0.04);
+      --surface-subtle-hover: rgba(255, 255, 255, 0.07);
+      --border: rgba(255, 255, 255, 0.08);
+      --border-subtle: rgba(255, 255, 255, 0.04);
+      --border-strong: rgba(255, 255, 255, 0.15);
+      --text: #f8fafc;
+      --text-sub: #cbd5e1;
+      --muted: #94a3b8;
+      --muted-dark: #64748b;
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+      --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+      --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
+      
+      /* A股多空配色 */
+      --up: #f43f5e;
+      --up-bg: rgba(244, 63, 94, 0.12);
+      --up-border: rgba(244, 63, 94, 0.26);
+      --down: #10b981;
+      --down-bg: rgba(16, 185, 129, 0.12);
+      --down-border: rgba(16, 185, 129, 0.26);
+      --gold: #f59e0b;
+      --gold-light: #fbbf24;
+      --gold-bg: rgba(245, 158, 11, 0.12);
+      --gold-border: rgba(245, 158, 11, 0.3);
+      --accent: #6366f1;
+      --accent-bg: rgba(99, 102, 241, 0.15);
+    }
+
+    /* 浅色主题 (优雅 Apple/Notion 清爽质感) */
+    html[data-theme="light"] {
+      color-scheme: light;
+      --bg: #f8fafc;
+      --bg-gradient: radial-gradient(900px circle at 15% -5%, rgba(56, 189, 248, 0.06), transparent 40%),
+                     radial-gradient(800px circle at 85% 10%, rgba(129, 140, 248, 0.06), transparent 45%),
+                     #f8fafc;
+      --surface: #ffffff;
+      --surface-card: #ffffff;
+      --surface-card-hover: #f1f5f9;
+      --surface-bar: rgba(255, 255, 255, 0.9);
+      --surface-input: #f1f5f9;
+      --surface-subtle: #f8fafc;
+      --surface-subtle-hover: #e2e8f0;
+      --border: #e2e8f0;
+      --border-subtle: #f1f5f9;
+      --border-strong: #cbd5e1;
+      --text: #0f172a;
+      --text-sub: #334155;
+      --muted: #64748b;
+      --muted-dark: #94a3b8;
+      --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.05);
+      --shadow-md: 0 4px 14px rgba(15, 23, 42, 0.08);
+      --shadow-lg: 0 12px 30px rgba(15, 23, 42, 0.12);
+      
+      /* A股多空配色 (浅色模式更清晰柔和) */
+      --up: #e11d48;
+      --up-bg: #ffe4e6;
+      --up-border: rgba(225, 29, 72, 0.22);
+      --down: #059669;
+      --down-bg: #d1fae5;
+      --down-border: rgba(5, 150, 105, 0.22);
+      --gold: #d97706;
+      --gold-light: #b45309;
+      --gold-bg: #fef3c7;
+      --gold-border: rgba(217, 119, 6, 0.25);
+      --accent: #4f46e5;
+      --accent-bg: #e0e7ff;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      background: var(--bg);
+      background-image: var(--bg-gradient);
+      background-attachment: fixed;
+      color: var(--text);
+      min-height: 100vh;
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+    body {
+      font: 14px/1.5 var(--font-sans);
+      font-variant-numeric: tabular-nums;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input, select {
+      font: inherit;
+      color: inherit;
+    }
+    button {
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      user-select: none;
+    }
+
+    /* 页面骨架 */
+    .app {
+      width: min(1220px, calc(100% - 36px));
+      margin: 0 auto 80px;
+    }
+
+    /* =========================================================
+       2. 顶部导航与仪表盘英雄区
+       ========================================================= */
+    .top-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 24px 0 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-badge {
+      width: 38px;
+      height: 38px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(135deg, #f59e0b, #ec4899 50%, #6366f1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+      flex-shrink: 0;
+    }
+    .brand-badge svg {
+      width: 20px;
+      height: 20px;
+      fill: #ffffff;
+    }
+    .brand-title-wrap h1 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .brand-desc {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .live-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--down);
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--down-bg);
+      border: 1px solid var(--down-border);
+    }
+    .pulse-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--down);
+      box-shadow: 0 0 8px var(--down);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.35; transform: scale(0.8); }
+    }
+    /* 主题切换开关 */
+    .theme-toggle-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition-fast);
+    }
+    .theme-toggle-btn:hover {
+      color: var(--text);
+      border-color: var(--border-strong);
+      background: var(--surface-card-hover);
+    }
+    .theme-toggle-btn svg {
+      width: 17px;
+      height: 17px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+    }
+
+    /* 4 大核心 KPI 指标卡 */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin: 18px 0 20px;
+    }
+    .kpi-card {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      box-shadow: var(--shadow-sm);
+      transition: transform var(--transition-fast), border-color var(--transition-fast);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .kpi-card:hover {
+      border-color: var(--border-strong);
+      transform: translateY(-1px);
+    }
+    .kpi-label {
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .kpi-val {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+      margin-top: 2px;
+    }
+    .kpi-val.gold {
+      color: var(--gold);
+    }
+    .kpi-val small {
+      font-size: 13px;
+      font-weight: normal;
+      color: var(--muted);
+    }
+    .kpi-sub {
+      font-size: 11px;
+      color: var(--muted-dark);
+    }
+
+    /* =========================================================
+       3. 粘性命令栏 (Sticky Toolbar)
+       ========================================================= */
+    .toolbar.bar {
+      position: sticky;
+      top: 12px;
+      z-index: 40;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--surface-bar);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: var(--shadow-md);
+      margin-bottom: 12px;
+      transition: border-color var(--transition-fast);
+    }
+    .search-box {
+      flex: 1;
+      min-width: 200px;
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .search-icon {
+      position: absolute;
+      left: 10px;
+      pointer-events: none;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+    }
+    .search-box input[type="search"] {
+      width: 100%;
+      background: var(--surface-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 7px 34px 7px 32px;
+      outline: none;
+      color: var(--text);
+      transition: all var(--transition-fast);
+    }
+    .search-box input[type="search"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-bg);
+      background: var(--surface);
+    }
+    .search-kbd {
+      position: absolute;
+      right: 8px;
+      font-size: 11px;
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: var(--surface-subtle-hover);
+      color: var(--muted);
+      border: 1px solid var(--border);
+      pointer-events: none;
+    }
+    .bar select, .filters select, .filters input {
+      background: var(--surface-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 7px 10px;
+      outline: none;
+      color: var(--text);
+      transition: all var(--transition-fast);
+    }
+    .bar select {
+      min-width: 130px;
+      cursor: pointer;
+    }
+    .bar select:focus, .filters select:focus, .filters input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-bg);
+    }
+
+    /* 视图切换分段器 */
+    .seg {
+      display: flex;
+      padding: 2px;
+      background: var(--surface-input);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      gap: 2px;
+    }
+    .seg button {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+      transition: all var(--transition-fast);
+    }
+    .seg button svg {
+      width: 13px;
+      height: 13px;
+      fill: currentColor;
+    }
+    .seg button.on {
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: var(--shadow-sm);
+    }
+    .count {
+      margin-left: auto;
+      color: var(--muted);
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--surface-subtle);
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .count b {
+      color: var(--gold);
+      font-size: 13px;
+    }
+    .btn-reset-filter {
+      display: none;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      color: var(--muted);
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--surface-subtle);
+      transition: all var(--transition-fast);
+    }
+    .btn-reset-filter:hover {
+      color: var(--text);
+      border-color: var(--muted);
+      background: var(--surface-subtle-hover);
+    }
+    .btn-reset-filter.show {
+      display: inline-flex;
+    }
+
+    /* =========================================================
+       4. 快捷胶囊与天梯阶梯导航
+       ========================================================= */
+    .quick {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin: 10px 0;
+    }
+    .quick-title {
+      font-size: 12px;
+      color: var(--muted);
+      margin-right: 2px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .chip {
+      border: 1px solid var(--border);
+      background: var(--surface-card);
+      color: var(--text-sub);
+      border-radius: 999px;
+      padding: 4px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      box-shadow: var(--shadow-sm);
+      transition: all var(--transition-fast);
+    }
+    .chip:hover {
+      border-color: var(--border-strong);
+      background: var(--surface-card-hover);
+    }
+    .chip.on {
+      color: #ffffff;
+      border-color: var(--accent);
+      background: var(--accent);
+    }
+    html[data-theme="light"] .chip.on {
+      color: #ffffff;
+      background: var(--accent);
+    }
+    .chip.on.gold {
+      color: #1e1402;
+      background: var(--gold);
+      border-color: transparent;
+      font-weight: 600;
+    }
+
+    /* 天梯阶梯与行业快捷条 */
+    .days-section {
+      margin: 8px 0 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .days {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+    .day-chip, .ind-chip {
+      border: 1px solid var(--border);
+      background: var(--surface-card);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      box-shadow: var(--shadow-sm);
+      transition: all var(--transition-fast);
+    }
+    .day-chip:hover, .ind-chip:hover {
+      color: var(--text);
+      border-color: var(--border-strong);
+      background: var(--surface-card-hover);
+    }
+    .day-chip.on, .ind-chip.on {
+      color: var(--text);
+      border-color: var(--border-strong);
+      background: var(--surface-subtle-hover);
+      font-weight: 600;
+    }
+    .day-chip.top-tier {
+      border-color: var(--gold-border);
+      color: var(--gold);
+      background: var(--gold-bg);
+    }
+    .day-chip.top-tier.on {
+      background: var(--gold);
+      color: #1a1200;
+      border-color: transparent;
+      font-weight: 600;
+    }
+    .badge-count {
+      display: inline-block;
+      padding: 0 5px;
+      background: var(--surface-subtle-hover);
+      border-radius: 999px;
+      font-size: 11px;
+      opacity: 0.85;
+    }
+    .day-chip.on .badge-count, .day-chip.top-tier.on .badge-count {
+      background: rgba(0, 0, 0, 0.18);
+      opacity: 1;
+    }
+
+    .industry-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: thin;
+    }
+
+    /* =========================================================
+       5. 更多筛选折叠面板 (Accordion)
+       ========================================================= */
+    details.more-filters {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      margin: 10px 0 20px;
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      transition: border-color var(--transition-fast);
+    }
+    details.more-filters:hover {
+      border-color: var(--border-strong);
+    }
+    details.more-filters > summary {
+      list-style: none;
+      cursor: pointer;
+      color: var(--text-sub);
+      padding: 10px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      user-select: none;
+    }
+    details.more-filters > summary::-webkit-details-marker {
+      display: none;
+    }
+    .summary-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .summary-arrow {
+      transition: transform 0.2s ease;
+      width: 14px;
+      height: 14px;
+      fill: currentColor;
+      color: var(--muted);
+    }
+    details[open] .summary-arrow {
+      transform: rotate(90deg);
+    }
+    .filters {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 12px;
+      padding: 8px 16px 16px;
+      border-top: 1px solid var(--border);
+    }
+    .filter-item {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .filter-item label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .filter-item.filter-wide {
+      grid-column: 1 / -1;
+      background: var(--surface-subtle);
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+    .filter-range {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .filter-range input {
+      flex: 1;
+      min-width: 0;
+    }
+    .filter-range span {
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .days-compact {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .days-compact input[type=range] {
+      appearance: none;
+      height: 4px;
+      background: var(--surface-subtle-hover);
+      border-radius: 2px;
+      border: 0;
+      padding: 0;
+      flex: 1;
+    }
+    .range-value {
+      color: var(--gold);
+      min-width: 1.5em;
+      font-weight: 600;
+    }
+
+    /* =========================================================
+       6. 天梯梯队与股票卡片 (Cards View)
+       ========================================================= */
+    .group {
+      margin-bottom: 32px;
+    }
+    .group-h {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0 0 12px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    .group-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 32px;
+      height: 32px;
+      padding: 0 8px;
+      border-radius: var(--radius-sm);
+      background: var(--gold-bg);
+      border: 1px solid var(--gold-border);
+      color: var(--gold);
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .group-h .t {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .group-h .t b {
+      color: var(--text);
+    }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 12px;
+    }
+
+    /* 股票卡片 */
+    .stock-card {
+      text-align: left;
+      width: 100%;
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      color: inherit;
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
+      cursor: pointer;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: var(--shadow-sm);
+      transition: transform var(--transition-fast),
+                  border-color var(--transition-fast),
+                  box-shadow var(--transition-fast),
+                  background var(--transition-fast);
+    }
+    .stock-card:hover {
+      background: var(--surface-card-hover);
+      border-color: var(--border-strong);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+      outline: none;
+    }
+    .stock-card.active {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 2px var(--gold-border), var(--shadow-md);
+    }
+    .stock-card.highlight {
+      border-color: var(--gold-border);
+      background: linear-gradient(180deg, var(--gold-bg), transparent 60%), var(--surface-card);
+    }
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .code-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .code {
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      font-family: var(--font-mono);
+    }
+    .name {
+      font-size: 16px;
+      font-weight: 650;
+      color: var(--text);
+      margin-top: 1px;
+    }
+    .badge {
+      font-size: 11px;
+      color: #1e1402;
+      background: var(--gold);
+      border-radius: 999px;
+      padding: 2px 7px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+    .card-main-stat {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      padding: 8px 10px;
+      background: var(--surface-subtle);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-subtle);
+    }
+    .pct-label {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .pct-value {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .up { color: var(--up); }
+    .down { color: var(--down); }
+    .flat { color: var(--muted); }
+
+    .quote-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: var(--text-sub);
+    }
+    .quote-price {
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--text);
+    }
+    .quote-today {
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    .quote-today.up { background: var(--up-bg); color: var(--up); }
+    .quote-today.down { background: var(--down-bg); color: var(--down); }
+    .quote-today.flat { background: var(--surface-subtle); color: var(--muted); }
+
+    .tags {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .tag {
+      font-size: 11px;
+      color: var(--muted);
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 2px 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .tag.in {
+      color: var(--up);
+      border-color: var(--up-border);
+      background: var(--up-bg);
+    }
+    .tag.out {
+      color: var(--down);
+      border-color: var(--down-border);
+      background: var(--down-bg);
+    }
+
+    /* =========================================================
+       7. 列表表格视图 (List View)
+       ========================================================= */
+    .table-wrap {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+    table.list {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    table.list th {
+      text-align: left;
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 12px;
+      padding: 10px 14px;
+      background: var(--surface-subtle);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      user-select: none;
+    }
+    table.list td {
+      padding: 11px 14px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-sub);
+    }
+    table.list tr {
+      cursor: pointer;
+      transition: background var(--transition-fast);
+    }
+    table.list tbody tr:hover {
+      background: var(--surface-card-hover);
+    }
+    table.list tbody tr.active {
+      background: var(--accent-bg);
+    }
+    .table-stock-name {
+      font-weight: 600;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .num {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* 空状态 */
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 64px 20px;
+      background: var(--surface-card);
+      border-radius: var(--radius-lg);
+      border: 1px dashed var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    .empty-icon {
+      font-size: 36px;
+      opacity: 0.6;
+    }
+    .empty p {
+      margin: 0;
+      font-size: 14px;
+    }
+    .empty button {
+      padding: 7px 16px;
+      border-radius: 999px;
+      background: var(--accent);
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    /* =========================================================
+       8. 侧边抽屉详情 (Detail Drawer)
+       ========================================================= */
+    .drawer {
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: min(420px, 100%);
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      z-index: 60;
+      transform: translateX(100%);
+      transition: transform var(--transition-normal);
+      padding: 22px;
+      overflow-y: auto;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .drawer.open {
+      transform: none;
+    }
+    .mask {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
+      z-index: 50;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--transition-fast);
+    }
+    .mask.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .drawer-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .drawer h2 {
+      margin: 1px 0 3px;
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .drawer-close {
+      width: 30px;
+      height: 30px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      transition: all var(--transition-fast);
+    }
+    .drawer-close:hover {
+      background: var(--surface-subtle-hover);
+      color: var(--text);
+    }
+    .drawer-section-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .kv-card {
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 14px;
+    }
+    .kv-item span {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      margin-bottom: 1px;
+    }
+    .kv-item b {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .acts {
+      display: flex;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .acts a, .acts button {
+      flex: 1;
+      text-align: center;
+      text-decoration: none;
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      font-weight: 600;
+      font-size: 13px;
+      border: 1px solid var(--border);
+      background: var(--surface-subtle);
+      color: var(--text);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all var(--transition-fast);
+    }
+    .acts a:hover, .acts button:hover {
+      background: var(--surface-subtle-hover);
+      border-color: var(--border-strong);
+    }
+    .acts a.primary {
+      background: var(--accent);
+      color: #ffffff;
+      border-color: transparent;
+    }
+    .acts a.primary:hover {
+      opacity: 0.92;
+      transform: translateY(-1px);
+    }
+    .hint {
+      color: var(--muted-dark);
+      font-size: 12px;
+      text-align: center;
+    }
+
+    /* 回到顶部悬浮球 */
+    .back-to-top {
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--surface-bar);
+      border: 1px solid var(--border);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--shadow-md);
+      cursor: pointer;
+      opacity: 0;
+      transform: translateY(10px);
+      pointer-events: none;
+      transition: all var(--transition-fast);
+      z-index: 35;
+    }
+    .back-to-top.visible {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+    .back-to-top:hover {
+      background: var(--surface-card-hover);
+      border-color: var(--accent);
+    }
+
+    /* 移动端响应式 */
+    @media (max-width: 860px) {
+      .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .toolbar.bar {
+        position: static;
+      }
+    }
+    @media (max-width: 600px) {
+      .app { width: calc(100% - 24px); }
+      .kpi-grid { grid-template-columns: 1fr; }
+      .cards { grid-template-columns: 1fr; }
+      .toolbar.bar { flex-direction: column; align-items: stretch; }
+      .search-box { width: 100%; }
+      .count { margin-left: 0; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- 顶部导航栏与双主题切换 -->
+    <header class="top-nav">
+      <div class="brand-section">
+        <div class="brand-badge">
+          <svg viewBox="0 0 24 24"><path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z"/></svg>
+        </div>
+        <div class="brand-title-wrap">
+          <h1>连涨天梯</h1>
+          <div class="brand-desc">A股同花顺强势连涨动能追踪仪表盘</div>
+        </div>
+      </div>
+      <div class="nav-actions">
+        <div class="live-status">
+          <span class="pulse-dot"></span>
+          <span>盘口实时</span>
+        </div>
+        <button type="button" class="theme-toggle-btn" id="refreshBtn" title="重新拉取最新数据">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 5v4h4"></path><path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4"></path></svg>
+        </button>
+        <button type="button" class="theme-toggle-btn" id="themeToggleBtn" title="切换深色/浅色主题">
+          <!-- 太阳图标 (浅色模式显示) -->
+          <svg class="sun-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- 4 大核心指标看板 -->
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">
+          <span>连涨标的总数</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        </div>
+        <div class="kpi-val">__TOTAL__ <small>只</small></div>
+        <div class="kpi-sub">同花顺连涨榜全样本</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">
+          <span>最高连涨天梯</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+        </div>
+        <div class="kpi-val gold">__MAX_DAYS__ <small>天</small></div>
+        <div class="kpi-sub">当前领涨龙头高度</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">
+          <span>最新行情时间</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        </div>
+        <div class="kpi-val" style="font-size:15px; font-weight:600;">__QUOTE_AT__</div>
+        <div class="kpi-sub">东方财富盘口数据</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">
+          <span>榜单抓取时间</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+        </div>
+        <div class="kpi-val" style="font-size:15px; font-weight:600;">__GENERATED_AT__</div>
+        <div class="kpi-sub">报告自动生成归档</div>
+      </div>
+    </section>
+
+    <!-- 粘性浮动控制栏 (保留 class="toolbar bar") -->
+    <div class="toolbar bar">
+      <div class="search-box">
+        <span class="search-icon">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        </span>
+        <input id="keywordInput" type="search" placeholder="搜索名称 / 股票代码..." />
+        <span class="search-kbd">/ 聚焦</span>
+      </div>
+
+      <select id="industrySelect"></select>
+
+      <select id="sortSelect">
+        <option value="days">连涨天数（高→低）</option>
+        <option value="pct">累计涨跌幅（高→低）</option>
+        <option value="todayPct">今日涨跌幅（高→低）</option>
+        <option value="avgPct">平均涨幅/天（高→低）</option>
+        <option value="avgTurnover">平均换手/天（高→低）</option>
+        <option value="retail">散户指数（高→低）</option>
+        <option value="price">现价（高→低）</option>
+        <option value="close">收盘价（高→低）</option>
+      </select>
+
+      <div class="seg" id="viewSeg">
+        <button type="button" data-view="cards" class="on" title="按 1 快捷切换卡片">
+          <svg viewBox="0 0 24 24"><path d="M4 5h6v6H4zm10 0h6v6h-6zM4 15h6v6H4zm10 0h6v6h-6z"/></svg>
+          卡片
+        </button>
+        <button type="button" data-view="list" title="按 2 快捷切换列表">
+          <svg viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>
+          列表
+        </button>
+      </div>
+
+      <button type="button" id="resetFiltersBtn" class="btn-reset-filter" title="还原为初始条件">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        重置
+      </button>
+
+      <div id="resultCount" class="count"></div>
+    </div>
+
+    <!-- 快捷筛选胶囊 -->
+    <div class="quick">
+      <span class="quick-title">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+        快捷筛选：
+      </span>
+      <button type="button" class="chip on" id="excludeStChip">非 ST</button>
+      <button type="button" class="chip on gold" id="onlyHighlightChip">仅精选 ⭐️</button>
+      <button type="button" class="chip" id="todayUpChip">今日上涨 📈</button>
+      <button type="button" class="chip" id="retailOutChip">散户净流出 🌊</button>
+      <button type="button" class="chip price-chip" data-price="0-10">10元以下</button>
+      <button type="button" class="chip price-chip" data-price="10-20">10–20元</button>
+      <button type="button" class="chip price-chip" data-price="20-50">20–50元</button>
+      <button type="button" class="chip price-chip" data-price="50-100">50–100元</button>
+      <button type="button" class="chip price-chip" data-price="100+">100元以上</button>
+      <span style="flex:1"></span>
+      <label class="days-compact" style="display:none">
+        连涨
+        <input id="daysRange" type="range" min="0" max="__MAX_DAYS__" value="0" />
+        <span id="daysValue" class="range-value">0</span>
+      </label>
+      <input type="checkbox" id="excludeSt" checked hidden />
+      <input type="checkbox" id="onlyHighlight" checked hidden />
+    </div>
+
+    <!-- 天梯阶梯与行业条 -->
+    <div class="days-section">
+      <div class="days" id="dayPills"></div>
+      <div class="industry-bar" id="industryPills"></div>
+    </div>
+
+    <!-- 更多筛选折叠卡片 -->
+    <details class="more-filters">
+      <summary>
+        <div class="summary-left">
+          <svg class="summary-arrow" viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
+          <span>更多筛选与精选条件</span>
+        </div>
+        <span style="font-size:11px; color:var(--muted); font-weight:normal;">自定义涨跌幅、换手率与主力散户模型</span>
+      </summary>
+      <section class="filters">
+        <div class="filter-item">
+          <label>平均涨幅区间</label>
+          <select id="pctRange">
+            <option value="all">全部平均涨幅</option>
+            <option value="0-5">0% - 5%</option>
+            <option value="5-10">5% - 10%</option>
+            <option value="10-15">10% - 15%</option>
+            <option value="15+">15%+</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <label>平均换手率区间</label>
+          <select id="turnoverRange">
+            <option value="all">全部平均换手率</option>
+            <option value="0-5">0% - 5%</option>
+            <option value="5-10">5% - 10%</option>
+            <option value="10-20">10% - 20%</option>
+            <option value="20+">20%+</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <label>累计涨跌幅区间（%）</label>
+          <div class="filter-range">
+            <input id="pctTotalMin" type="number" step="0.1" placeholder="最小" />
+            <span>～</span>
+            <input id="pctTotalMax" type="number" step="0.1" placeholder="最大" />
+          </div>
+        </div>
+        <div class="filter-item">
+          <label>今日涨跌幅区间（%）</label>
+          <div class="filter-range">
+            <input id="todayPctMin" type="number" step="0.1" placeholder="最小" />
+            <span>～</span>
+            <input id="todayPctMax" type="number" step="0.1" placeholder="最大" />
+          </div>
+        </div>
+        <div class="filter-item">
+          <label>当前股价区间</label>
+          <select id="priceRange">
+            <option value="all">全部股价</option>
+            <option value="0-10">10 元以下</option>
+            <option value="10-20">10 – 20 元</option>
+            <option value="20-50">20 – 50 元</option>
+            <option value="50-100">50 – 100 元</option>
+            <option value="100+">100 元以上</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <label>当前股价自定义（元）</label>
+          <div class="filter-range">
+            <input id="priceMin" type="number" step="0.01" min="0" placeholder="最低价" />
+            <span>～</span>
+            <input id="priceMax" type="number" step="0.01" min="0" placeholder="最高价" />
+          </div>
+        </div>
+        <div class="filter-item">
+          <label>累计换手率区间（%）</label>
+          <div class="filter-range">
+            <input id="turnTotalMin" type="number" step="0.1" placeholder="最小" />
+            <span>～</span>
+            <input id="turnTotalMax" type="number" step="0.1" placeholder="最大" />
+          </div>
+        </div>
+        <div class="filter-item">
+          <label>散户指数</label>
+          <select id="retailRange">
+            <option value="all">全部散户指数</option>
+            <option value="out">净流出（&lt; 0%）</option>
+            <option value="-5-0">-5% ~ 0%</option>
+            <option value="0-5">0% ~ 5%</option>
+            <option value="5-10">5% ~ 10%</option>
+            <option value="10+">10%+</option>
+            <option value="in">净流入（&gt; 0%）</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <label>散户指数自定义区间（%）</label>
+          <div class="filter-range">
+            <input id="retailMin" type="number" step="0.1" placeholder="最小" value="__RETAIL_MIN__" />
+            <span>～</span>
+            <input id="retailMax" type="number" step="0.1" placeholder="最大" value="__RETAIL_MAX__" />
+          </div>
+        </div>
+        <div class="filter-item filter-wide">
+          <label>精选条件</label>
+          <div class="filter-range" style="margin-top: 6px;">
+            <span>散户指数 &lt;</span>
+            <input id="retailHLMax" type="number" step="0.1" value="__HL_RETAIL_MAX__" />
+            <span>%</span>
+          </div>
+          <div class="filter-range" style="margin-top: 8px;">
+            <span>当日换手率 &lt;</span>
+            <input id="todayTurnHLMax" type="number" step="0.1" value="__HL_TODAY_TURN_MAX__" />
+            <span>%</span>
+          </div>
+          <div class="filter-range" style="margin-top: 8px;">
+            <span>平均日涨幅 &gt;</span>
+            <input id="avgPctMin" type="number" step="0.1" value="__HL_AVG_PCT_MIN__" />
+            <span>%</span>
+          </div>
+        </div>
+      </section>
+    </details>
+
+    <main>
+      <div id="ladderContainer" class="ladder-list"></div>
+    </main>
+  </div>
+
+  <!-- 遮罩与抽屉 -->
+  <div class="mask" id="mask"></div>
+  <aside class="drawer" id="drawer" aria-hidden="true"></aside>
+
+  <!-- 回到顶部浮球 -->
+  <button type="button" class="back-to-top" id="backToTop" title="回到顶部">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+  </button>
+
+  <script id="stock-data" type="application/json">__DATA_JSON__</script>
+  <script id="industry-data" type="application/json">__INDUSTRIES_JSON__</script>
+  <script>
+    // ==========================================
+    // 双主题切换与持久化逻辑
+    // ==========================================
+    const THEME_KEY = 'gp_theme_pref';
+    function getPreferredTheme() {
+      const saved = localStorage.getItem(THEME_KEY);
+      if (saved) return saved;
+      return window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    }
+    function setTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem(THEME_KEY, theme);
+      updateThemeIcon(theme);
+    }
+    function updateThemeIcon(theme) {
+      const btn = document.getElementById('themeToggleBtn');
+      if (!btn) return;
+      if (theme === 'dark') {
+        // 显示太阳图标（点击切换为浅色）
+        btn.innerHTML = `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`;
+      } else {
+        // 显示月亮图标（点击切换为深色）
+        btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
+      }
+    }
+    const currentTheme = getPreferredTheme();
+    setTheme(currentTheme);
+    document.getElementById('themeToggleBtn').addEventListener('click', () => {
+      const active = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      setTheme(active);
+    });
+    const refreshBtn = document.getElementById('refreshBtn');
+    if (refreshBtn) refreshBtn.addEventListener('click', async () => {
+      refreshBtn.disabled = true;
+      refreshBtn.style.opacity = '0.55';
+      refreshBtn.title = '正在拉取最新数据...';
+      try {
+        const response = await fetch('/api/refresh', { method: 'POST', headers: { 'Accept': 'application/json' } });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || '刷新失败');
+        window.location.reload();
+      } catch (error) {
+        refreshBtn.disabled = false;
+        refreshBtn.style.opacity = '';
+        refreshBtn.title = '重新拉取最新数据';
+        window.alert(error.message || '刷新失败，请稍后重试');
+      }
+    });
+
+    // ==========================================
+    // 基础数据与元素引用
+    // ==========================================
+    const data = JSON.parse(document.getElementById('stock-data').textContent);
+    const industries = JSON.parse(document.getElementById('industry-data').textContent);
+    const keywordInput = document.getElementById('keywordInput');
+    const industrySelect = document.getElementById('industrySelect');
+    const pctRangeSelect = document.getElementById('pctRange');
+    const turnoverRangeSelect = document.getElementById('turnoverRange');
+    const pctTotalMinInput = document.getElementById('pctTotalMin');
+    const pctTotalMaxInput = document.getElementById('pctTotalMax');
+    const todayPctMinInput = document.getElementById('todayPctMin');
+    const todayPctMaxInput = document.getElementById('todayPctMax');
+    const priceRangeSelect = document.getElementById('priceRange');
+    const priceMinInput = document.getElementById('priceMin');
+    const priceMaxInput = document.getElementById('priceMax');
+    const turnTotalMinInput = document.getElementById('turnTotalMin');
+    const turnTotalMaxInput = document.getElementById('turnTotalMax');
+    const retailRangeSelect = document.getElementById('retailRange');
+    const retailMinInput = document.getElementById('retailMin');
+    const retailMaxInput = document.getElementById('retailMax');
+    const retailHLMaxInput = document.getElementById('retailHLMax');
+    const todayTurnHLMaxInput = document.getElementById('todayTurnHLMax');
+    const daysRange = document.getElementById('daysRange');
+    const daysValue = document.getElementById('daysValue');
+    const sortSelect = document.getElementById('sortSelect');
+    const excludeStCheckbox = document.getElementById('excludeSt');
+    const onlyHighlightCheckbox = document.getElementById('onlyHighlight');
+    const container = document.getElementById('ladderContainer');
+    const resultCount = document.getElementById('resultCount');
+    const avgPctMinInput = document.getElementById('avgPctMin');
+    const drawer = document.getElementById('drawer');
+    const mask = document.getElementById('mask');
+    const resetFiltersBtn = document.getElementById('resetFiltersBtn');
+    const backToTop = document.getElementById('backToTop');
+
+    let viewMode = 'cards';
+    let exactDay = null;
+    let selectedCode = null;
+
+    function getParams() {
+      const source = location.search || (location.hash ? '?' + location.hash.substring(1) : '');
+      return new URLSearchParams(source);
+    }
+    function parseMinMax(text) {
+      if (!text) return { min: null, max: null };
+      const [minStr, maxStr] = String(text).split('-');
+      const min = minStr !== undefined && minStr !== '' ? Number(minStr) : null;
+      const max = maxStr !== undefined && maxStr !== '' ? Number(maxStr) : null;
+      return { min, max };
+    }
+    function parseSignedRange(text) {
+      if (!text) return { min: null, max: null };
+      const match = String(text).trim().match(/^(-?\d+(?:\.\d+)?)-(-?\d+(?:\.\d+)?)$/);
+      if (!match) return { min: null, max: null };
+      return { min: Number(match[1]), max: Number(match[2]) };
+    }
+    function applyHighlightRuleFromParams() {
+      const params = getParams();
+      const avgPct = params.get('avgPct') ?? params.get('hlAvgPctMin');
+      const turnover = params.get('todayTurnover') ?? params.get('hlTurnoverMax');
+      const retail = params.get('hlRetail') ?? params.get('hlRetailMax');
+      if (avgPct) {
+        const asRange = parseMinMax(avgPct);
+        const value = asRange.min !== null && avgPct.includes('-') ? asRange.min : Number(avgPct);
+        if (!Number.isNaN(value)) HIGHLIGHT_RULE.avgPctMin = value;
+      }
+      if (turnover) {
+        const value = Number(turnover);
+        if (!Number.isNaN(value)) HIGHLIGHT_RULE.todayTurnoverMax = value;
+      }
+      if (retail) {
+        const asRange = parseSignedRange(retail);
+        const value = asRange.max !== null ? asRange.max : Number(retail);
+        if (!Number.isNaN(value)) HIGHLIGHT_RULE.retailMax = value;
+      }
+    }
+    function applyRetailFilterFromParams() {
+      const params = getParams();
+      const preset = params.get('retail');
+      const minParam = params.get('retailMin');
+      const maxParam = params.get('retailMax');
+      const presets = ['all', 'out', 'in', '-5-0', '0-5', '5-10', '10+'];
+      if (preset && presets.includes(preset) && retailRangeSelect) retailRangeSelect.value = preset;
+      else if (preset) {
+        const { min, max } = parseSignedRange(preset);
+        if (min !== null && retailMinInput) retailMinInput.value = min;
+        if (max !== null && retailMaxInput) retailMaxInput.value = max;
+      }
+      if (minParam !== null && retailMinInput) {
+        const min = Number(minParam);
+        if (!Number.isNaN(min)) retailMinInput.value = min;
+      }
+      if (maxParam !== null && retailMaxInput) {
+        const max = Number(maxParam);
+        if (!Number.isNaN(max)) retailMaxInput.value = max;
+      }
+    }
+    function applyPriceFilterFromParams() {
+      const params = getParams();
+      const preset = params.get('price');
+      const minParam = params.get('priceMin');
+      const maxParam = params.get('priceMax');
+      const presets = ['all', '0-10', '10-20', '20-50', '50-100', '100+'];
+      if (preset && presets.includes(preset) && priceRangeSelect) {
+        priceRangeSelect.value = preset;
+      } else if (preset) {
+        const { min, max } = parseMinMax(preset);
+        if (min !== null && priceMinInput) priceMinInput.value = min;
+        if (max !== null && priceMaxInput) priceMaxInput.value = max;
+      }
+      if (minParam !== null && priceMinInput) {
+        const min = Number(minParam);
+        if (!Number.isNaN(min)) priceMinInput.value = min;
+      }
+      if (maxParam !== null && priceMaxInput) {
+        const max = Number(maxParam);
+        if (!Number.isNaN(max)) priceMaxInput.value = max;
+      }
+    }
+    function syncHighlightInputsFromRule() {
+      if (avgPctMinInput) avgPctMinInput.value = HIGHLIGHT_RULE.avgPctMin ?? '';
+      if (todayTurnHLMaxInput) todayTurnHLMaxInput.value = HIGHLIGHT_RULE.todayTurnoverMax ?? '';
+      if (retailHLMaxInput) retailHLMaxInput.value = HIGHLIGHT_RULE.retailMax ?? '';
+    }
+    function readOptionalNumber(input) {
+      if (!input) return null;
+      const text = String(input.value ?? '').trim();
+      if (!text) return null;
+      const num = Number(text);
+      return Number.isNaN(num) ? null : num;
+    }
+    function updateHighlightRuleFromInputs() {
+      const pctMin = readOptionalNumber(avgPctMinInput);
+      const turnoverMax = readOptionalNumber(todayTurnHLMaxInput);
+      const retailMax = readOptionalNumber(retailHLMaxInput);
+      if (pctMin !== null) HIGHLIGHT_RULE.avgPctMin = pctMin;
+      if (turnoverMax !== null) HIGHLIGHT_RULE.todayTurnoverMax = turnoverMax;
+      if (retailMax !== null) HIGHLIGHT_RULE.retailMax = retailMax;
+    }
+
+    function syncChips() {
+      document.getElementById('excludeStChip').classList.toggle('on', excludeStCheckbox.checked);
+      document.getElementById('onlyHighlightChip').classList.toggle('on', onlyHighlightCheckbox.checked);
+      document.getElementById('onlyHighlightChip').classList.toggle('gold', onlyHighlightCheckbox.checked);
+      document.getElementById('todayUpChip').classList.toggle('on', todayPctMinInput.value === '0');
+      document.getElementById('retailOutChip').classList.toggle('on', retailRangeSelect.value === 'out');
+      document.querySelectorAll('.price-chip').forEach(chip => {
+        chip.classList.toggle('on', priceRangeSelect && priceRangeSelect.value === chip.dataset.price);
+      });
+
+      const hasFilter = !excludeStCheckbox.checked ||
+        !onlyHighlightCheckbox.checked ||
+        todayPctMinInput.value !== '' ||
+        retailRangeSelect.value !== 'all' ||
+        industrySelect.value !== 'all' ||
+        keywordInput.value.trim() !== '' ||
+        exactDay !== null ||
+        Number(daysRange.value) > 0 ||
+        pctRangeSelect.value !== 'all' ||
+        turnoverRangeSelect.value !== 'all' ||
+        (priceRangeSelect && priceRangeSelect.value !== 'all') ||
+        (priceMinInput && priceMinInput.value !== '') ||
+        (priceMaxInput && priceMaxInput.value !== '');
+      if (resetFiltersBtn) {
+        resetFiltersBtn.classList.toggle('show', hasFilter);
+      }
+    }
+
+    function resetAllFilters() {
+      keywordInput.value = '';
+      industrySelect.value = 'all';
+      pctRangeSelect.value = 'all';
+      turnoverRangeSelect.value = 'all';
+      retailRangeSelect.value = 'all';
+      pctTotalMinInput.value = '';
+      pctTotalMaxInput.value = '';
+      todayPctMinInput.value = '';
+      todayPctMaxInput.value = '';
+      turnTotalMinInput.value = '';
+      turnTotalMaxInput.value = '';
+      retailMinInput.value = '';
+      retailMaxInput.value = '';
+      if (priceRangeSelect) priceRangeSelect.value = 'all';
+      if (priceMinInput) priceMinInput.value = '';
+      if (priceMaxInput) priceMaxInput.value = '';
+      excludeStCheckbox.checked = true;
+      onlyHighlightCheckbox.checked = true;
+      daysRange.value = '0';
+      daysValue.textContent = '0';
+      exactDay = null;
+      syncChips();
+      handleChange();
+    }
+
+    function initFilters() {
+      industrySelect.innerHTML = ['<option value="all">全部行业</option>', ...industries.map(item => `<option value="${item}">${item}</option>`)].join('');
+      const onChange = () => { syncChips(); handleChange(); };
+      [keywordInput, industrySelect, pctRangeSelect, turnoverRangeSelect, retailRangeSelect, sortSelect, priceRangeSelect].forEach(el => {
+        if (el) el.addEventListener(el.tagName === 'INPUT' ? 'input' : 'change', onChange);
+      });
+      [pctTotalMinInput, pctTotalMaxInput, todayPctMinInput, todayPctMaxInput, turnTotalMinInput, turnTotalMaxInput, retailMinInput, retailMaxInput, priceMinInput, priceMaxInput].forEach(el => {
+        if (el) el.addEventListener('input', onChange);
+      });
+      excludeStCheckbox.addEventListener('change', onChange);
+      onlyHighlightCheckbox.addEventListener('change', onChange);
+      daysRange.addEventListener('input', () => { daysValue.textContent = daysRange.value; onChange(); });
+      applyHighlightRuleFromParams();
+      applyRetailFilterFromParams();
+      applyPriceFilterFromParams();
+      syncHighlightInputsFromRule();
+      const onHLChange = () => { updateHighlightRuleFromInputs(); onChange(); };
+      [avgPctMinInput, todayTurnHLMaxInput, retailHLMaxInput].forEach(el => {
+        if (el) el.addEventListener('input', onHLChange);
+      });
+
+      document.getElementById('excludeStChip').addEventListener('click', () => {
+        excludeStCheckbox.checked = !excludeStCheckbox.checked; onChange();
+      });
+      document.getElementById('onlyHighlightChip').addEventListener('click', () => {
+        onlyHighlightCheckbox.checked = !onlyHighlightCheckbox.checked; onChange();
+      });
+      document.getElementById('todayUpChip').addEventListener('click', () => {
+        todayPctMinInput.value = todayPctMinInput.value === '0' ? '' : '0';
+        onChange();
+      });
+      document.getElementById('retailOutChip').addEventListener('click', () => {
+        retailRangeSelect.value = retailRangeSelect.value === 'out' ? 'all' : 'out';
+        onChange();
+      });
+      document.querySelectorAll('.price-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          const value = chip.dataset.price;
+          priceRangeSelect.value = priceRangeSelect.value === value ? 'all' : value;
+          if (priceMinInput) priceMinInput.value = '';
+          if (priceMaxInput) priceMaxInput.value = '';
+          onChange();
+        });
+      });
+      if (resetFiltersBtn) {
+        resetFiltersBtn.addEventListener('click', resetAllFilters);
+      }
+      document.getElementById('viewSeg').addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        viewMode = btn.dataset.view;
+        document.querySelectorAll('#viewSeg button').forEach(b => b.classList.toggle('on', b === btn));
+        handleChange();
+      });
+
+      window.addEventListener('scroll', () => {
+        if (window.scrollY > 280) {
+          backToTop.classList.add('visible');
+        } else {
+          backToTop.classList.remove('visible');
+        }
+      }, { passive: true });
+      backToTop.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    }
+
+    function normalizeNumber(value) {
+      if (!value) return 0;
+      const num = Number(String(value).replace('%', ''));
+      return Number.isNaN(num) ? 0 : num;
+    }
+    function toNullableNumber(value) {
+      const text = String(value ?? '').trim();
+      if (!text) return null;
+      const num = Number(text);
+      return Number.isNaN(num) ? null : num;
+    }
+    function getPctRange(rangeValue) {
+      const mapping = { '0-5': { min: 0, max: 5 }, '5-10': { min: 5, max: 10 }, '10-15': { min: 10, max: 15 }, '15+': { min: 15, max: null } };
+      return mapping[rangeValue] || { min: null, max: null };
+    }
+    function getTurnoverRange(rangeValue) {
+      const mapping = { '0-5': { min: 0, max: 5 }, '5-10': { min: 5, max: 10 }, '10-20': { min: 10, max: 20 }, '20+': { min: 20, max: null } };
+      return mapping[rangeValue] || { min: null, max: null };
+    }
+    function getRetailPresetRange(rangeValue) {
+      const mapping = {
+        out: { min: null, max: 0, maxExclusive: true },
+        in: { min: 0, max: null, minExclusive: true },
+        '-5-0': { min: -5, max: 0 },
+        '0-5': { min: 0, max: 5 },
+        '5-10': { min: 5, max: 10 },
+        '10+': { min: 10, max: null },
+      };
+      return mapping[rangeValue] || { min: null, max: null };
+    }
+
+    const HIGHLIGHT_RULE = {
+      retailMax: __HL_RETAIL_MAX__,
+      todayTurnoverMax: __HL_TODAY_TURN_MAX__,
+      avgPctMin: __HL_AVG_PCT_MIN__,
+    };
+
+    function getAvgTurnover(item) {
+      const days = Math.max(1, Number(item['连涨天数']) || 0);
+      return normalizeNumber(item['累计换手率']) / days;
+    }
+    function getAvgPct(item) {
+      const days = Math.max(1, Number(item['连涨天数']) || 0);
+      return normalizeNumber(item['连续涨跌幅']) / days;
+    }
+    function getRetailIndex(item) {
+      const text = String(item['散户指数'] ?? '').trim();
+      if (!text) return null;
+      return normalizeNumber(text);
+    }
+    function getTodayPct(item) {
+      const text = String(item['今日涨跌幅'] ?? '').trim();
+      if (!text) return null;
+      return normalizeNumber(text);
+    }
+    function getTodayTurnover(item) {
+      const text = String(item['今日换手率'] ?? '').trim();
+      if (!text) return null;
+      return normalizeNumber(text);
+    }
+    function getPrice(item) {
+      const live = String(item['现价'] ?? '').trim();
+      if (live) return normalizeNumber(live);
+      const close = String(item['收盘价(元)'] ?? '').trim();
+      if (close) return normalizeNumber(close);
+      return null;
+    }
+    function getPriceRange(rangeValue) {
+      const mapping = {
+        '0-10': { min: 0, max: 10 },
+        '10-20': { min: 10, max: 20 },
+        '20-50': { min: 20, max: 50 },
+        '50-100': { min: 50, max: 100 },
+        '100+': { min: 100, max: null },
+      };
+      return mapping[rangeValue] || { min: null, max: null };
+    }
+    function shouldHighlight(item) {
+      const retail = getRetailIndex(item);
+      const todayTurnover = getTodayTurnover(item);
+      const avgPct = getAvgPct(item);
+      if (retail === null || retail >= HIGHLIGHT_RULE.retailMax) return false;
+      if (todayTurnover === null || todayTurnover >= HIGHLIGHT_RULE.todayTurnoverMax) return false;
+      if (avgPct <= HIGHLIGHT_RULE.avgPctMin) return false;
+      return true;
+    }
+    function isStStock(name) {
+      return !!(name && name.toUpperCase().includes('ST'));
+    }
+    function pctClass(v) { return v > 0 ? 'up' : v < 0 ? 'down' : 'flat'; }
+
+    function filterData() {
+      const keyword = keywordInput.value.trim().toUpperCase();
+      const industry = industrySelect.value;
+      const pctRange = pctRangeSelect.value;
+      const turnoverRange = turnoverRangeSelect.value;
+      const pctTotalMin = toNullableNumber(pctTotalMinInput.value);
+      const pctTotalMax = toNullableNumber(pctTotalMaxInput.value);
+      const todayPctMin = toNullableNumber(todayPctMinInput && todayPctMinInput.value);
+      const todayPctMax = toNullableNumber(todayPctMaxInput && todayPctMaxInput.value);
+      const pricePreset = priceRangeSelect ? priceRangeSelect.value : 'all';
+      const priceMin = toNullableNumber(priceMinInput && priceMinInput.value);
+      const priceMax = toNullableNumber(priceMaxInput && priceMaxInput.value);
+      const turnTotalMin = toNullableNumber(turnTotalMinInput.value);
+      const turnTotalMax = toNullableNumber(turnTotalMaxInput.value);
+      const retailPreset = retailRangeSelect ? retailRangeSelect.value : 'all';
+      const retailMin = toNullableNumber(retailMinInput && retailMinInput.value);
+      const retailMax = toNullableNumber(retailMaxInput && retailMaxInput.value);
+      const minDays = Number(daysRange.value);
+      const sort = sortSelect.value;
+      const excludeSt = excludeStCheckbox.checked;
+      const onlyHighlight = onlyHighlightCheckbox.checked;
+      const { min: pctMin, max: pctMax } = getPctRange(pctRange);
+      const { min: turnoverMin, max: turnoverMax } = getTurnoverRange(turnoverRange);
+      const { min: presetPriceMin, max: presetPriceMax } = getPriceRange(pricePreset);
+
+      let filtered = data.filter(item => {
+        const day = Number(item['连涨天数']) || 0;
+        const pct = normalizeNumber(item['连续涨跌幅']);
+        const turnover = normalizeNumber(item['累计换手率']);
+        const avgPct = getAvgPct(item);
+        const avgTurnover = getAvgTurnover(item);
+        if (exactDay !== null && day !== exactDay) return false;
+        if (day < minDays) return false;
+        if (industry !== 'all' && item['所属行业'] !== industry) return false;
+        if (pctTotalMin !== null && pct < pctTotalMin) return false;
+        if (pctTotalMax !== null && pct > pctTotalMax) return false;
+        const todayPct = getTodayPct(item);
+        if (todayPctMin !== null || todayPctMax !== null) {
+          if (todayPct === null) return false;
+          if (todayPctMin !== null && todayPct < todayPctMin) return false;
+          if (todayPctMax !== null && todayPct > todayPctMax) return false;
+        }
+        const price = getPrice(item);
+        if (pricePreset && pricePreset !== 'all') {
+          if (price === null) return false;
+          if (presetPriceMin !== null && price < presetPriceMin) return false;
+          if (presetPriceMax !== null && price >= presetPriceMax) return false;
+        }
+        if (priceMin !== null || priceMax !== null) {
+          if (price === null) return false;
+          if (priceMin !== null && price < priceMin) return false;
+          if (priceMax !== null && price > priceMax) return false;
+        }
+        if (turnTotalMin !== null && turnover < turnTotalMin) return false;
+        if (turnTotalMax !== null && turnover > turnTotalMax) return false;
+        const retail = getRetailIndex(item);
+        if (retailPreset && retailPreset !== 'all') {
+          const preset = getRetailPresetRange(retailPreset);
+          if (retail === null) return false;
+          if (preset.min !== null && (preset.minExclusive ? retail <= preset.min : retail < preset.min)) return false;
+          if (preset.max !== null && (preset.maxExclusive ? retail >= preset.max : retail > preset.max)) return false;
+        }
+        if (retailMin !== null || retailMax !== null) {
+          if (retail === null) return false;
+          if (retailMin !== null && retail < retailMin) return false;
+          if (retailMax !== null && retail > retailMax) return false;
+        }
+        if (pctRange !== 'all') {
+          if (pctMin !== null && avgPct < pctMin) return false;
+          if (pctMax !== null && avgPct >= pctMax) return false;
+        }
+        if (turnoverRange !== 'all') {
+          if (turnoverMin !== null && avgTurnover < turnoverMin) return false;
+          if (turnoverMax !== null && avgTurnover >= turnoverMax) return false;
+        }
+        if (excludeSt && isStStock(item['股票简称'])) return false;
+        if (onlyHighlight && !shouldHighlight(item)) return false;
+        if (keyword) {
+          const name = String(item['股票简称'] || '').toUpperCase();
+          const code = String(item['股票代码'] || '').toUpperCase();
+          return name.includes(keyword) || code.includes(keyword);
+        }
+        return true;
+      });
+      const sorters = {
+        days: (a, b) => (Number(b['连涨天数']) || 0) - (Number(a['连涨天数']) || 0),
+        pct: (a, b) => normalizeNumber(b['连续涨跌幅']) - normalizeNumber(a['连续涨跌幅']),
+        todayPct: (a, b) => (getTodayPct(b) ?? Number.NEGATIVE_INFINITY) - (getTodayPct(a) ?? Number.NEGATIVE_INFINITY),
+        avgPct: (a, b) => getAvgPct(b) - getAvgPct(a),
+        avgTurnover: (a, b) => getAvgTurnover(b) - getAvgTurnover(a),
+        retail: (a, b) => (getRetailIndex(b) ?? Number.NEGATIVE_INFINITY) - (getRetailIndex(a) ?? Number.NEGATIVE_INFINITY),
+        price: (a, b) => (getPrice(b) ?? Number.NEGATIVE_INFINITY) - (getPrice(a) ?? Number.NEGATIVE_INFINITY),
+        close: (a, b) => normalizeNumber(b['收盘价(元)']) - normalizeNumber(a['收盘价(元)']),
+      };
+      return filtered.sort(sorters[sort]);
+    }
+
+    function groupByDays(list) {
+      return list.reduce((acc, item) => {
+        const day = Number(item['连涨天数']) || 0;
+        (acc[day] = acc[day] || []).push(item);
+        return acc;
+      }, {});
+    }
+    function buildDetailUrl(code) {
+      if (!code) return '#';
+      const trimmed = code.trim();
+      return `https://quote.eastmoney.com/${trimmed.startsWith('6') ? 'sh' : 'sz'}${trimmed}.html`;
+    }
+
+    function cardHtml(item) {
+      const pctValue = normalizeNumber(item['连续涨跌幅']);
+      const todayPct = getTodayPct(item);
+      const retail = getRetailIndex(item);
+      const hl = shouldHighlight(item);
+      const retailClass = retail === null ? 'flat' : retail > 0 ? 'in' : 'out';
+      const retailIcon = retail === null ? '' : retail > 0 ? '▲ 净流入' : '▼ 净流出';
+      const active = selectedCode === item['股票代码'] ? ' active' : '';
+      return `
+        <button type="button" class="stock-card${hl ? ' highlight' : ''}${active}" data-code="${item['股票代码']}">
+          <div class="card-top">
+            <div>
+              <div class="code-wrap">
+                <span class="code">${item['股票代码'] || ''}</span>
+              </div>
+              <div class="name">${item['股票简称']}</div>
+            </div>
+            ${hl ? '<span class="badge">⭐️ 精选</span>' : ''}
+          </div>
+          <div class="card-main-stat">
+            <span class="pct-label">连涨累计</span>
+            <span class="pct-value ${pctClass(pctValue)}">${item['连续涨跌幅'] || '--'}</span>
+          </div>
+          <div class="quote-row">
+            <div>现价 <span class="quote-price">${item['现价'] || '--'}</span></div>
+            <div class="quote-today ${pctClass(todayPct ?? 0)}">今 ${item['今日涨跌幅'] || '--'}</div>
+          </div>
+          <div class="tags">
+            <span class="tag">${item['所属行业'] || '未知'}</span>
+            <span class="tag ${retailClass}">散户 ${item['散户指数'] || '--'} ${retailIcon}</span>
+          </div>
+        </button>`;
+    }
+
+    function renderDayPills(list) {
+      const days = [...new Set(data.map(i => Number(i['连涨天数']) || 0))].sort((a,b) => b - a);
+      const counts = {};
+      list.forEach(i => { const d = Number(i['连涨天数']) || 0; counts[d] = (counts[d] || 0) + 1; });
+      document.getElementById('dayPills').innerHTML = ['<button type="button" class="day-chip' + (exactDay===null?' on':'') + '" data-day="">全部天数 <span class="badge-count">' + list.length + '</span></button>']
+        .concat(days.map(d => {
+          const isTopTier = d >= 4;
+          return `<button type="button" class="day-chip${isTopTier ? ' top-tier' : ''}${exactDay===d?' on':''}" data-day="${d}">${d} 天 <span class="badge-count">${counts[d] || 0}</span></button>`;
+        }))
+        .join('');
+    }
+
+    function renderIndustryPills() {
+      const counts = {};
+      data.forEach(item => {
+        const name = item['所属行业'] || '未知';
+        counts[name] = (counts[name] || 0) + 1;
+      });
+      const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 12).map(entry => entry[0]);
+      const current = industrySelect.value;
+      document.getElementById('industryPills').innerHTML =
+        `<button type="button" class="ind-chip${current === 'all' ? ' on' : ''}" data-ind="all">全部行业</button>` +
+        top.map(name => `<button type="button" class="ind-chip${current === name ? ' on' : ''}" data-ind="${name}">${name} <span class="badge-count">${counts[name]}</span></button>`).join('');
+    }
+
+    function render(list) {
+      if (!list.length) {
+        container.innerHTML = `
+          <div class="empty">
+            <div class="empty-icon">🔍</div>
+            <p>暂无符合当前筛选条件的连涨标的</p>
+            <button type="button" onclick="resetAllFilters()">重置所有筛选条件</button>
+          </div>`;
+        return;
+      }
+      if (viewMode === 'list') {
+        const rows = list.map(item => {
+          const todayPct = getTodayPct(item);
+          const pctValue = normalizeNumber(item['连续涨跌幅']);
+          const active = selectedCode === item['股票代码'] ? ' class="active"' : '';
+          const hl = shouldHighlight(item);
+          const retail = getRetailIndex(item);
+          const retailColor = retail === null ? 'flat' : retail > 0 ? 'up' : 'down';
+          return `<tr${active} data-code="${item['股票代码']}">
+            <td>
+              <div class="table-stock-name">
+                <span>${item['股票简称']}</span>
+                ${hl ? '<span class="badge" style="font-size:10px; padding:1px 6px;">⭐️ 精选</span>' : ''}
+              </div>
+              <span class="code">${item['股票代码']}</span>
+            </td>
+            <td class="num"><span style="font-weight:700; color:var(--gold);">${item['连涨天数']}</span> 天</td>
+            <td class="num ${pctClass(pctValue)}" style="font-weight:700; font-size:14px;">${item['连续涨跌幅'] || '--'}</td>
+            <td class="num" style="font-weight:600; color:var(--text);">${item['现价'] || '--'}</td>
+            <td class="num ${pctClass(todayPct ?? 0)}" style="font-weight:600;">${item['今日涨跌幅'] || '--'}</td>
+            <td class="num ${retailColor}">${item['散户指数'] || '--'}</td>
+            <td class="num">${item['今日换手率'] || '--'}</td>
+            <td><span class="tag" style="margin:0;">${item['所属行业'] || ''}</span></td>
+          </tr>`;
+        }).join('');
+        container.innerHTML = `
+          <div class="table-wrap">
+            <table class="list">
+              <thead>
+                <tr>
+                  <th>股票标的</th>
+                  <th class="num">连涨天数</th>
+                  <th class="num">连涨累计</th>
+                  <th class="num">现价</th>
+                  <th class="num">今日涨跌</th>
+                  <th class="num">散户指数</th>
+                  <th class="num">今日换手</th>
+                  <th>所属行业</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>`;
+        return;
+      }
+      const grouped = groupByDays(list);
+      const sortedDays = Object.keys(grouped).map(Number).sort((a,b) => b - a);
+      container.innerHTML = sortedDays.map(day => `
+        <section class="group">
+          <div class="group-h">
+            <span class="group-badge">${day}</span>
+            <div class="t">连涨天梯 <b>${day}</b> 连涨阶梯 · 包含 <b>${grouped[day].length}</b> 只标的</div>
+          </div>
+          <div class="cards">${grouped[day].map(cardHtml).join('')}</div>
+        </section>`).join('');
+    }
+
+    function openDrawer(code) {
+      const item = data.find(i => i['股票代码'] === code);
+      if (!item) return;
+      selectedCode = code;
+      const avgPct = getAvgPct(item);
+      const avgTurnover = getAvgTurnover(item);
+      const todayPct = getTodayPct(item);
+      const hl = shouldHighlight(item);
+      const retail = getRetailIndex(item);
+      const retailTrend = retail === null ? '' : retail > 0 ? '(主力流出/散户追高)' : '(主力吸筹/散户离场)';
+
+      drawer.innerHTML = `
+        <div class="drawer-header">
+          <div>
+            <div class="code-wrap">
+              <span class="code" style="font-size:13px;">${item['股票代码']}</span>
+            </div>
+            <h2>${item['股票简称']}</h2>
+            <div style="display:flex; gap:6px; align-items:center; margin-top:4px;">
+              <span class="tag">${item['所属行业'] || '行业未知'}</span>
+              <span class="tag" style="color:var(--gold); border-color:var(--gold-border); background:var(--gold-bg);">${item['连涨天数']} 连涨天</span>
+              ${hl ? '<span class="badge">⭐️ 精选标的</span>' : ''}
+            </div>
+          </div>
+          <button type="button" class="drawer-close" id="drawerCloseBtn" title="关闭 (Esc)">✕</button>
+        </div>
+
+        <div>
+          <div class="drawer-section-title">📊 当日盘口表现</div>
+          <div class="kv-card">
+            <div class="kv-item"><span>现价</span><b>${item['现价'] || '--'} 元</b></div>
+            <div class="kv-item"><span>今日涨跌幅</span><b class="${pctClass(todayPct ?? 0)}">${item['今日涨跌幅'] || '--'}</b></div>
+            <div class="kv-item"><span>今日换手率</span><b>${item['今日换手率'] || '--'}</b></div>
+            <div class="kv-item"><span>成交额</span><b>${item['成交额'] || '--'}</b></div>
+            <div class="kv-item" style="grid-column: 1 / -1;">
+              <span>今开 / 最高 / 最低</span>
+              <b>${item['今开'] || '--'} / ${item['今高'] || '--'} / ${item['今低'] || '--'}</b>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="drawer-section-title">🪜 连涨天梯数据</div>
+          <div class="kv-card">
+            <div class="kv-item"><span>连涨天数</span><b style="color:var(--gold);">${item['连涨天数']} 天</b></div>
+            <div class="kv-item"><span>连涨累计</span><b class="${pctClass(normalizeNumber(item['连续涨跌幅']))}">${item['连续涨跌幅'] || '--'}</b></div>
+            <div class="kv-item"><span>平均涨幅/天</span><b>${avgPct.toFixed(2)}%</b></div>
+            <div class="kv-item"><span>平均换手/天</span><b>${avgTurnover.toFixed(2)}%</b></div>
+            <div class="kv-item" style="grid-column: 1 / -1;"><span>榜单收盘价</span><b>${item['收盘价(元)'] || '--'} 元</b></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="drawer-section-title">💡 资金情绪与估值</div>
+          <div class="kv-card">
+            <div class="kv-item">
+              <span>散户指数 (小单占比)</span>
+              <b class="${pctClass(retail ?? 0)}">${item['散户指数'] || '--'}</b>
+            </div>
+            <div class="kv-item">
+              <span>散户净额</span>
+              <b>${item['散户净额'] || '--'}</b>
+            </div>
+            <div class="kv-item"><span>市盈率 (PE)</span><b>${item['市盈率'] || '--'}</b></div>
+            <div class="kv-item"><span>行情更新时刻</span><b>${item['行情时间'] || '--'}</b></div>
+            ${retailTrend ? `<div class="kv-item" style="grid-column:1 / -1;"><span style="color:var(--text-sub);">${retailTrend}</span></div>` : ''}
+          </div>
+        </div>
+
+        <div class="acts">
+          <a class="primary" href="${buildDetailUrl(item['股票代码'])}" target="_blank" rel="noopener">
+            打开东财行情
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          </a>
+          <button type="button" id="copyCodeBtn">复制代码</button>
+        </div>
+        <div class="hint">按 Esc 键或点击外部遮罩退出详情</div>`;
+
+      drawer.classList.add('open');
+      mask.classList.add('open');
+      drawer.setAttribute('aria-hidden', 'false');
+
+      const closeBtn = document.getElementById('drawerCloseBtn');
+      if (closeBtn) closeBtn.onclick = closeDrawer;
+
+      const copyBtn = document.getElementById('copyCodeBtn');
+      if (copyBtn) copyBtn.onclick = async () => {
+        try {
+          await navigator.clipboard.writeText(item['股票代码']);
+          copyBtn.textContent = '✓ 已复制';
+          setTimeout(() => { if (copyBtn) copyBtn.textContent = '复制代码'; }, 1800);
+        } catch {
+          copyBtn.textContent = item['股票代码'];
+        }
+      };
+
+      document.querySelectorAll('[data-code]').forEach(el => el.classList.toggle('active', el.getAttribute('data-code') === code));
+    }
+
+    function closeDrawer() {
+      selectedCode = null;
+      drawer.classList.remove('open');
+      mask.classList.remove('open');
+      drawer.setAttribute('aria-hidden', 'true');
+      document.querySelectorAll('[data-code]').forEach(el => el.classList.remove('active'));
+    }
+
+    function handleChange() {
+      const filtered = filterData();
+      if (resultCount) {
+        resultCount.innerHTML = `符合条件 <b>${filtered.length}</b> / ${data.length} 只`;
+      }
+      renderDayPills(filtered);
+      renderIndustryPills();
+      render(filtered);
+    }
+
+    document.getElementById('dayPills').addEventListener('click', (e) => {
+      const btn = e.target.closest('.day-chip');
+      if (!btn) return;
+      exactDay = btn.dataset.day === '' ? null : Number(btn.dataset.day);
+      syncChips();
+      handleChange();
+    });
+    document.getElementById('industryPills').addEventListener('click', (e) => {
+      const btn = e.target.closest('.ind-chip');
+      if (!btn) return;
+      industrySelect.value = btn.dataset.ind;
+      syncChips();
+      handleChange();
+    });
+    container.addEventListener('click', (e) => {
+      const el = e.target.closest('[data-code]');
+      if (!el) return;
+      openDrawer(el.getAttribute('data-code'));
+    });
+    mask.addEventListener('click', closeDrawer);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeDrawer();
+      if (e.key === '/' && !['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+        e.preventDefault();
+        keywordInput.focus();
+        keywordInput.select();
+      }
+      if (e.key === '1' && !['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+        const btn = document.querySelector('#viewSeg button[data-view="cards"]');
+        if (btn) btn.click();
+      }
+      if (e.key === '2' && !['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+        const btn = document.querySelector('#viewSeg button[data-view="list"]');
+        if (btn) btn.click();
+      }
+    });
+
+    initFilters();
+    syncChips();
+    handleChange();
+  </script>
+</body>
+</html>
