@@ -1,12 +1,17 @@
-"""在线榜单服务：登录、页面展示与最新数据刷新。"""
+"""在线榜单服务：登录、页面展示与手动刷新实时数据。"""
 
 from __future__ import annotations
 
+import gzip
+import json
 import os
+import sys
 import threading
+import traceback
 from datetime import datetime
 from functools import wraps
-from typing import Any, Callable, Dict, List
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Tuple
 
 from flask import Flask, jsonify, redirect, render_template_string, request, session, url_for
 
@@ -14,28 +19,187 @@ from gp.crawl import crawl_all_pages
 from gp.enrich import enrich_output_rows
 from gp.export import generate_html_content
 
+_UNSET = object()
+DEFAULT_CACHE_PATH = "output/web_snapshot.json"
+
+
+def _resolve_cache_path(cache_path: Any) -> Path | None:
+    """解析快照路径：未传则读环境变量，显式 None 表示不落盘。"""
+
+    if cache_path is None:
+        return None
+    if cache_path is _UNSET:
+        raw = os.getenv("GP_CACHE_PATH", DEFAULT_CACHE_PATH).strip()
+        return Path(raw) if raw else None
+    return Path(cache_path)
+
 
 class RankingStore:
-    """保存最近一次成功抓取结果，避免每次打开页面都请求外部站点。"""
+    """缓存最近一次手动刷新的榜单；打开页面只读快照，不请求外部站点。"""
 
-    def __init__(self, max_pages: int | None = None) -> None:
+    def __init__(
+        self,
+        max_pages: int | None = None,
+        cache_path: Any = _UNSET,
+    ) -> None:
         self.max_pages = max_pages
+        self.cache_path = _resolve_cache_path(cache_path)
         self._rows: List[Dict[str, str]] = []
         self.updated_at: str | None = None
         self._lock = threading.Lock()
+        self._refreshing = threading.Lock()
+        self._job_id = 0
+        self._state = "idle"
+        self._error: str | None = None
+        self._progress = ""
+        self._load_cache()
+        if self._rows:
+            self._state = "ok"
 
-    def load(self, *, force: bool = False) -> List[Dict[str, str]]:
-        if self._rows and not force:
-            return self._rows
+    def snapshot(self) -> Tuple[List[Dict[str, str]], str | None]:
+        """返回内存中的榜单副本，绝不触发抓取。"""
+
         with self._lock:
-            if self._rows and not force:
-                return self._rows
-            rows = crawl_all_pages(self.max_pages)
+            return [dict(row) for row in self._rows], self.updated_at
+
+    def job_status(self) -> Dict[str, Any]:
+        """当前刷新任务状态，供前端轮询。"""
+
+        with self._lock:
+            return self._status_unlocked()
+
+    def start_refresh(self) -> Dict[str, Any]:
+        """启动后台刷新并立即返回，避免卡住唯一的 HTTP worker。"""
+
+        with self._lock:
+            if self._state == "running":
+                return self._status_unlocked()
+            self._job_id += 1
+            job_id = self._job_id
+            self._state = "running"
+            self._error = None
+            self._progress = "正在抓取同花顺连涨榜…"
+            started = self._status_unlocked()
+        thread = threading.Thread(
+            target=self._run_refresh,
+            args=(job_id,),
+            name=f"gp-refresh-{job_id}",
+            daemon=True,
+        )
+        thread.start()
+        return started
+
+    def refresh(self) -> List[Dict[str, str]]:
+        """抓取同花顺榜单并叠加东方财富实时行情，成功后才替换快照。"""
+
+        with self._refreshing:
+            self._set_progress("正在抓取同花顺连涨榜…")
+            rows = crawl_all_pages(self.max_pages, on_progress=self._set_progress)
             if not rows:
                 raise RuntimeError("未获取到榜单数据")
-            self._rows = enrich_output_rows(rows)
-            self.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            return self._rows
+            self._set_progress("正在拉取东方财富行情…")
+            enriched = enrich_output_rows(rows, on_progress=self._set_progress)
+            self._set_progress("正在保存快照…")
+            updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            with self._lock:
+                self._rows = [dict(row) for row in enriched]
+                self.updated_at = updated_at
+                saved = [dict(row) for row in self._rows]
+            try:
+                self._save_cache(saved, updated_at)
+            except OSError:
+                pass
+            return saved
+
+    def _status_unlocked(self) -> Dict[str, Any]:
+        return {
+            "status": self._state,
+            "job_id": self._job_id,
+            "updated_at": self.updated_at,
+            "count": len(self._rows),
+            "error": self._error,
+            "progress": self._progress,
+        }
+
+    def _set_progress(self, message: str) -> None:
+        with self._lock:
+            self._progress = message
+
+    def _run_refresh(self, job_id: int) -> None:
+        try:
+            self.refresh()
+            with self._lock:
+                if self._job_id == job_id:
+                    self._state = "ok"
+                    self._error = None
+                    self._progress = f"已更新 {len(self._rows)} 只"
+        except Exception as exc:
+            print(f"后台刷新失败: {exc}", file=sys.stderr)
+            if not isinstance(exc, RuntimeError):
+                traceback.print_exc()
+            with self._lock:
+                if self._job_id == job_id:
+                    self._state = "error"
+                    self._error = str(exc)
+                    self._progress = ""
+
+    def _load_cache(self) -> None:
+        if self.cache_path is None or not self.cache_path.is_file():
+            return
+        try:
+            payload = json.loads(self.cache_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError, TypeError):
+            return
+        if not isinstance(payload, dict):
+            return
+        rows = payload.get("rows")
+        if not isinstance(rows, list):
+            return
+        cleaned = [dict(row) for row in rows if isinstance(row, dict)]
+        updated = payload.get("updated_at")
+        self._rows = cleaned
+        self.updated_at = (
+            updated.strip() if isinstance(updated, str) and updated.strip() else None
+        )
+
+    def _save_cache(self, rows: List[Dict[str, str]], updated_at: str | None) -> None:
+        if self.cache_path is None:
+            return
+        payload = {"updated_at": updated_at, "rows": rows}
+        self.cache_path.parent.mkdir(parents=True, exist_ok=True)
+        tmp_path = self.cache_path.with_name(self.cache_path.name + ".tmp")
+        tmp_path.write_text(
+            json.dumps(payload, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        tmp_path.replace(self.cache_path)
+
+
+def build_snapshot_payload(
+    rows: List[Dict[str, str]], updated_at: str | None
+) -> Dict[str, Any]:
+    """把缓存榜单整理成前端可直接套用的快照。"""
+
+    max_days = 0
+    industries: set[str] = set()
+    quote_times: List[str] = []
+    for row in rows:
+        industries.add(row.get("所属行业") or "未知")
+        try:
+            max_days = max(max_days, int(row.get("连涨天数") or 0))
+        except (TypeError, ValueError):
+            pass
+        quote_time = (row.get("行情时间") or "").strip()
+        if quote_time:
+            quote_times.append(quote_time)
+    return {
+        "rows": [dict(row) for row in rows],
+        "updated_at": updated_at,
+        "count": len(rows),
+        "max_days": max_days,
+        "quote_at": max(quote_times) if quote_times else None,
+        "industries": sorted(industries),
+    }
 
 
 def _parse_max_pages() -> int | None:
@@ -97,24 +261,69 @@ def logout() -> Any:
     return redirect(url_for("login"))
 
 
+@app.get("/healthz")
+def healthz() -> Any:
+    """给 Docker 健康检查用的轻量接口，不读榜单、不登录。"""
+
+    return "ok", 200
+
+
 @app.get("/")
 @login_required
 def index() -> Any:
-    try:
-        rows = store.load()
-    except Exception as exc:
-        return f"暂时无法获取榜单数据：{exc}", 502
-    return generate_html_content(rows)
+    rows, updated_at = store.snapshot()
+    return generate_html_content(rows, updated_at=updated_at)
 
 
 @app.post("/api/refresh")
 @login_required
 def refresh() -> Any:
-    try:
-        rows = store.load(force=True)
-    except Exception as exc:
-        return jsonify({"error": f"刷新失败：{exc}"}), 502
-    return jsonify({"count": len(rows), "updated_at": store.updated_at})
+    return jsonify(store.start_refresh()), 202
+
+
+@app.get("/api/refresh/status")
+@login_required
+def refresh_status() -> Any:
+    return jsonify(store.job_status())
+
+
+@app.get("/api/snapshot")
+@login_required
+def api_snapshot() -> Any:
+    rows, updated_at = store.snapshot()
+    return jsonify(build_snapshot_payload(rows, updated_at))
+
+
+@app.after_request
+def gzip_response(response: Any) -> Any:
+    """压缩 HTML/JSON，避免刷新后整页下发显得像卡住。"""
+
+    if getattr(response, "direct_passthrough", False):
+        return response
+    accept = request.headers.get("Accept-Encoding", "")
+    if "gzip" not in accept.lower():
+        return response
+    if response.status_code < 200 or response.status_code >= 300:
+        return response
+    if response.mimetype not in {"application/json", "text/html"}:
+        return response
+    if response.headers.get("Content-Encoding"):
+        return response
+    data = response.get_data()
+    if not data or len(data) < 512:
+        return response
+    compressed = gzip.compress(data, compresslevel=5)
+    if len(compressed) >= len(data):
+        return response
+    response.set_data(compressed)
+    response.headers["Content-Encoding"] = "gzip"
+    response.headers["Content-Length"] = str(len(compressed))
+    vary = response.headers.get("Vary", "")
+    if "Accept-Encoding" not in vary:
+        response.headers["Vary"] = (
+            f"{vary}, Accept-Encoding" if vary else "Accept-Encoding"
+        )
+    return response
 
 
 if __name__ == "__main__":  # pragma: no cover

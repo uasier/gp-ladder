@@ -181,30 +181,110 @@
       display: flex;
       align-items: center;
       gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
     }
-    .live-status {
+    .refresh-panel {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 4px 4px 14px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface);
+      box-shadow: var(--shadow-sm);
+    }
+    .refresh-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      min-width: 0;
+    }
+    .refresh-label {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.02em;
+    }
+    .refresh-panel time {
+      font-size: 13px;
+      font-weight: 650;
+      font-variant-numeric: tabular-nums;
+      color: var(--text);
+      white-space: nowrap;
+    }
+    .refresh-btn {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      font-size: 11px;
-      font-weight: 500;
-      color: var(--down);
-      padding: 4px 10px;
+      height: 32px;
+      padding: 0 12px;
       border-radius: 999px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+      transition: filter var(--transition-fast), opacity var(--transition-fast);
+    }
+    .refresh-btn:hover {
+      filter: brightness(1.08);
+    }
+    .refresh-btn:disabled {
+      opacity: 0.65;
+      cursor: wait;
+      filter: none;
+    }
+    .refresh-btn svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+    }
+    .refresh-btn.is-loading svg {
+      animation: refresh-spin 0.8s linear infinite;
+    }
+    @keyframes refresh-spin {
+      to { transform: rotate(360deg); }
+    }
+    .refresh-panel time.just-updated {
+      color: var(--down);
+    }
+    .refresh-banner {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      margin: 14px 0 0;
+      padding: 9px 12px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--accent);
+      background: var(--accent-bg);
+      color: var(--text);
+      font-size: 13px;
+    }
+    .refresh-banner.is-visible {
+      display: flex;
+    }
+    .refresh-banner.is-error {
+      border-color: var(--up-border);
+      background: var(--up-bg);
+      color: var(--up);
+    }
+    .refresh-banner.is-success {
+      border-color: var(--down-border);
       background: var(--down-bg);
-      border: 1px solid var(--down-border);
+      color: var(--down);
     }
-    .pulse-dot {
-      width: 6px;
-      height: 6px;
+    .refresh-banner-spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--border-strong);
+      border-top-color: var(--accent);
       border-radius: 50%;
-      background: var(--down);
-      box-shadow: 0 0 8px var(--down);
-      animation: pulse 2s infinite;
+      animation: refresh-spin 0.8s linear infinite;
+      flex-shrink: 0;
     }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.35; transform: scale(0.8); }
+    .refresh-banner.is-error .refresh-banner-spinner,
+    .refresh-banner.is-success .refresh-banner-spinner {
+      display: none;
     }
     /* 主题切换开关 */
     .theme-toggle-btn {
@@ -1113,6 +1193,9 @@
       .toolbar.bar { flex-direction: column; align-items: stretch; }
       .search-box { width: 100%; }
       .count { margin-left: 0; justify-content: center; }
+      .top-nav { flex-direction: column; align-items: flex-start; gap: 12px; }
+      .nav-actions { width: 100%; justify-content: space-between; }
+      .refresh-panel { flex: 1; }
     }
   </style>
 </head>
@@ -1130,19 +1213,26 @@
         </div>
       </div>
       <div class="nav-actions">
-        <div class="live-status">
-          <span class="pulse-dot"></span>
-          <span>盘口实时</span>
+        <div class="refresh-panel">
+          <div class="refresh-meta">
+            <span class="refresh-label">数据刷新时间</span>
+            <time id="refreshedAt">__UPDATED_AT__</time>
+          </div>
+          <button type="button" class="refresh-btn" id="refreshBtn" title="重新抓取同花顺榜单和东方财富实时行情">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 5v4h4"></path><path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4"></path></svg>
+            <span class="refresh-btn-label">刷新实时数据</span>
+          </button>
         </div>
-        <button type="button" class="theme-toggle-btn" id="refreshBtn" title="重新拉取最新数据">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 5v4h4"></path><path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4"></path></svg>
-        </button>
         <button type="button" class="theme-toggle-btn" id="themeToggleBtn" title="切换深色/浅色主题">
           <!-- 太阳图标 (浅色模式显示) -->
           <svg class="sun-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
         </button>
       </div>
     </header>
+    <div class="refresh-banner" id="refreshBanner" role="status" aria-live="polite">
+      <span class="refresh-banner-spinner" aria-hidden="true"></span>
+      <span id="refreshBannerText">正在刷新实时数据</span>
+    </div>
 
     <!-- 4 大核心指标看板 -->
     <section class="kpi-grid">
@@ -1151,7 +1241,7 @@
           <span>连涨标的总数</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
         </div>
-        <div class="kpi-val">__TOTAL__ <small>只</small></div>
+        <div class="kpi-val" id="kpiTotal">__TOTAL__ <small>只</small></div>
         <div class="kpi-sub">同花顺连涨榜全样本</div>
       </div>
       <div class="kpi-card">
@@ -1159,7 +1249,7 @@
           <span>最高连涨天梯</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
         </div>
-        <div class="kpi-val gold">__MAX_DAYS__ <small>天</small></div>
+        <div class="kpi-val gold" id="kpiMaxDays">__MAX_DAYS__ <small>天</small></div>
         <div class="kpi-sub">当前领涨龙头高度</div>
       </div>
       <div class="kpi-card">
@@ -1167,7 +1257,7 @@
           <span>最新行情时间</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
         </div>
-        <div class="kpi-val" style="font-size:15px; font-weight:600;">__QUOTE_AT__</div>
+        <div class="kpi-val" id="kpiQuoteAt" style="font-size:15px; font-weight:600;">__QUOTE_AT__</div>
         <div class="kpi-sub">东方财富盘口数据</div>
       </div>
       <div class="kpi-card">
@@ -1175,8 +1265,8 @@
           <span>榜单抓取时间</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
         </div>
-        <div class="kpi-val" style="font-size:15px; font-weight:600;">__GENERATED_AT__</div>
-        <div class="kpi-sub">报告自动生成归档</div>
+        <div class="kpi-val" id="kpiGeneratedAt" style="font-size:15px; font-weight:600;">__GENERATED_AT__</div>
+        <div class="kpi-sub">仅手动刷新时更新</div>
       </div>
     </section>
 
@@ -1415,29 +1505,96 @@
       const active = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
       setTheme(active);
     });
-    const refreshBtn = document.getElementById('refreshBtn');
-    if (refreshBtn) refreshBtn.addEventListener('click', async () => {
-      refreshBtn.disabled = true;
-      refreshBtn.style.opacity = '0.55';
-      refreshBtn.title = '正在拉取最新数据...';
-      try {
-        const response = await fetch('/api/refresh', { method: 'POST', headers: { 'Accept': 'application/json' } });
-        const payload = await response.json();
-        if (!response.ok) throw new Error(payload.error || '刷新失败');
-        window.location.reload();
-      } catch (error) {
-        refreshBtn.disabled = false;
-        refreshBtn.style.opacity = '';
-        refreshBtn.title = '重新拉取最新数据';
-        window.alert(error.message || '刷新失败，请稍后重试');
+    let refreshing = false;
+    let refreshBannerTimer = 0;
+    async function readJson(response) {
+      const payload = await response.json().catch(() => ({}));
+      if (response.status === 401) {
+        window.location.href = '/login';
+        throw new Error('需要登录');
       }
-    });
+      return payload;
+    }
+    function setRefreshUi({ busy, text, tone }) {
+      const refreshBtn = document.getElementById('refreshBtn');
+      const emptyBtn = document.getElementById('emptyRefreshBtn');
+      const label = refreshBtn ? refreshBtn.querySelector('.refresh-btn-label') : null;
+      const banner = document.getElementById('refreshBanner');
+      const bannerText = document.getElementById('refreshBannerText');
+      if (refreshBtn) {
+        refreshBtn.disabled = !!busy;
+        refreshBtn.classList.toggle('is-loading', !!busy);
+      }
+      if (label) label.textContent = busy ? '正在刷新…' : '刷新实时数据';
+      if (emptyBtn) {
+        emptyBtn.disabled = !!busy;
+        emptyBtn.textContent = busy ? '正在刷新…' : '刷新实时数据';
+      }
+      if (!banner || !bannerText) return;
+      window.clearTimeout(refreshBannerTimer);
+      banner.classList.toggle('is-error', tone === 'error');
+      banner.classList.toggle('is-success', tone === 'success');
+      if (text) {
+        bannerText.textContent = text;
+        banner.classList.add('is-visible');
+      } else {
+        banner.classList.remove('is-visible');
+      }
+      if (tone === 'success') {
+        refreshBannerTimer = window.setTimeout(() => {
+          banner.classList.remove('is-visible', 'is-success');
+        }, 1800);
+      }
+    }
+    async function startRefresh() {
+      if (refreshing) return;
+      refreshing = true;
+      setRefreshUi({ busy: true, text: '正在抓取同花顺连涨榜…', tone: 'busy' });
+      try {
+        const started = await fetch('/api/refresh', { method: 'POST', headers: { 'Accept': 'application/json' } });
+        const startPayload = await readJson(started);
+        if (!started.ok) throw new Error(startPayload.error || '刷新失败');
+        const jobId = startPayload.job_id;
+        const deadline = Date.now() + 120000;
+        while (Date.now() < deadline) {
+          const statusRes = await fetch('/api/refresh/status', { headers: { 'Accept': 'application/json' } });
+          const status = await readJson(statusRes);
+          if (status.progress) {
+            setRefreshUi({ busy: true, text: status.progress, tone: 'busy' });
+          }
+          if (status.job_id === jobId && status.status === 'ok') {
+            setRefreshUi({ busy: true, text: '正在套用最新榜单…', tone: 'busy' });
+            const snapRes = await fetch('/api/snapshot', { headers: { 'Accept': 'application/json' } });
+            const snapshot = await readJson(snapRes);
+            if (!snapRes.ok) throw new Error(snapshot.error || '读取最新数据失败');
+            applySnapshot(snapshot);
+            refreshing = false;
+            setRefreshUi({
+              busy: false,
+              text: snapshot.updated_at ? `已更新 ${snapshot.count || 0} 只 · ${snapshot.updated_at}` : '已更新',
+              tone: 'success',
+            });
+            return;
+          }
+          if (status.job_id === jobId && status.status === 'error') {
+            throw new Error(status.error || '刷新失败');
+          }
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        }
+        throw new Error('刷新超时，请稍后重试');
+      } catch (error) {
+        refreshing = false;
+        setRefreshUi({ busy: false, text: error.message || '刷新失败，请稍后重试', tone: 'error' });
+      }
+    }
+    const refreshBtn = document.getElementById('refreshBtn');
+    if (refreshBtn) refreshBtn.addEventListener('click', startRefresh);
 
     // ==========================================
     // 基础数据与元素引用
     // ==========================================
-    const data = JSON.parse(document.getElementById('stock-data').textContent);
-    const industries = JSON.parse(document.getElementById('industry-data').textContent);
+    let data = JSON.parse(document.getElementById('stock-data').textContent);
+    let industries = JSON.parse(document.getElementById('industry-data').textContent);
     const keywordInput = document.getElementById('keywordInput');
     const industrySelect = document.getElementById('industrySelect');
     const pctRangeSelect = document.getElementById('pctRange');
@@ -1956,6 +2113,17 @@
     }
 
     function render(list) {
+      if (!data.length) {
+        container.innerHTML = `
+          <div class="empty">
+            <div class="empty-icon">📡</div>
+            <p>尚未刷新实时数据，当前没有缓存榜单</p>
+            <button type="button" id="emptyRefreshBtn">刷新实时数据</button>
+          </div>`;
+        const emptyBtn = document.getElementById('emptyRefreshBtn');
+        if (emptyBtn) emptyBtn.addEventListener('click', startRefresh);
+        return;
+      }
       if (!list.length) {
         container.innerHTML = `
           <div class="empty">
@@ -2137,6 +2305,44 @@
       renderDayPills(filtered);
       renderIndustryPills();
       render(filtered);
+    }
+
+    function applySnapshot(payload) {
+      data = Array.isArray(payload.rows) ? payload.rows : [];
+      industries = Array.isArray(payload.industries) ? payload.industries : [];
+      const timeText = payload.updated_at || '尚未刷新';
+      const refreshedAt = document.getElementById('refreshedAt');
+      if (refreshedAt) {
+        refreshedAt.textContent = timeText;
+        refreshedAt.classList.remove('just-updated');
+        void refreshedAt.offsetWidth;
+        refreshedAt.classList.add('just-updated');
+      }
+      const kpiTotal = document.getElementById('kpiTotal');
+      if (kpiTotal) kpiTotal.innerHTML = `${payload.count || 0} <small>只</small>`;
+      const kpiMaxDays = document.getElementById('kpiMaxDays');
+      if (kpiMaxDays) kpiMaxDays.innerHTML = `${payload.max_days || 0} <small>天</small>`;
+      const kpiQuoteAt = document.getElementById('kpiQuoteAt');
+      if (kpiQuoteAt) kpiQuoteAt.textContent = payload.quote_at || '--';
+      const kpiGeneratedAt = document.getElementById('kpiGeneratedAt');
+      if (kpiGeneratedAt) kpiGeneratedAt.textContent = timeText;
+      if (daysRange) {
+        daysRange.max = String(payload.max_days || 0);
+        if (Number(daysRange.value) > Number(daysRange.max)) {
+          daysRange.value = '0';
+          if (daysValue) daysValue.textContent = '0';
+        }
+      }
+      if (industrySelect) {
+        const current = industrySelect.value || 'all';
+        industrySelect.innerHTML = ['<option value="all">全部行业</option>', ...industries.map(item => `<option value="${item}">${item}</option>`)].join('');
+        industrySelect.value = current === 'all' || industries.includes(current) ? current : 'all';
+      }
+      handleChange();
+      if (selectedCode) {
+        if (data.some(item => item['股票代码'] === selectedCode)) openDrawer(selectedCode);
+        else closeDrawer();
+      }
     }
 
     document.getElementById('dayPills').addEventListener('click', (e) => {

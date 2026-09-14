@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# uv
+.venv/
+.env
+
+# 系统文件
+.DS_Store
+
+# 抓取产物
+output/
+lxsz_rankings_*.csv
+lxsz_rankings_*.json
+lxsz_rankings_*.html
+*_selected.txt

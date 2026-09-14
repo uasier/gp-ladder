@@ -8,8 +8,11 @@ services:
       GP_PASSWORD: ${GP_PASSWORD:-uasier}
       GP_SECRET_KEY: ${GP_SECRET_KEY:-change-this-session-key}
       TZ: ${TZ:-Asia/Shanghai}
+      GP_CACHE_PATH: ${GP_CACHE_PATH:-output/web_snapshot.json}
       # 可选：限制启动和刷新时抓取的页数，例如 3
       # GP_MAX_PAGES: 3
+    volumes:
+      - ./output:/app/output
     restart: unless-stopped
     healthcheck:
       test:
@@ -17,9 +20,9 @@ services:
           "CMD",
           "python",
           "-c",
-          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/login', timeout=5)",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3)",
         ]
-      interval: 30s
-      timeout: 8s
+      interval: 15s
+      timeout: 5s
       retries: 3
-      start_period: 15s
+      start_period: 10s

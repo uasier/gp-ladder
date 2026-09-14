@@ -217,7 +217,7 @@ uv run python -m unittest discover -s tests -v
 
 ## 在线服务与 Docker 部署
 
-启动 Web 服务后可直接用浏览器访问 `http://localhost:8000`。首次访问会要求输入密码，默认密码为 `uasier`。登录后的页面顶部有刷新按钮，会重新抓取同花顺榜单和东方财富行情并展示最新结果。
+启动 Web 服务后可直接用浏览器访问 `http://localhost:8000`。首次访问会要求输入密码，默认密码为 `uasier`。登录后首页只展示最近一次缓存的榜单，并在顶部显示数据刷新时间；只有点击「刷新实时数据」才会在后台重新抓取同花顺榜单和东方财富行情。刷新过程中页面可继续筛选浏览，完成后就地更新榜单，不会整页重载。打开页面、筛选、刷新浏览器都不会请求实时数据。
 
 本地启动：
 
@@ -238,6 +238,7 @@ docker compose up -d --build
 - `GP_SECRET_KEY`：会话签名密钥
 - `GP_MAX_PAGES`：每次抓取的页数上限
 - `TZ`：容器时区，默认 `Asia/Shanghai`
+- `GP_CACHE_PATH`：手动刷新成功后的快照路径，默认 `output/web_snapshot.json`
 
 ## 注意事项
 

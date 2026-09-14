@@ -12,4 +12,4 @@ COPY main.py ./
 RUN pip install --no-cache-dir .
 
 EXPOSE 8000
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "1", "--timeout", "180", "gp.web:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "1", "--threads", "4", "--timeout", "60", "gp.web:app"]
