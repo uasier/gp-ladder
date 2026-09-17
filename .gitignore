@@ -1,23 +1,23 @@
-# Python
-__pycache__/
-*.py[cod]
-*.egg-info/
-.pytest_cache/
-.ruff_cache/
-.mypy_cache/
+# 依赖与构建
+node_modules/
+dist/
+src-tauri/target/
+.gp-desktop-data/
 
-# uv
-.venv/
-.env
-
-# 系统文件
+# 系统 / 编辑器
 .DS_Store
-
-# 编辑器
 .vscode/
+.env
+.claude/
+.Codex/
 
-# 抓取产物
-output/
+# 工作区临时符号链接（勿把目录指回仓库根）
+/src/gp
+
+# 安装包与导出
+release/
+*.dmg
+*-setup.exe
 lxsz_rankings_*.csv
 lxsz_rankings_*.json
 lxsz_rankings_*.html
