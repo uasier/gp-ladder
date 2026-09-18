@@ -8,8 +8,8 @@
 
 从 [GitHub Releases](https://github.com/uasier/gp-ladder/releases) 获取安装包：
 
-- macOS：`.dmg`（Apple Silicon `aarch64` / Intel `x64` 分开打包；未签名，首次请右键 → 打开）
-- Windows：`-setup.exe`（未签名，SmartScreen 可能提示「仍要运行」）
+- macOS：`gp-ladder_*_aarch64.dmg`（Apple Silicon）/ `gp-ladder_*_x64.dmg`（Intel）；未签名，首次请右键 → 打开
+- Windows：`gp-ladder_*_x64-setup.exe`（未签名，SmartScreen 可能提示「仍要运行」）
 
 应用内 **设置 → 关于** 可检查更新，并下载当前系统对应的安装包。
 

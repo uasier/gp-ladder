@@ -107,9 +107,9 @@ jobs:
             同花顺连涨榜桌面工作台。打开只读本地快照；点击「刷新实时数据」才会联网。
 
             ## 安装包
-            - macOS Apple Silicon：`连涨天梯_*_aarch64.dmg`
-            - macOS Intel：`连涨天梯_*_x64.dmg`
-            - Windows 64 位：`连涨天梯_*_x64-setup.exe`
+            - macOS Apple Silicon：`gp-ladder_*_aarch64.dmg`
+            - macOS Intel：`gp-ladder_*_x64.dmg`
+            - Windows 64 位：`gp-ladder_*_x64-setup.exe`
 
             安装包未签名。macOS 请右键 App 选择「打开」；Windows 如遇 SmartScreen，选择「仍要运行」。
 
@@ -117,6 +117,8 @@ jobs:
           releaseDraft: false
           prerelease: false
           uploadUpdaterJson: false
+          # GitHub Release 资源名用 ASCII，避免中文产品名被剥成 `_0.1.0_*.dmg`
+          releaseAssetNamePattern: gp-ladder_[version]_[arch][setup][ext]
           retryAttempts: 2
 
       - name: Upload workflow artifacts

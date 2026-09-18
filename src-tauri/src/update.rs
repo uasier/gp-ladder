@@ -96,11 +96,14 @@ pub fn asset_matches(name: &str, platform: &str) -> bool {
         }
         "macos-x64" => {
             n.ends_with(".dmg")
-                && (n.contains("_x64") || n.contains("x64") || n.contains("x86_64") || n.contains("intel"))
+                && (n.contains("_x64")
+                    || n.contains("-x64")
+                    || n.contains("x86_64")
+                    || n.contains("intel"))
                 && !n.contains("aarch64")
                 && !n.contains("arm64")
         }
-        "windows-x64" => n.ends_with(".exe") && n.contains("setup"),
+        "windows-x64" => n.ends_with(".exe") && (n.contains("setup") || n.contains("nsis")),
         "linux" => n.ends_with(".appimage") || n.ends_with(".deb"),
         _ => false,
     }
@@ -364,6 +367,25 @@ mod tests {
             "连涨天梯_0.2.0_x64-setup.exe"
         );
         assert!(pick_asset(&assets, "linux").is_none());
+
+        let ascii = vec![
+            asset("gp-ladder_0.2.0_aarch64.dmg"),
+            asset("gp-ladder_0.2.0_x64.dmg"),
+            asset("gp-ladder_0.2.0_x64-setup.exe"),
+            asset("gp-ladder_0.2.0_aarch64.app.tar.gz"),
+        ];
+        assert_eq!(
+            pick_asset(&ascii, "macos-arm64").unwrap().name,
+            "gp-ladder_0.2.0_aarch64.dmg"
+        );
+        assert_eq!(
+            pick_asset(&ascii, "macos-x64").unwrap().name,
+            "gp-ladder_0.2.0_x64.dmg"
+        );
+        assert_eq!(
+            pick_asset(&ascii, "windows-x64").unwrap().name,
+            "gp-ladder_0.2.0_x64-setup.exe"
+        );
     }
 
     #[test]
