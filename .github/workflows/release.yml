@@ -1,0 +1,130 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "上传安装包到已有 GitHub Release tag（如 v0.1.0）。留空则只构建产物。"
+        required: false
+        type: string
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    name: Verify version
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Check version files match tag
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            node scripts/sync-version.mjs --check --tag "${GITHUB_REF_NAME}"
+          else
+            node scripts/sync-version.mjs --check
+          fi
+
+  build:
+    needs: verify
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            name: macOS-arm64
+            args: --target aarch64-apple-darwin --bundles app,dmg
+            rust_targets: aarch64-apple-darwin
+          - platform: macos-latest
+            name: macOS-x64
+            args: --target x86_64-apple-darwin --bundles app,dmg
+            rust_targets: x86_64-apple-darwin
+          - platform: windows-latest
+            name: Windows-x64
+            args: --bundles nsis
+            rust_targets: ""
+
+    runs-on: ${{ matrix.platform }}
+    name: Build ${{ matrix.name }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_targets }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+          key: ${{ matrix.name }}
+
+      - name: Install frontend deps
+        run: npm ci
+
+      - name: Test frontend
+        run: npm test
+
+      # Windows 上 Tauri cdylib 的 cargo test 会 STATUS_ENTRYPOINT_NOT_FOUND，与产品功能无关
+      - name: Test rust
+        if: runner.os != 'Windows'
+        run: npm run test:rust
+
+      - name: Build and upload
+        uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: .
+          tauriScript: npm run tauri
+          args: ${{ matrix.args }}
+          tagName: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || github.event.inputs.release_tag || '' }}
+          releaseName: 连涨天梯 v__VERSION__
+          releaseBody: |
+            同花顺连涨榜桌面工作台。打开只读本地快照；点击「刷新实时数据」才会联网。
+
+            ## 安装包
+            - macOS Apple Silicon：`连涨天梯_*_aarch64.dmg`
+            - macOS Intel：`连涨天梯_*_x64.dmg`
+            - Windows 64 位：`连涨天梯_*_x64-setup.exe`
+
+            安装包未签名。macOS 请右键 App 选择「打开」；Windows 如遇 SmartScreen，选择「仍要运行」。
+
+            应用内「设置 → 关于」可检查更新并下载当前系统对应安装包。
+          releaseDraft: false
+          prerelease: false
+          includeUpdaterJson: false
+          retryAttempts: 2
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: gp-ladder-${{ matrix.name }}
+          path: |
+            src-tauri/target/**/release/bundle/dmg/*.dmg
+            src-tauri/target/**/release/bundle/nsis/*.exe
+            src-tauri/target/**/release/bundle/msi/*.msi
+          if-no-files-found: warn

@@ -2,12 +2,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   analyzeStock,
   cancelRefresh,
+  checkUpdate,
   exportSnapshot,
   getRefreshSnapshot,
   getSettings,
   getSnapshot,
+  installUpdate,
   isTauri,
   onRefreshEvent,
+  openReleasePage,
   probeRuntime,
   saveSettings,
   startRefresh,
@@ -27,6 +30,7 @@ import { SettingsModal } from "./components/SettingsModal"
 import { StockContextMenu } from "./components/StockContextMenu"
 import { StockDrawer } from "./components/StockDrawer"
 import { Toolbar } from "./components/Toolbar"
+import { UpdateBanner } from "./components/UpdateBanner"
 import { downloadText, rowsToCsv, rowsToJson, timestampName } from "./files"
 import { filterAndSort, hasActiveFilters, topIndustries, uniqueDays } from "./stock"
 import {
@@ -41,9 +45,13 @@ import {
   type SettingsView,
   type Snapshot,
   type StockRow,
+  type UpdateCheck,
 } from "./types"
 
 const THEME_KEY = "gp_theme_pref"
+const SKIP_VERSION_KEY = "gp_skip_version"
+const UPDATE_CHECKED_KEY = "gp_update_checked_at"
+const UPDATE_CHECK_EVERY_MS = 6 * 60 * 60 * 1000
 
 function preferredTheme(): "dark" | "light" {
   const saved = localStorage.getItem(THEME_KEY)
@@ -64,7 +72,13 @@ export default function App() {
   const [rule, setRule] = useState<HighlightRule>(DEFAULT_HIGHLIGHT)
   const [settings, setSettings] = useState<SettingsView | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [settingsTab, setSettingsTab] = useState<"crawl" | "deepseek" | "about">("crawl")
   const [settingsSaving, setSettingsSaving] = useState(false)
+  const [update, setUpdate] = useState<UpdateCheck | null>(null)
+  const [updateNotice, setUpdateNotice] = useState(false)
+  const [updateChecking, setUpdateChecking] = useState(false)
+  const [updateInstalling, setUpdateInstalling] = useState(false)
+  const [updateError, setUpdateError] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
   const [banner, setBanner] = useState<{ text: string; tone: "busy" | "success" | "error" | null }>({
     text: "",
@@ -133,6 +147,39 @@ export default function App() {
     return view
   }, [])
 
+  const runUpdateCheck = useCallback(async (force: boolean, quiet: boolean) => {
+    setUpdateChecking(true)
+    if (!quiet) setUpdateError(null)
+    try {
+      const info = await checkUpdate(force)
+      setUpdate(info)
+      localStorage.setItem(UPDATE_CHECKED_KEY, String(Date.now()))
+      const skipped = localStorage.getItem(SKIP_VERSION_KEY)
+      if (info.available && info.latestVersion !== skipped) {
+        setUpdateNotice(true)
+      } else if (!info.available) {
+        setUpdateNotice(false)
+      }
+      if (!quiet) {
+        await writeAppLog(
+          "info",
+          "ui",
+          info.available
+            ? `发现新版本 ${info.latestVersion}（当前 ${info.currentVersion}）`
+            : `已是最新版本 ${info.currentVersion}`,
+        )
+      }
+      return info
+    } catch (e) {
+      const message = String(e)
+      if (!quiet) setUpdateError(message)
+      await writeAppLog("warn", "ui", `检查更新失败: ${message}`)
+      return null
+    } finally {
+      setUpdateChecking(false)
+    }
+  }, [])
+
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme)
     localStorage.setItem(THEME_KEY, theme)
@@ -144,6 +191,10 @@ export default function App() {
       try {
         await loadSettings()
         if (!cancelled) await loadSnapshot("lxsz")
+        if (cancelled) return
+        const last = Number(localStorage.getItem(UPDATE_CHECKED_KEY) || 0)
+        const stale = !last || Date.now() - last > UPDATE_CHECK_EVERY_MS
+        if (stale) await runUpdateCheck(false, true)
       } catch (e) {
         if (!cancelled) setBootError(String(e))
       }
@@ -151,7 +202,7 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [loadSettings, loadSnapshot])
+  }, [loadSettings, loadSnapshot, runUpdateCheck])
 
   useEffect(() => {
     const unlisten = onRefreshEvent(async (event) => {
@@ -286,12 +337,51 @@ export default function App() {
     }
   }
 
+  function openAbout() {
+    setSettingsTab("about")
+    setSettingsOpen(true)
+  }
+
+  function dismissUpdate() {
+    if (update?.latestVersion) {
+      localStorage.setItem(SKIP_VERSION_KEY, update.latestVersion)
+    }
+    setUpdateNotice(false)
+  }
+
+  async function handleOpenRelease() {
+    try {
+      await openReleasePage(update?.htmlUrl)
+    } catch (e) {
+      setUpdateError(String(e))
+    }
+  }
+
+  async function handleInstallUpdate() {
+    setUpdateInstalling(true)
+    setUpdateError(null)
+    try {
+      const path = await installUpdate()
+      setUpdateNotice(false)
+      await writeAppLog("info", "ui", `已打开安装包 ${path}`)
+      showBanner("已打开新版本安装包", "success")
+    } catch (e) {
+      const message = String(e)
+      setUpdateError(message)
+      showBanner(message, "error")
+      await writeAppLog("error", "ui", `更新失败: ${message}`)
+    } finally {
+      setUpdateInstalling(false)
+    }
+  }
+
   async function handleAnalyze(item: StockRow) {
     const code = (item["股票代码"] || "").trim()
     const name = (item["股票简称"] || "").trim()
     analyzeTarget.current = item
     setMenu(null)
     if (!settings?.hasDeepseekKey && !settings?.deepseekApiKey) {
+      setSettingsTab("deepseek")
       setSettingsOpen(true)
       showBanner("请先在设置中填写 DeepSeek API Key", "error")
       return
@@ -335,12 +425,26 @@ export default function App() {
             refreshing={refreshing}
             onRefresh={() => void handleRefresh()}
             onCancel={() => void handleCancel()}
-            onOpenSettings={() => setSettingsOpen(true)}
+            onOpenSettings={() => {
+              setSettingsTab("crawl")
+              setSettingsOpen(true)
+            }}
+            onOpenAbout={openAbout}
             onExport={(fmt) => void handleExport(fmt)}
             theme={theme}
             onToggleTheme={() => setTheme((cur) => (cur === "dark" ? "light" : "dark"))}
+            update={updateNotice ? update : null}
           />
           {bootError ? <div className="refresh-banner is-visible is-error">{bootError}</div> : null}
+          {updateNotice ? (
+            <UpdateBanner
+              info={update}
+              installing={updateInstalling}
+              onView={openAbout}
+              onInstall={() => void handleInstallUpdate()}
+              onLater={dismissUpdate}
+            />
+          ) : null}
           <RefreshBanner text={banner.text} tone={banner.tone} />
           <KpiGrid snapshot={snapshot} board={board} />
           <FilterBar
@@ -426,7 +530,15 @@ export default function App() {
         open={settingsOpen}
         settings={settings}
         saving={settingsSaving}
+        initialTab={settingsTab}
+        update={update}
+        updateChecking={updateChecking}
+        updateInstalling={updateInstalling}
+        updateError={updateError}
         onClose={() => setSettingsOpen(false)}
+        onCheckUpdate={() => void runUpdateCheck(true, false)}
+        onOpenRelease={() => void handleOpenRelease()}
+        onInstallUpdate={() => void handleInstallUpdate()}
         onSave={async (patch) => {
           setSettingsSaving(true)
           try {

@@ -14,6 +14,7 @@ mod refresh;
 mod settings;
 mod snapshot;
 mod types;
+mod update;
 mod workspace;
 mod zt;
 
@@ -191,6 +192,25 @@ fn write_app_log(level: String, source: String, message: String) {
 
 #[cfg(feature = "desktop")]
 #[tauri::command]
+async fn check_update(force: Option<bool>) -> Result<update::UpdateCheck, String> {
+    let force = force.unwrap_or(false);
+    block_in(move || update::check_update(force)).await
+}
+
+#[cfg(feature = "desktop")]
+#[tauri::command]
+async fn open_release_page(url: Option<String>) -> Result<(), String> {
+    block_in(move || update::open_release(url)).await
+}
+
+#[cfg(feature = "desktop")]
+#[tauri::command]
+async fn install_update() -> Result<String, String> {
+    block_in(update::install_update).await
+}
+
+#[cfg(feature = "desktop")]
+#[tauri::command]
 fn reveal_app_log() -> Result<String, String> {
     let path = applog::log_path().ok_or_else(|| "日志文件尚未就绪".to_string())?;
     if let Some(parent) = path.parent() {
@@ -259,7 +279,10 @@ pub fn run() {
             get_app_logs,
             get_app_log_path,
             write_app_log,
-            reveal_app_log
+            reveal_app_log,
+            check_update,
+            open_release_page,
+            install_update
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

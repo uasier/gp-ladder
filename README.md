@@ -4,6 +4,15 @@
 
 抓取在软件内部完成，不依赖本机 Python、uv 或仓库脚本。打开只读本地快照；点击「刷新实时数据」才会联网。
 
+## 下载
+
+从 [GitHub Releases](https://github.com/uasier/gp-ladder/releases) 获取安装包：
+
+- macOS：`.dmg`（Apple Silicon `aarch64` / Intel `x64` 分开打包；未签名，首次请右键 → 打开）
+- Windows：`-setup.exe`（未签名，SmartScreen 可能提示「仍要运行」）
+
+应用内 **设置 → 关于** 可检查更新，并下载当前系统对应的安装包。
+
 ## 环境
 
 - Node 18+
@@ -44,6 +53,7 @@ npm run server
 - 右键股票按短线视角调用 DeepSeek 看盘（动能、量价、买点止损），并给出 0–100 短线评分
 - 导出 HTML / CSV / JSON
 - 刷新进度与运行日志
+- 检查 GitHub Release 更新并下载安装包
 
 ## 仓库结构
 
@@ -60,6 +70,24 @@ npm run server
 ├── package.json
 └── README.md
 ```
+
+## 发布
+
+三个版本号必须一致：`package.json`、`src-tauri/tauri.conf.json`、`src-tauri/Cargo.toml`。
+
+```bash
+# 只校验
+npm run version:check
+
+# 同步三个文件到指定版本（不提交）
+npm run version:set -- 0.2.0
+
+# 同步版本、提交并打 annotated tag（不推送）
+npm run release:tag -- 0.2.0
+git push origin HEAD && git push origin v0.2.0
+```
+
+推送 `v*` tag 后，GitHub Actions 会在 macOS arm64 / macOS x64 / Windows x64 构建，并上传到该 tag 的 GitHub Release。也可在 Actions 里手动 `workflow_dispatch`，填已有 tag 补传安装包。
 
 ## 注意事项
 

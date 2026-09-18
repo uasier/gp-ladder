@@ -1,4 +1,4 @@
-import type { BoardKind, SettingsView } from "../types"
+import type { BoardKind, SettingsView, UpdateCheck } from "../types"
 
 type Props = {
   settings: SettingsView | null
@@ -9,9 +9,11 @@ type Props = {
   onRefresh: () => void
   onCancel: () => void
   onOpenSettings: () => void
+  onOpenAbout: () => void
   onExport: (format: "html" | "csv" | "json") => void
   theme: "dark" | "light"
   onToggleTheme: () => void
+  update: UpdateCheck | null
 }
 
 export function Toolbar({
@@ -23,9 +25,11 @@ export function Toolbar({
   onRefresh,
   onCancel,
   onOpenSettings,
+  onOpenAbout,
   onExport,
   theme,
   onToggleTheme,
+  update,
 }: Props) {
   return (
     <header className="top-nav">
@@ -45,6 +49,7 @@ export function Toolbar({
               : board === "jjzt"
                 ? "昨天涨停 · 今日竞价后红盘 2%–8%"
                 : "A股同花顺强势连涨动能追踪仪表盘"}
+            {settings?.version ? ` · v${settings.version}` : ""}
           </div>
           <div className="board-tabs">
             <button
@@ -134,6 +139,11 @@ export function Toolbar({
             <option value="json">JSON</option>
           </select>
         </label>
+        {update?.available ? (
+          <button type="button" className="btn update-chip" onClick={onOpenAbout} title="发现新版本">
+            有更新 v{update.latestVersion}
+          </button>
+        ) : null}
         <button type="button" className="btn" onClick={onOpenSettings}>
           设置
         </button>

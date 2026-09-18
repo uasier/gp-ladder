@@ -81,6 +81,18 @@ export type AppLogEntry = {
   message: string
 }
 
+export type UpdateCheck = {
+  currentVersion: string
+  latestVersion: string
+  available: boolean
+  name: string
+  notes: string
+  htmlUrl: string
+  assetName: string
+  assetUrl: string
+  repo: string
+}
+
 export type HighlightRule = {
   retailMax: number
   todayTurnoverMax: number

@@ -5,6 +5,7 @@ use crate::pipeline;
 use crate::refresh::{self, RefreshState};
 use crate::settings::{self, SettingsPatch, SettingsState};
 use crate::types::{ExportRequest, Snapshot};
+use crate::update;
 use crate::workspace;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
@@ -194,6 +195,42 @@ async fn reveal_app_log() -> Result<Json<Value>, ApiError> {
     Ok(Json(json!({ "path": path })))
 }
 
+#[derive(Deserialize, Default)]
+struct UpdateQuery {
+    force: Option<u8>,
+}
+
+#[derive(Deserialize, Default)]
+struct OpenReleaseBody {
+    url: Option<String>,
+}
+
+async fn check_update(Query(q): Query<UpdateQuery>) -> Result<Json<update::UpdateCheck>, ApiError> {
+    let force = q.force.unwrap_or(0) != 0;
+    block_in(move || update::check_update(force)).await.map(Json)
+}
+
+async fn open_release_page(Json(body): Json<OpenReleaseBody>) -> Result<StatusCode, ApiError> {
+    block_in(move || update::open_release(body.url)).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+async fn install_update() -> Result<Json<Value>, ApiError> {
+    // Web 模式不下载安装包，只返回 GitHub 资源地址给浏览器。
+    let info = block_in(|| update::check_update(true)).await?;
+    if !info.available {
+        return Err(ApiError::bad("当前已是最新版本"));
+    }
+    let path = if !info.asset_url.trim().is_empty() {
+        info.asset_url
+    } else if !info.html_url.trim().is_empty() {
+        info.html_url
+    } else {
+        return Err(ApiError::bad("GitHub Release 中没有适合当前系统的安装包"));
+    };
+    Ok(Json(json!({ "path": path })))
+}
+
 fn api_router() -> Router<AppState> {
     Router::new()
         .route("/health", get(health))
@@ -208,6 +245,9 @@ fn api_router() -> Router<AppState> {
         .route("/logs", get(get_app_logs).post(write_app_log))
         .route("/logs/path", get(get_app_log_path))
         .route("/logs/reveal", post(reveal_app_log))
+        .route("/update", get(check_update))
+        .route("/update/open", post(open_release_page))
+        .route("/update/install", post(install_update))
 }
 
 pub async fn run() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {

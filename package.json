@@ -13,6 +13,9 @@
     "tauri:build": "tauri build",
     "tauri:build:mac": "tauri build --bundles app,dmg",
     "tauri:build:win": "tauri build --bundles nsis,msi",
+    "version:check": "node scripts/sync-version.mjs --check",
+    "version:set": "node scripts/sync-version.mjs --set",
+    "release:tag": "node scripts/cut-release.mjs",
     "server": "npm run build && GP_DESKTOP_DIST=dist GP_DESKTOP_DATA=.gp-desktop-data PORT=40300 cargo run --manifest-path src-tauri/Cargo.toml --bin gp-ladder-server --no-default-features --features web"
   },
   "dependencies": {

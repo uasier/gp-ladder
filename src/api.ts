@@ -11,6 +11,7 @@ import type {
   SettingsView,
   Snapshot,
   BoardKind,
+  UpdateCheck,
 } from "./types"
 
 type TauriWindow = Window & {
@@ -140,6 +141,30 @@ export function writeAppLog(level: string, source: string, message: string) {
 export async function revealAppLog() {
   if (isTauri()) return invoke<string>("reveal_app_log")
   const data = await http<{ path: string }>("/api/logs/reveal", { method: "POST" })
+  return data.path
+}
+
+export function checkUpdate(force = false) {
+  if (isTauri()) return invoke<UpdateCheck>("check_update", { force })
+  return http<UpdateCheck>(`/api/update?force=${force ? 1 : 0}`)
+}
+
+export function openReleasePage(url?: string) {
+  if (isTauri()) return invoke<void>("open_release_page", { url: url ?? null })
+  if (url) {
+    window.open(url, "_blank", "noopener,noreferrer")
+    return Promise.resolve()
+  }
+  return http<void>("/api/update/open", {
+    method: "POST",
+    body: JSON.stringify({ url: url ?? "" }),
+  })
+}
+
+export async function installUpdate() {
+  if (isTauri()) return invoke<string>("install_update")
+  const data = await http<{ path: string }>("/api/update/install", { method: "POST" })
+  if (data.path) window.open(data.path, "_blank", "noopener,noreferrer")
   return data.path
 }
 

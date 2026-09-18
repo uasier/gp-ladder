@@ -213,6 +213,61 @@ body {
   box-sizing: border-box;
 }
 
+.btn.update-chip {
+  color: var(--gold, #d97706);
+  border-color: var(--gold, #d97706);
+}
+.about-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 8px 0 14px;
+}
+@media (max-width: 720px) {
+  .about-grid { grid-template-columns: 1fr; }
+}
+.about-grid div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-input);
+}
+.about-grid strong { font-size: 14px; }
+.about-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.update-notes {
+  max-height: 180px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-input);
+  color: var(--text);
+  margin: 0 0 4px;
+}
+.update-banner {
+  justify-content: space-between;
+  gap: 12px;
+}
+.update-banner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: auto;
+}
+
 .ctx-mask {
   position: fixed;
   inset: 0;

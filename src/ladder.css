@@ -256,6 +256,10 @@
     .refresh-banner.is-visible {
       display: flex;
     }
+    .update-banner {
+      border-color: var(--gold-border);
+      background: var(--gold-bg);
+    }
     .refresh-banner.is-error {
       border-color: var(--up-border);
       background: var(--up-bg);
