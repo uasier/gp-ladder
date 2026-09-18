@@ -116,7 +116,7 @@ jobs:
             应用内「设置 → 关于」可检查更新并下载当前系统对应安装包。
           releaseDraft: false
           prerelease: false
-          includeUpdaterJson: false
+          uploadUpdaterJson: false
           retryAttempts: 2
 
       - name: Upload workflow artifacts
