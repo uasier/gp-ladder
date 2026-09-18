@@ -3,6 +3,7 @@ name = "gp-ladder"
 version = "0.1.0"
 description = "连涨天梯桌面工作台"
 authors = ["you"]
+license = "MIT"
 edition = "2021"
 default-run = "gp-ladder"
 
