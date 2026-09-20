@@ -154,7 +154,10 @@ jobs:
           java-version: 17
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
+        with:
+          # Google 已下架旧的 `tools` 包；v3 默认仍会安装它并失败
+          packages: platform-tools
 
       - name: Setup NDK
         uses: nttld/setup-ndk@v1
