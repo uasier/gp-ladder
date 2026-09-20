@@ -1514,7 +1514,7 @@ dependencies = [
 
 [[package]]
 name = "gp-ladder"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "axum",
  "chrono",
