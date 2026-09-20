@@ -36,36 +36,38 @@
 
 ## 环境
 
-- Node 18+
-- Rust 1.77+（推荐最新 stable）
-- Android 打包另需 JDK 17+、Android SDK（API 24+）与 NDK，并安装 Rust 目标 `aarch64-linux-android`
+日常改前端只需 **Node 18+**。
+
+Rust / Android / 安装包编译都在 GitHub Actions 上完成，不必在本机装 JDK、Android SDK 或交叉编译 target。本机跑 `tauri build` 会生成数 GB 的 `src-tauri/target/`，硬盘紧张时请不要本地打包。
 
 ## 开发
 
 ```bash
 npm install
-npm test
-npm run test:rust
-npm run tauri dev
+npm test          # 前端单测（本机）
+npm run dev       # 仅 Vite，不编译 Rust
 ```
 
-打包：
+全平台安装包（macOS arm64 / macOS x64 / Windows / Android APK）在 GitHub 上编译：
 
 ```bash
-npm run tauri build
-# 或按平台
-npm run tauri:build:mac    # .app / .dmg
-npm run tauri:build:win    # NSIS（需 Windows 工具链或交叉编译）
-npm run tauri:android:init # 首次生成 src-tauri/gen/android
-npm run tauri:android:dev  # 连真机 / 模拟器热重载
-npm run tauri:android:build # 未签名 APK
+npm run build:github
+# 或打开 Actions → Build → Run workflow
+# 填已有 tag（如 v0.2.0）会把安装包挂到该 Release；留空只作为 Artifacts（保留 14 天）
 ```
 
-Android 环境变量：`JAVA_HOME`（JDK 17+）、`ANDROID_HOME`（SDK 根目录）、`NDK_HOME`（例如 `$ANDROID_HOME/ndk/27.2.12479018`）。若本机存在 `~/.android/debug.keystore`，release APK 会用它签名，便于直接安装；否则产物为 unsigned，需自行签名。
+推送 `v*` tag 同样会走 Build 工作流并上传 GitHub Release。
 
-APK 默认输出：`src-tauri/gen/android/app/build/outputs/apk/universal/release/`。
+清理本机已经产生的编译缓存：
 
-同一套前端的 Web 服务（默认端口 **40300**）：
+```bash
+npm run clean              # 删除 target / dist / release / Android build
+npm run clean:toolchains   # 再删本机 Android SDK、Gradle 缓存、多余 Rust target
+```
+
+Rust 单测由 CI 在 GitHub 上跑。若硬盘允许、需要本机 `tauri dev`，再安装 Rust 1.77+；Android 真机热重载另需 JDK 17、Android SDK 与 NDK。
+
+同一套前端的 Web 服务（默认端口 **40300**，会编译 Rust server，占用 `src-tauri/target/`）：
 
 ```bash
 npm run server
@@ -119,7 +121,7 @@ npm run release:tag -- 0.2.0
 git push origin HEAD && git push origin v0.2.0
 ```
 
-推送 `v*` tag 后，GitHub Actions 会在 macOS arm64 / macOS x64 / Windows x64 / Android arm64 构建，并上传到该 tag 的 GitHub Release。也可在 Actions 里手动 `workflow_dispatch`，填已有 tag 补传安装包。
+推送 `v*` tag 后，GitHub Actions 的 **Build** 工作流会在 macOS arm64 / macOS x64 / Windows x64 / Android arm64 构建，并上传到该 tag 的 GitHub Release。也可 `npm run build:github` 或在 Actions 里手动运行 Build：不填 tag 只保留 Artifacts；填已有 tag 则补传安装包。
 
 ## 注意事项
 

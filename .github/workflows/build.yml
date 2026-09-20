@@ -1,10 +1,13 @@
-name: Release
+name: Build
 
+# 本仓库的安装包编译只在 GitHub 上跑，避免本机生成数 GB 的 target/。
+# - 推送 v* tag：编译并上传到该 GitHub Release
+# - 手动 Run workflow：默认只上传 Actions Artifacts；填 release_tag 则额外挂到已有 Release
 on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: "上传安装包到已有 GitHub Release tag（如 v0.1.0）。留空则只构建产物。"
+        description: "上传到已有 GitHub Release（如 v0.2.0）。留空则只作为 Actions 产物，不创建/更新 Release。"
         required: false
         type: string
   push:
@@ -15,13 +18,16 @@ permissions:
   contents: write
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: build-${{ github.workflow }}-${{ github.ref }}-${{ github.event.inputs.release_tag || github.run_id }}
   cancel-in-progress: false
 
 jobs:
   verify:
     runs-on: ubuntu-latest
     name: Verify version
+    outputs:
+      publish_tag: ${{ steps.meta.outputs.tag }}
+      publish_name: ${{ steps.meta.outputs.name }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,10 +37,40 @@ jobs:
         with:
           node-version: 22
 
-      - name: Check version files match tag
+      - name: Resolve publish tag
+        id: meta
+        env:
+          REF: ${{ github.ref }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_TAG: ${{ github.event.inputs.release_tag }}
         run: |
-          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
-            node scripts/sync-version.mjs --check --tag "${GITHUB_REF_NAME}"
+          TAG=""
+          if [[ "$REF" == refs/tags/v* ]]; then
+            TAG="$REF_NAME"
+          elif [[ -n "$INPUT_TAG" ]]; then
+            TAG="$INPUT_TAG"
+          fi
+          if [[ "$TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            TAG="v$TAG"
+          fi
+          if [[ -n "$TAG" && ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "非法 tag: $TAG（需要 vX.Y.Z）" >&2
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          if [[ -n "$TAG" ]]; then
+            echo "name=连涨天梯 v__VERSION__" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=" >> "$GITHUB_OUTPUT"
+          fi
+          echo "publish_tag=${TAG:-<artifacts-only>}"
+
+      - name: Check version files match tag
+        env:
+          PUBLISH_TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          if [[ -n "$PUBLISH_TAG" ]]; then
+            node scripts/sync-version.mjs --check --tag "$PUBLISH_TAG"
           else
             node scripts/sync-version.mjs --check
           fi
@@ -93,6 +129,7 @@ jobs:
         if: runner.os != 'Windows'
         run: npm run test:rust
 
+      # tagName / releaseName 都为空时 tauri-action 只编译，不创建或更新 GitHub Release
       - name: Build and upload
         uses: tauri-apps/tauri-action@v1
         env:
@@ -101,8 +138,8 @@ jobs:
           projectPath: .
           tauriScript: npm run tauri
           args: ${{ matrix.args }}
-          tagName: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || github.event.inputs.release_tag || '' }}
-          releaseName: 连涨天梯 v__VERSION__
+          tagName: ${{ needs.verify.outputs.publish_tag }}
+          releaseName: ${{ needs.verify.outputs.publish_name }}
           releaseBody: |
             同花顺连涨榜桌面工作台。打开只读本地快照；点击「刷新实时数据」才会联网。
 
@@ -128,9 +165,11 @@ jobs:
           name: gp-ladder-${{ matrix.name }}
           path: |
             src-tauri/target/**/release/bundle/dmg/*.dmg
+            src-tauri/target/**/release/bundle/macos/*.app.tar.gz
             src-tauri/target/**/release/bundle/nsis/*.exe
             src-tauri/target/**/release/bundle/msi/*.msi
           if-no-files-found: warn
+          retention-days: 14
 
   android:
     needs: verify
@@ -226,11 +265,11 @@ jobs:
           name: gp-ladder-Android-arm64
           path: dist-android/*.apk
           if-no-files-found: error
+          retention-days: 14
 
       - name: Upload APK to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.release_tag != ''
+        if: needs.verify.outputs.publish_tag != ''
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TAG="${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || github.event.inputs.release_tag }}"
-          gh release upload "$TAG" dist-android/*.apk --clobber
+          TAG: ${{ needs.verify.outputs.publish_tag }}
+        run: gh release upload "$TAG" dist-android/*.apk --clobber

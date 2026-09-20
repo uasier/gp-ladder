@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * 本地打发布 tag：同步版本 → 提交 → 打 vX.Y.Z。
- * 不推送远程；推送 tag 后 GitHub Actions 会构建并上传 Release。
+ * 不推送远程；推送 tag 后由 GitHub Actions Build 工作流编译并上传 Release。
  *
  *   npm run release:tag -- 0.2.0
  */

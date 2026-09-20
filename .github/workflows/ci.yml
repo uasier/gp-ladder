@@ -1,5 +1,6 @@
 name: CI
 
+# 只跑测试。安装包编译见 .github/workflows/build.yml（GitHub 上打包，不占本机磁盘）。
 on:
   push:
     branches: [main]
