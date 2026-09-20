@@ -1,0 +1,9 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Theme.gp_ladder" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@color/gp_bg</item>
+        <item name="android:windowBackground">@color/gp_bg</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

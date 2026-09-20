@@ -1129,12 +1129,14 @@
       background: var(--surface-subtle-hover);
       border-color: var(--border-strong);
     }
-    .acts a.primary {
+    .acts a.primary,
+    .acts button.primary {
       background: var(--accent);
       color: #ffffff;
       border-color: transparent;
     }
-    .acts a.primary:hover {
+    .acts a.primary:hover,
+    .acts button.primary:hover {
       opacity: 0.92;
       transform: translateY(-1px);
     }
@@ -1176,7 +1178,7 @@
       border-color: var(--accent);
     }
 
-    /* 移动端响应式 */
+    /* 移动端响应式（窄屏 + Android/iOS WebView） */
     @media (max-width: 860px) {
       .kpi-grid {
         grid-template-columns: repeat(2, 1fr);
@@ -1187,7 +1189,7 @@
     }
     @media (max-width: 600px) {
       .app { width: calc(100% - 24px); }
-      .kpi-grid { grid-template-columns: 1fr; }
+      .kpi-grid { grid-template-columns: 1fr 1fr; }
       .cards { grid-template-columns: 1fr; }
       .toolbar.bar { flex-direction: column; align-items: stretch; }
       .search-box { width: 100%; }
@@ -1195,4 +1197,146 @@
       .top-nav { flex-direction: column; align-items: flex-start; gap: 12px; }
       .nav-actions { width: 100%; justify-content: space-between; }
       .refresh-panel { flex: 1; }
+    }
+
+    html.is-mobile {
+      -webkit-tap-highlight-color: transparent;
+    }
+    html.is-mobile body {
+      overscroll-behavior: none;
+    }
+    html.is-mobile .app {
+      width: calc(100% - 20px);
+      margin: 0 auto 16px;
+      padding-bottom: 8px;
+    }
+    html.is-mobile .top-nav {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+      padding: 12px 0 10px;
+    }
+    html.is-mobile .brand-desc {
+      display: none;
+    }
+    html.is-mobile .brand-title-wrap h1 {
+      font-size: 18px;
+    }
+    html.is-mobile .board-tabs {
+      margin-top: 6px;
+    }
+    html.is-mobile .board-tabs button {
+      min-height: 36px;
+      padding: 4px 14px;
+    }
+    html.is-mobile .nav-actions {
+      width: 100%;
+      justify-content: flex-start;
+      gap: 8px;
+    }
+    html.is-mobile .refresh-panel {
+      flex: 1 1 auto;
+      min-width: 0;
+      padding: 4px 4px 4px 10px;
+    }
+    html.is-mobile .refresh-btn {
+      min-height: 40px;
+      padding: 0 14px;
+    }
+    html.is-mobile .export-select,
+    html.is-mobile .btn,
+    html.is-mobile .theme-toggle-btn {
+      min-height: 40px;
+    }
+    html.is-mobile .theme-toggle-btn {
+      width: 40px;
+    }
+    html.is-mobile .search-kbd {
+      display: none;
+    }
+    html.is-mobile .toolbar.bar {
+      position: static;
+      flex-direction: column;
+      align-items: stretch;
+    }
+    html.is-mobile .search-box {
+      width: 100%;
+      min-width: 0;
+    }
+    html.is-mobile .search-box input[type="search"] {
+      min-height: 40px;
+      font-size: 16px;
+    }
+    html.is-mobile .bar select,
+    html.is-mobile .filters select,
+    html.is-mobile .filters input {
+      min-height: 40px;
+      font-size: 16px;
+    }
+    html.is-mobile .count {
+      margin-left: 0;
+      justify-content: center;
+    }
+    html.is-mobile .kpi-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 12px 0 14px;
+    }
+    html.is-mobile .kpi-sub {
+      display: none;
+    }
+    html.is-mobile .kpi-val {
+      font-size: 18px;
+    }
+    html.is-mobile .cards {
+      grid-template-columns: 1fr;
+    }
+    html.is-mobile .stock-card {
+      padding: 12px 14px;
+    }
+    html.is-mobile .stock-card:hover {
+      transform: none;
+    }
+    html.is-mobile .chip,
+    html.is-mobile .day-chip,
+    html.is-mobile .ind-chip {
+      min-height: 36px;
+      padding: 6px 12px;
+    }
+    html.is-mobile .days,
+    html.is-mobile .industry-bar,
+    html.is-mobile .quick {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 4px;
+    }
+    html.is-mobile .table-wrap {
+      overflow-x: auto;
+    }
+    html.is-mobile table.list {
+      min-width: 720px;
+    }
+    html.is-mobile .mask.open {
+      background: rgba(0, 0, 0, 0.45);
+    }
+    html.is-mobile .drawer {
+      top: auto;
+      left: 0;
+      right: 0;
+      width: 100%;
+      height: min(90dvh, 100%);
+      max-height: 90dvh;
+      transform: translateY(100%);
+      border-left: 0;
+      border-top: 1px solid var(--border);
+      border-top-left-radius: 16px;
+      border-top-right-radius: 16px;
+      padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+    }
+    html.is-mobile .drawer.open {
+      transform: translateY(0);
+    }
+    html.is-mobile .kv-card {
+      grid-template-columns: 1fr 1fr;
     }

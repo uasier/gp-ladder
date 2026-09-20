@@ -3,8 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/app-icon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#0b0f17" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <title>连涨天梯</title>
+    <script>
+      (function () {
+        var ua = navigator.userAgent || ""
+        var mobile = /Android|iPhone|iPad|iPod/i.test(ua) || window.innerWidth <= 720
+        if (mobile) document.documentElement.classList.add("is-mobile")
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

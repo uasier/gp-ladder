@@ -118,7 +118,7 @@ export function SettingsModal({
         ) : tab === "deepseek" ? (
           <div className="settings-pane">
             <p className="muted tip">
-              右键股票可按短线视角（未来 1–5 个交易日）调用 DeepSeek 看盘，并给出短线评分。Key 只保存在本机设置文件。
+              右键或长按股票可按短线视角（未来 1–5 个交易日）调用 DeepSeek 看盘，并给出短线评分。Key 只保存在本机设置文件。
               分析提示词里的 <code>______</code> / <code>{"{name}"}</code> / <code>{"{code}"}</code> 会替换成标的；
               评分提示词里的 <code>{"{analysis}"}</code> 会替换成分析正文。
             </p>
@@ -184,7 +184,8 @@ export function SettingsModal({
         ) : (
           <div className="settings-pane">
             <p className="muted tip">
-              安装包由 GitHub Releases 发布。应用启动后会检查最新 tag；也可在此手动检查并下载当前系统对应的安装包。
+              安装包由 GitHub Releases 发布。应用启动后会检查最新 tag；也可在此手动检查并下载当前系统对应的安装包（桌面为
+              dmg/exe，Android 为 APK）。
             </p>
             <div className="about-grid">
               <div>
@@ -226,7 +227,11 @@ export function SettingsModal({
                 disabled={updateInstalling || !update?.available}
                 onClick={onInstallUpdate}
               >
-                {updateInstalling ? "正在下载…" : "下载并打开安装包"}
+                {updateInstalling
+                  ? "正在打开…"
+                  : update?.assetName?.toLowerCase().endsWith(".apk")
+                    ? "下载 APK"
+                    : "下载并打开安装包"}
               </button>
             </div>
           </div>

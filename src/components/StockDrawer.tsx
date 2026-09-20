@@ -1,4 +1,6 @@
 import { useState } from "react"
+import { isTauri } from "../api"
+import { isPhoneUi } from "../platform"
 import type { HighlightRule, StockRow } from "../types"
 import {
   buildDetailUrl,
@@ -46,6 +48,21 @@ export function StockDrawer({ item, rule, onClose }: Props) {
     } catch {
       setCopied(false)
     }
+  }
+
+  async function openQuote() {
+    const url = buildDetailUrl(code)
+    if (!url || url === "#") return
+    try {
+      if (isTauri()) {
+        const { openUrl } = await import("@tauri-apps/plugin-opener")
+        await openUrl(url)
+        return
+      }
+    } catch {
+      // 回退到浏览器
+    }
+    window.open(url, "_blank", "noopener")
   }
 
   return (
@@ -200,14 +217,16 @@ export function StockDrawer({ item, rule, onClose }: Props) {
           </div>
         </div>
         <div className="acts">
-          <a className="primary" href={buildDetailUrl(code)} target="_blank" rel="noopener">
+          <button type="button" className="primary" onClick={() => void openQuote()}>
             打开东财行情
-          </a>
+          </button>
           <button type="button" onClick={() => void copyCode()}>
             {copied ? "✓ 已复制" : "复制代码"}
           </button>
         </div>
-        <div className="hint">按 Esc 键或点击外部遮罩退出详情</div>
+        <div className="hint">
+          {isPhoneUi() ? "点遮罩关闭详情；长按卡片可做短线分析" : "按 Esc 键或点击外部遮罩退出详情"}
+        </div>
       </aside>
     </>
   )

@@ -65,6 +65,10 @@ pub fn current_platform() -> &'static str {
         }
     } else if cfg!(target_os = "windows") {
         "windows-x64"
+    } else if cfg!(target_os = "android") {
+        "android"
+    } else if cfg!(target_os = "ios") {
+        "ios"
     } else {
         "linux"
     }
@@ -105,11 +109,29 @@ pub fn asset_matches(name: &str, platform: &str) -> bool {
         }
         "windows-x64" => n.ends_with(".exe") && (n.contains("setup") || n.contains("nsis")),
         "linux" => n.ends_with(".appimage") || n.ends_with(".deb"),
+        "android" => n.ends_with(".apk"),
         _ => false,
     }
 }
 
 fn pick_asset<'a>(assets: &'a [GithubAsset], platform: &str) -> Option<&'a GithubAsset> {
+    if platform == "android" {
+        let matched: Vec<_> = assets
+            .iter()
+            .filter(|a| asset_matches(&a.name, platform))
+            .collect();
+        return matched
+            .iter()
+            .copied()
+            .find(|a| a.name.to_ascii_lowercase().contains("universal"))
+            .or_else(|| {
+                matched.iter().copied().find(|a| {
+                    let n = a.name.to_ascii_lowercase();
+                    n.contains("aarch64") || n.contains("arm64")
+                })
+            })
+            .or_else(|| matched.first().copied());
+    }
     assets.iter().find(|a| asset_matches(&a.name, platform))
 }
 
@@ -188,6 +210,15 @@ pub fn check_update(_force: bool) -> Result<UpdateCheck, String> {
     }
 }
 
+#[cfg(any(target_os = "android", target_os = "ios"))]
+pub fn open_url(url: &str) -> Result<(), String> {
+    if url.trim().is_empty() {
+        return Err("链接为空".into());
+    }
+    Err("请使用系统浏览器打开该链接".into())
+}
+
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 pub fn open_url(url: &str) -> Result<(), String> {
     let url = url.trim();
     if url.is_empty() {
@@ -217,7 +248,7 @@ pub fn open_url(url: &str) -> Result<(), String> {
     Ok(())
 }
 
-#[cfg_attr(not(feature = "desktop"), allow(dead_code))]
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 fn open_path(path: &Path) -> Result<(), String> {
     #[cfg(target_os = "macos")]
     {
@@ -243,7 +274,7 @@ fn open_path(path: &Path) -> Result<(), String> {
     Ok(())
 }
 
-#[cfg_attr(not(feature = "desktop"), allow(dead_code))]
+#[cfg_attr(any(target_os = "android", target_os = "ios"), allow(dead_code))]
 fn safe_file_name(name: &str) -> Result<String, String> {
     let trimmed = name.trim();
     if trimmed.is_empty()
@@ -264,7 +295,7 @@ fn safe_file_name(name: &str) -> Result<String, String> {
     Ok(base.to_string())
 }
 
-#[cfg_attr(not(feature = "desktop"), allow(dead_code))]
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 fn download_file(url: &str, dest: &Path) -> Result<(), String> {
     let ua = format!(
         "gp-ladder/{ver} (+https://github.com/{repo})",
@@ -295,7 +326,7 @@ fn download_file(url: &str, dest: &Path) -> Result<(), String> {
 }
 
 /// 下载当前平台安装包到临时目录并打开。返回本地路径。
-#[cfg_attr(not(feature = "desktop"), allow(dead_code))]
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 pub fn install_update() -> Result<String, String> {
     let info = check_update(true)?;
     if !info.available {
@@ -317,6 +348,7 @@ pub fn install_update() -> Result<String, String> {
     Ok(dest.to_string_lossy().into_owned())
 }
 
+#[allow(dead_code)]
 pub fn open_release(url: Option<String>) -> Result<(), String> {
     let target = match url {
         Some(u) if !u.trim().is_empty() => u,
@@ -372,6 +404,8 @@ mod tests {
             asset("gp-ladder_0.2.0_aarch64.dmg"),
             asset("gp-ladder_0.2.0_x64.dmg"),
             asset("gp-ladder_0.2.0_x64-setup.exe"),
+            asset("gp-ladder_0.2.0_aarch64.apk"),
+            asset("gp-ladder_0.2.0_universal.apk"),
             asset("gp-ladder_0.2.0_aarch64.app.tar.gz"),
         ];
         assert_eq!(
@@ -386,6 +420,11 @@ mod tests {
             pick_asset(&ascii, "windows-x64").unwrap().name,
             "gp-ladder_0.2.0_x64-setup.exe"
         );
+        assert_eq!(
+            pick_asset(&ascii, "android").unwrap().name,
+            "gp-ladder_0.2.0_universal.apk"
+        );
+        assert!(pick_asset(&assets, "android").is_none());
     }
 
     #[test]

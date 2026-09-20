@@ -110,8 +110,9 @@ jobs:
             - macOS Apple Silicon：`gp-ladder_*_aarch64.dmg`
             - macOS Intel：`gp-ladder_*_x64.dmg`
             - Windows 64 位：`gp-ladder_*_x64-setup.exe`
+            - Android arm64：`gp-ladder_*_aarch64.apk`
 
-            安装包未签名。macOS 请右键 App 选择「打开」；Windows 如遇 SmartScreen，选择「仍要运行」。
+            安装包未签名。macOS 请右键 App 选择「打开」；Windows 如遇 SmartScreen，选择「仍要运行」；Android 需允许安装未知来源。
 
             应用内「设置 → 关于」可检查更新并下载当前系统对应安装包。
           releaseDraft: false
@@ -130,3 +131,99 @@ jobs:
             src-tauri/target/**/release/bundle/nsis/*.exe
             src-tauri/target/**/release/bundle/msi/*.msi
           if-no-files-found: warn
+
+  android:
+    needs: verify
+    runs-on: ubuntu-latest
+    name: Build Android-arm64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup NDK
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r27c
+          link-to-sdk: true
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+          key: Android-arm64
+
+      - name: Install frontend deps
+        run: npm ci
+
+      - name: Test frontend
+        run: npm test
+
+      - name: Init Android project
+        run: |
+          if [ ! -f src-tauri/gen/android/settings.gradle ] && [ ! -f src-tauri/gen/android/settings.gradle.kts ]; then
+            npx tauri android init --ci
+          fi
+
+      - name: Create debug keystore for sideload APK
+        run: |
+          mkdir -p "$HOME/.android"
+          if [ ! -f "$HOME/.android/debug.keystore" ]; then
+            keytool -genkeypair -v -keystore "$HOME/.android/debug.keystore" \
+              -storepass android -alias androiddebugkey -keypass android \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+
+      - name: Build APK
+        run: npx tauri android build --apk --target aarch64
+
+      - name: Collect APK
+        run: |
+          mkdir -p dist-android
+          find src-tauri/gen/android/app/build/outputs/apk src-tauri/target -name "*.apk" 2>/dev/null | while read -r f; do
+            case "$f" in
+              *unsigned*) continue ;;
+            esac
+            cp "$f" dist-android/
+          done
+          if ! ls dist-android/*.apk >/dev/null 2>&1; then
+            find src-tauri/gen/android/app/build/outputs/apk -name "*.apk" -exec cp {} dist-android/ \;
+          fi
+          ls -la dist-android
+          test -n "$(ls -A dist-android/*.apk 2>/dev/null)"
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: gp-ladder-Android-arm64
+          path: dist-android/*.apk
+          if-no-files-found: error
+
+      - name: Upload APK to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.release_tag != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || github.event.inputs.release_tag }}
+          files: dist-android/*.apk
+          fail_on_unmatched_files: false

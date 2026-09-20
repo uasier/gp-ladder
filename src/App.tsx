@@ -32,6 +32,7 @@ import { StockDrawer } from "./components/StockDrawer"
 import { Toolbar } from "./components/Toolbar"
 import { UpdateBanner } from "./components/UpdateBanner"
 import { downloadText, rowsToCsv, rowsToJson, timestampName } from "./files"
+import { isMobileApp } from "./platform"
 import { filterAndSort, hasActiveFilters, topIndustries, uniqueDays } from "./stock"
 import {
   DEFAULT_FILTERS,
@@ -306,30 +307,39 @@ export default function App() {
 
   async function handleExport(format: "html" | "csv" | "json") {
     try {
-      if (format === "csv") {
+      const mobile = isMobileApp(isTauri())
+      if (!mobile && format === "csv") {
         downloadText(timestampName("csv"), rowsToCsv(snapshot.rows), "text/csv;charset=utf-8")
         await writeAppLog("info", "ui", `已导出 CSV ${snapshot.count} 只`)
         return
       }
-      if (format === "json") {
+      if (!mobile && format === "json") {
         downloadText(timestampName("json"), rowsToJson(snapshot.rows), "application/json;charset=utf-8")
         await writeAppLog("info", "ui", `已导出 JSON ${snapshot.count} 只`)
         return
       }
-      let path: string | null = timestampName("html")
-      if (isTauri()) {
+      let path: string | null = timestampName(format)
+      if (isTauri() && !mobile && format === "html") {
         const { save } = await import("@tauri-apps/plugin-dialog")
         const selected = await save({
           defaultPath: timestampName("html"),
           filters: [{ name: "HTML", extensions: ["html"] }],
         })
         path = typeof selected === "string" ? selected : null
-      } else {
+      } else if (!isTauri() && format === "html") {
         path = window.prompt("HTML 导出路径", path)
       }
       if (!path) return
-      const result = await exportSnapshot("html", path, board)
-      await writeAppLog("info", "ui", `已导出 HTML ${result.count} 只 → ${result.path}`)
+      const result = await exportSnapshot(format, path, board)
+      if (mobile && isTauri()) {
+        try {
+          const { openPath } = await import("@tauri-apps/plugin-opener")
+          await openPath(result.path)
+        } catch {
+          // 无系统文件应用时只提示路径
+        }
+      }
+      await writeAppLog("info", "ui", `已导出 ${format.toUpperCase()} ${result.count} 只 → ${result.path}`)
       showBanner(`已导出 ${result.count} 只`, "success")
     } catch (e) {
       showBanner(String(e), "error")

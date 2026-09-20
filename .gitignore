@@ -14,6 +14,18 @@ src-tauri/target/
 # 工作区临时符号链接（勿把目录指回仓库根）
 /src/gp
 
+# Android 本地构建（工程源码 src-tauri/gen/android 需入库）
+src-tauri/gen/android/local.properties
+src-tauri/gen/android/.gradle/
+src-tauri/gen/android/.idea/
+src-tauri/gen/android/**/build/
+src-tauri/gen/android/app/src/main/assets/
+src-tauri/gen/android/key.properties
+*.jks
+*.keystore
+*.apk
+*.aab
+
 # 安装包与导出
 release/
 *.dmg

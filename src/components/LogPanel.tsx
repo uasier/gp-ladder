@@ -84,7 +84,7 @@ export function LogPanel({ open, onToggle }: Props) {
                   .catch((e) => writeAppLog("error", "ui", `打开日志文件失败: ${String(e)}`))
               }}
             >
-              打开文件
+              打开日志
             </button>
             <button type="button" className="btn" onClick={() => setEntries([])}>
               清空显示

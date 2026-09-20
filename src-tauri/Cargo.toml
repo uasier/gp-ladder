@@ -1,7 +1,7 @@
 [package]
 name = "gp-ladder"
 version = "0.1.0"
-description = "连涨天梯桌面工作台"
+description = "连涨天梯工作台（桌面 / Android）"
 authors = ["you"]
 license = "MIT"
 edition = "2021"
@@ -35,6 +35,7 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "signal
 tower-http = { version = "0.6", features = ["fs"], optional = true }
 
 [features]
+# desktop：Tauri 宿主（macOS / Windows / Android），与 web 服务互斥于默认 feature
 default = ["desktop"]
 desktop = [
     "dep:tauri",

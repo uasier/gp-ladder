@@ -1,4 +1,5 @@
 import type { BoardKind, HighlightRule, StockRow, ViewMode } from "../types"
+import { useLongPress } from "../longPress"
 import {
   getBodyPct,
   getRetailIndex,
@@ -79,59 +80,17 @@ export function Ladder({
             </tr>
           </thead>
           <tbody>
-            {filtered.map((item) => {
-              const todayPct = getTodayPct(item)
-              const bodyPct = getBodyPct(item)
-              const pctValue = normalizeNumber(item["连续涨跌幅"])
-              const hl = shouldHighlight(item, rule)
-              const retail = getRetailIndex(item)
-              const retailColor = retail === null ? "flat" : retail > 0 ? "up" : "down"
-              const code = item["股票代码"]
-              return (
-                <tr
-                  key={code}
-                  className={selectedCode === code ? "active" : ""}
-                  onClick={() => onSelect(code)}
-                  onContextMenu={(e) => {
-                    e.preventDefault()
-                    onContextStock(item, e.clientX, e.clientY)
-                  }}
-                >
-                  <td>
-                    <div className="table-stock-name">
-                      <span>{item["股票简称"]}</span>
-                      {hl ? <span className="badge">⭐️ 精选</span> : null}
-                    </div>
-                    <span className="code">{code}</span>
-                  </td>
-                  <td className="num">
-                    <span style={{ fontWeight: 700, color: "var(--gold)" }}>{item["连涨天数"]}</span>{" "}
-                    {board === "lxsz" ? "天" : "板"}
-                  </td>
-                  <td className={`num ${pctClass(pctValue)}`} style={{ fontWeight: 700, fontSize: 14 }}>
-                    {board === "jjzt"
-                      ? item["今开涨幅"] || item["今日涨跌幅"] || "--"
-                      : item["连续涨跌幅"] || "--"}
-                  </td>
-                  <td className="num" style={{ fontWeight: 600 }}>
-                    {item["现价"] || "--"}
-                  </td>
-                  <td className={`num ${pctClass(todayPct ?? 0)}`} style={{ fontWeight: 600 }}>
-                    {item["今日涨跌幅"] || "--"}
-                  </td>
-                  <td className={`num ${pctClass(bodyPct ?? 0)}`} style={{ fontWeight: 600 }}>
-                    {item["实体涨幅"] || "--"}
-                  </td>
-                  <td className={`num ${retailColor}`}>{item["散户指数"] || "--"}</td>
-                  <td className="num">{item["今日换手率"] || "--"}</td>
-                  <td>
-                    <span className="tag" style={{ margin: 0 }}>
-                      {item["所属行业"] || ""}
-                    </span>
-                  </td>
-                </tr>
-              )
-            })}
+            {filtered.map((item) => (
+              <StockTableRow
+                key={item["股票代码"]}
+                item={item}
+                rule={rule}
+                active={selectedCode === item["股票代码"]}
+                board={board}
+                onSelect={onSelect}
+                onContextStock={onContextStock}
+              />
+            ))}
           </tbody>
         </table>
       </div>
@@ -168,6 +127,81 @@ export function Ladder({
   )
 }
 
+function StockTableRow({
+  item,
+  rule,
+  active,
+  board,
+  onSelect,
+  onContextStock,
+}: {
+  item: StockRow
+  rule: HighlightRule
+  active: boolean
+  board: BoardKind
+  onSelect: (code: string) => void
+  onContextStock: (item: StockRow, x: number, y: number) => void
+}) {
+  const todayPct = getTodayPct(item)
+  const bodyPct = getBodyPct(item)
+  const pctValue = normalizeNumber(item["连续涨跌幅"])
+  const hl = shouldHighlight(item, rule)
+  const retail = getRetailIndex(item)
+  const retailColor = retail === null ? "flat" : retail > 0 ? "up" : "down"
+  const code = item["股票代码"]
+  const press = useLongPress((x, y) => onContextStock(item, x, y))
+  return (
+    <tr
+      className={active ? "active" : ""}
+      onPointerDown={press.onPointerDown}
+      onPointerMove={press.onPointerMove}
+      onPointerUp={press.onPointerUp}
+      onPointerCancel={press.onPointerCancel}
+      onClick={(e) => {
+        if (press.consumeClick(e)) return
+        onSelect(code)
+      }}
+      onContextMenu={(e) => {
+        e.preventDefault()
+        onContextStock(item, e.clientX, e.clientY)
+      }}
+    >
+      <td>
+        <div className="table-stock-name">
+          <span>{item["股票简称"]}</span>
+          {hl ? <span className="badge">⭐️ 精选</span> : null}
+        </div>
+        <span className="code">{code}</span>
+      </td>
+      <td className="num">
+        <span style={{ fontWeight: 700, color: "var(--gold)" }}>{item["连涨天数"]}</span>{" "}
+        {board === "lxsz" ? "天" : "板"}
+      </td>
+      <td className={`num ${pctClass(pctValue)}`} style={{ fontWeight: 700, fontSize: 14 }}>
+        {board === "jjzt"
+          ? item["今开涨幅"] || item["今日涨跌幅"] || "--"
+          : item["连续涨跌幅"] || "--"}
+      </td>
+      <td className="num" style={{ fontWeight: 600 }}>
+        {item["现价"] || "--"}
+      </td>
+      <td className={`num ${pctClass(todayPct ?? 0)}`} style={{ fontWeight: 600 }}>
+        {item["今日涨跌幅"] || "--"}
+      </td>
+      <td className={`num ${pctClass(bodyPct ?? 0)}`} style={{ fontWeight: 600 }}>
+        {item["实体涨幅"] || "--"}
+      </td>
+      <td className={`num ${retailColor}`}>{item["散户指数"] || "--"}</td>
+      <td className="num">{item["今日换手率"] || "--"}</td>
+      <td>
+        <span className="tag" style={{ margin: 0 }}>
+          {item["所属行业"] || ""}
+        </span>
+      </td>
+    </tr>
+  )
+}
+
 function StockCard({
   item,
   rule,
@@ -190,11 +224,19 @@ function StockCard({
   const hl = shouldHighlight(item, rule)
   const retailClass = retail === null ? "flat" : retail > 0 ? "in" : "out"
   const retailIcon = retail === null ? "" : retail > 0 ? "▲ 净流入" : "▼ 净流出"
+  const press = useLongPress((x, y) => onContextStock(item, x, y))
   return (
     <button
       type="button"
       className={`stock-card${hl ? " highlight" : ""}${active ? " active" : ""}`}
-      onClick={() => onSelect(item["股票代码"])}
+      onPointerDown={press.onPointerDown}
+      onPointerMove={press.onPointerMove}
+      onPointerUp={press.onPointerUp}
+      onPointerCancel={press.onPointerCancel}
+      onClick={(e) => {
+        if (press.consumeClick(e)) return
+        onSelect(item["股票代码"])
+      }}
       onContextMenu={(e) => {
         e.preventDefault()
         e.stopPropagation()

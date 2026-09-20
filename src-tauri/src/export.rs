@@ -7,7 +7,7 @@ use crate::snapshot;
 use crate::types::{ExportResult, Snapshot, StockRow};
 use std::collections::BTreeMap;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 const EXTRA_FIELDS: &[&str] = &[
     "平均涨幅/天",
@@ -173,6 +173,23 @@ pub fn export_from_cache(cache_path: &Path, format: &str, output_path: &Path) ->
     write_snapshot_file(&snap, output_path, format)
 }
 
+/// 绝对路径原样使用；相对路径只取文件名并放到 `base`（应用文档目录）。
+pub fn join_export_path(base: &Path, path: &str) -> Result<PathBuf, String> {
+    let raw = path.trim();
+    if raw.is_empty() {
+        return Err("导出路径为空".into());
+    }
+    let p = PathBuf::from(raw);
+    if p.is_absolute() {
+        return Ok(p);
+    }
+    let file = p
+        .file_name()
+        .filter(|name| !name.is_empty() && *name != "." && *name != "..")
+        .ok_or_else(|| "导出文件名不合法".to_string())?;
+    Ok(base.join(file))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -202,5 +219,17 @@ mod tests {
         assert!(text.contains("000001"));
         assert!(Path::new(&result.selected_path).is_file());
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn relative_export_stays_under_base() {
+        let base = PathBuf::from("/tmp/gp-docs");
+        let dest = join_export_path(&base, "lxsz_rankings_20260101_120000.html").unwrap();
+        assert_eq!(dest, base.join("lxsz_rankings_20260101_120000.html"));
+        let sneak = join_export_path(&base, "../evil.html").unwrap();
+        assert_eq!(sneak, base.join("evil.html"));
+        assert!(join_export_path(&base, "").is_err());
+        let abs = join_export_path(&base, "/tmp/out.html").unwrap();
+        assert_eq!(abs, PathBuf::from("/tmp/out.html"));
     }
 }

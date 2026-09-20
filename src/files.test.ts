@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { rowsToCsv, rowsToJson } from "./files"
+import { rowsToCsv, rowsToJson, timestampName } from "./files"
 
 describe("rowsToCsv", () => {
   it("includes extra columns when present", () => {
@@ -17,6 +17,13 @@ describe("rowsToCsv", () => {
     expect(csv).toContain("散户指数")
     expect(csv).toContain("000001")
     expect(csv).toContain("-6.20%")
+  })
+})
+
+describe("timestampName", () => {
+  it("uses ranking prefix and extension", () => {
+    expect(timestampName("html")).toMatch(/^lxsz_rankings_\d{8}_\d{6}\.html$/)
+    expect(timestampName("apk")).toMatch(/\.apk$/)
   })
 })
 

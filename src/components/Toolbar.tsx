@@ -83,8 +83,8 @@ export function Toolbar({
           onClick={onOpenSettings}
           title={
             settings?.hasDeepseekKey
-              ? "抓取内置；DeepSeek 已配置，可右键分析股票"
-              : "抓取内置；右键分析前请在设置中填写 DeepSeek API Key"
+              ? "抓取内置；DeepSeek 已配置，可右键或长按分析股票"
+              : "抓取内置；右键或长按分析前请在设置中填写 DeepSeek API Key"
           }
         >
           <span>内置引擎</span>

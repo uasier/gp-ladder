@@ -4,6 +4,24 @@ html, body, #root {
 }
 body {
   overflow: hidden;
+  padding-top: env(safe-area-inset-top);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+html.is-mobile .shell {
+  height: 100%;
+  height: 100dvh;
+}
+html.is-mobile button,
+html.is-mobile a,
+html.is-mobile select,
+html.is-mobile input {
+  touch-action: manipulation;
+}
+html.is-mobile .stock-card,
+html.is-mobile table.list td {
+  -webkit-touch-callout: none;
+  user-select: none;
 }
 .shell {
   height: 100%;
@@ -305,6 +323,42 @@ body {
 }
 .ctx-menu button:hover {
   background: var(--surface-card-hover);
+}
+
+html.is-mobile .analyze-float {
+  left: 8px !important;
+  right: 8px !important;
+  top: calc(8px + env(safe-area-inset-top)) !important;
+  width: auto;
+  max-height: calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  border-radius: 12px;
+}
+html.is-mobile .analyze-float-bar {
+  cursor: default;
+}
+html.is-mobile .settings-modal {
+  width: calc(100vw - 16px);
+  max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  margin-top: env(safe-area-inset-top);
+}
+html.is-mobile .ctx-menu {
+  min-width: 220px;
+}
+html.is-mobile .ctx-menu button {
+  min-height: 44px;
+  font-size: 15px;
+}
+html.is-mobile .log-panel {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+html.is-mobile .log-bar {
+  min-height: 44px;
+}
+html.is-mobile .log-bar-last {
+  display: none;
+}
+html.is-mobile .log-scroll {
+  max-height: 36vh;
 }
 
 .analyze-float {
