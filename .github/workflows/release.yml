@@ -204,17 +204,21 @@ jobs:
       - name: Collect APK
         run: |
           mkdir -p dist-android
-          find src-tauri/gen/android/app/build/outputs/apk src-tauri/target -name "*.apk" 2>/dev/null | while read -r f; do
+          VER="$(node -p "require('./package.json').version")"
+          SRC=""
+          while IFS= read -r f; do
             case "$f" in
               *unsigned*) continue ;;
             esac
-            cp "$f" dist-android/
-          done
-          if ! ls dist-android/*.apk >/dev/null 2>&1; then
-            find src-tauri/gen/android/app/build/outputs/apk -name "*.apk" -exec cp {} dist-android/ \;
+            SRC="$f"
+            break
+          done < <(find src-tauri/gen/android/app/build/outputs/apk src-tauri/target -name "*.apk" 2>/dev/null)
+          if [ -z "$SRC" ]; then
+            SRC="$(find src-tauri/gen/android/app/build/outputs/apk -name "*.apk" | head -n 1)"
           fi
+          test -n "$SRC"
+          cp "$SRC" "dist-android/gp-ladder_${VER}_aarch64.apk"
           ls -la dist-android
-          test -n "$(ls -A dist-android/*.apk 2>/dev/null)"
 
       - name: Upload workflow artifacts
         uses: actions/upload-artifact@v4
@@ -225,8 +229,8 @@ jobs:
 
       - name: Upload APK to GitHub Release
         if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.release_tag != ''
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || github.event.inputs.release_tag }}
-          files: dist-android/*.apk
-          fail_on_unmatched_files: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || github.event.inputs.release_tag }}"
+          gh release upload "$TAG" dist-android/*.apk --clobber
