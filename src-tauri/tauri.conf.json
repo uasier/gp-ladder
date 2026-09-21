@@ -28,8 +28,8 @@
     "active": true,
     "targets": "all",
     "category": "Finance",
-    "shortDescription": "同花顺连涨榜桌面工作台",
-    "longDescription": "抓取同花顺连涨榜并叠加东方财富行情，在桌面里筛选、精选与导出。",
+    "shortDescription": "A股连涨榜、涨停天梯与昨日涨停工作台",
+    "longDescription": "抓取同花顺连涨榜、东方财富涨停池和昨日涨停，叠加当日行情，在桌面或 Android 里筛选、精选、导出，并可调用 DeepSeek 做短线分析。",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -39,6 +39,7 @@
     ],
     "macOS": {
       "minimumSystemVersion": "10.15",
+      "signingIdentity": "-",
       "dmg": {
         "appPosition": {
           "x": 180,

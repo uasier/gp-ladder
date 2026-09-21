@@ -2,14 +2,74 @@
 <html lang="zh-CN" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/app-icon.png" />
+    <title>连涨天梯 - A股连涨榜、涨停天梯与昨日涨停工作台</title>
+    <meta
+      name="description"
+      content="连涨天梯是开源的 A 股桌面与 Android 工作台：抓取同花顺连涨榜、东方财富涨停天梯和昨日涨停，叠加现价、涨跌幅、换手、成交额与散户资金，支持筛选、精选、导出和 DeepSeek 短线分析。"
+    />
+    <meta
+      name="keywords"
+      content="连涨天梯,涨停天梯,昨日涨停,连涨榜,涨停池,连板,同花顺,东方财富,A股,短线,竞价,gp-ladder"
+    />
+    <meta name="author" content="uasier" />
+    <meta name="robots" content="index,follow" />
+    <meta name="application-name" content="连涨天梯" />
+    <meta name="apple-mobile-web-app-title" content="连涨天梯" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#0b0f17" />
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
-    <meta name="theme-color" content="#0b0f17" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <title>连涨天梯</title>
+    <link rel="canonical" href="https://uasier.github.io/gp-ladder/" />
+    <link rel="icon" type="image/png" href="/app-icon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="zh_CN" />
+    <meta property="og:site_name" content="连涨天梯" />
+    <meta property="og:title" content="连涨天梯 - A股连涨榜、涨停天梯与昨日涨停工作台" />
+    <meta
+      property="og:description"
+      content="连涨天梯是开源的 A 股桌面与 Android 工作台：抓取同花顺连涨榜、东方财富涨停天梯和昨日涨停，叠加现价、涨跌幅、换手、成交额与散户资金，支持筛选、精选、导出和 DeepSeek 短线分析。"
+    />
+    <meta property="og:url" content="https://uasier.github.io/gp-ladder/" />
+    <meta property="og:image" content="https://uasier.github.io/gp-ladder/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="连涨天梯：A股连涨榜、涨停天梯与昨日涨停工作台" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="连涨天梯 - A股连涨榜、涨停天梯与昨日涨停工作台" />
+    <meta
+      name="twitter:description"
+      content="连涨天梯是开源的 A 股桌面与 Android 工作台：抓取同花顺连涨榜、东方财富涨停天梯和昨日涨停，叠加现价、涨跌幅、换手、成交额与散户资金，支持筛选、精选、导出和 DeepSeek 短线分析。"
+    />
+    <meta name="twitter:image" content="https://uasier.github.io/gp-ladder/og.png" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "连涨天梯",
+        "alternateName": ["gp-ladder", "涨停天梯", "昨日涨停"],
+        "applicationCategory": "FinanceApplication",
+        "operatingSystem": "macOS, Windows, Android",
+        "inLanguage": "zh-CN",
+        "description": "连涨天梯是开源的 A 股桌面与 Android 工作台：抓取同花顺连涨榜、东方财富涨停天梯和昨日涨停，叠加现价、涨跌幅、换手、成交额与散户资金，支持筛选、精选、导出和 DeepSeek 短线分析。",
+        "url": "https://uasier.github.io/gp-ladder/",
+        "downloadUrl": "https://github.com/uasier/gp-ladder/releases",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "CNY"
+        },
+        "author": {
+          "@type": "Person",
+          "name": "uasier",
+          "url": "https://github.com/uasier"
+        }
+      }
+    </script>
     <script>
       (function () {
         var ua = navigator.userAgent || ""
@@ -20,6 +80,22 @@
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <header>
+        <h1>连涨天梯</h1>
+        <p>
+          开源 A 股连涨榜、涨停天梯与昨日涨停工作台。从同花顺抓取连续上涨榜，叠加东方财富当日行情，在
+          macOS、Windows 和 Android 上筛选、精选并导出。
+        </p>
+        <p>
+          <a href="https://github.com/uasier/gp-ladder/releases">下载安装包</a>
+          ·
+          <a href="https://github.com/uasier/gp-ladder">GitHub 源码</a>
+          ·
+          <a href="https://uasier.github.io/gp-ladder/">产品页</a>
+        </p>
+      </header>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

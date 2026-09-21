@@ -32,6 +32,8 @@ describe("PROJECT_CLEAN_RELATIVE_PATHS", () => {
   it("covers rust target and android build dirs, never absolute", () => {
     expect(PROJECT_CLEAN_RELATIVE_PATHS).toContain("src-tauri/target")
     expect(PROJECT_CLEAN_RELATIVE_PATHS).toContain("src-tauri/gen/android/app/build")
+    expect(PROJECT_CLEAN_RELATIVE_PATHS).toContain("src-tauri/gen/android/buildSrc/.gradle")
+    expect(PROJECT_CLEAN_RELATIVE_PATHS).toContain("dist-android")
     expect(PROJECT_CLEAN_RELATIVE_PATHS).toContain("release")
     for (const rel of PROJECT_CLEAN_RELATIVE_PATHS) {
       expect(rel.startsWith("/")).toBe(false)

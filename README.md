@@ -1,6 +1,14 @@
-# 连涨天梯
+# 连涨天梯（gp-ladder）
 
-桌面 / Android 工作台：从同花顺抓取连续上涨榜，叠加东方财富当日行情（现价、涨跌幅、今开高低、换手、成交额、市盈率、散户资金），在窗口里筛选、精选并导出。
+[![GitHub Release](https://img.shields.io/github/v/release/uasier/gp-ladder)](https://github.com/uasier/gp-ladder/releases)
+[![License: MIT](https://img.shields.io/github/license/uasier/gp-ladder)](LICENSE)
+[![platform](https://img.shields.io/badge/macOS%20%7C%20Windows%20%7C%20Android-0b0f17)](https://github.com/uasier/gp-ladder/releases)
+
+开源的 A 股**连涨榜 / 涨停天梯 / 昨日涨停**工作台（macOS · Windows · Android）。从同花顺抓取连续上涨榜，叠加东方财富当日行情（现价、涨跌幅、今开高低、换手、成交额、市盈率、散户资金），在窗口里筛选、精选并导出。
+
+Tonghuashun consecutive-gain rankings, East Money limit-up boards, and yesterday’s limit-up watchlist — a local A-share desktop / Android app.
+
+安装包见 [GitHub Releases](https://github.com/uasier/gp-ladder/releases)。产品页：[uasier.github.io/gp-ladder](https://uasier.github.io/gp-ladder/)
 
 抓取在软件内部完成，不依赖本机 Python、uv 或仓库脚本。打开只读本地快照；点击「刷新实时数据」才会联网。
 
@@ -10,11 +18,23 @@
 
 从 [GitHub Releases](https://github.com/uasier/gp-ladder/releases) 获取安装包：
 
-- macOS：`gp-ladder_*_aarch64.dmg`（Apple Silicon）/ `gp-ladder_*_x64.dmg`（Intel）；未签名，首次请右键 → 打开
+- macOS：`gp-ladder_*_aarch64.dmg`（Apple Silicon）/ `gp-ladder_*_x64.dmg`（Intel）
 - Windows：`gp-ladder_*_x64-setup.exe`（未签名，SmartScreen 可能提示「仍要运行」）
 - Android：`gp-ladder_*_aarch64.apk`（未签名，需允许「安装未知来源」）
 
 应用内 **设置 → 关于** 可检查更新，并下载当前系统对应的安装包。
+
+### macOS 提示「文件已损坏」
+
+安装包没有 Apple 开发者公证。macOS 15 及以后（系统升级后尤其明显）会把这种情况显示成「已损坏，无法打开」，**不是**下载坏了。把「连涨天梯」拖进「应用程序」后，在「终端」执行：
+
+```bash
+xattr -cr /Applications/连涨天梯.app
+codesign --force --deep --sign - /Applications/连涨天梯.app
+open /Applications/连涨天梯.app
+```
+
+旧系统上的「右键 → 打开」在新系统上已经无效。`xattr` 去掉浏览器下载带来的隔离标记；`codesign` 给整个 `.app` 补上临时签名（v0.2.0 包里只有链接器签过可执行文件，Gatekeeper 会当成损坏）。
 
 ## 界面预览
 
@@ -38,7 +58,7 @@
 
 日常改前端只需 **Node 18+**。
 
-Rust / Android / 安装包编译都在 GitHub Actions 上完成，不必在本机装 JDK、Android SDK 或交叉编译 target。本机跑 `tauri build` 会生成数 GB 的 `src-tauri/target/`，硬盘紧张时请不要本地打包。
+Rust / Android / 安装包编译都在 GitHub Actions 上完成，不必在本机装 JDK、Android SDK 或交叉编译 target。`npm run tauri:build` 会转到云端，不会在本机生成数 GB 的 `src-tauri/target/`。
 
 ## 开发
 
@@ -48,15 +68,16 @@ npm test          # 前端单测（本机）
 npm run dev       # 仅 Vite，不编译 Rust
 ```
 
-全平台安装包（macOS arm64 / macOS x64 / Windows / Android APK）在 GitHub 上编译：
+全平台安装包（macOS arm64 / macOS x64 / Windows / Android APK）只在 GitHub 上编译：
 
 ```bash
 npm run build:github
+# 等同 npm run tauri:build / tauri:build:mac / tauri:build:win / tauri:android:build
 # 或打开 Actions → Build → Run workflow
 # 填已有 tag（如 v0.2.0）会把安装包挂到该 Release；留空只作为 Artifacts（保留 14 天）
 ```
 
-推送 `v*` tag 同样会走 Build 工作流并上传 GitHub Release。
+推送 `v*` tag 同样会走 Build 工作流并上传 GitHub Release。本机直接 `tauri build` 会被拦截；确需本地出包时：`GP_LOCAL_BUILD=1 npm run tauri -- build --bundles app,dmg`。
 
 清理本机已经产生的编译缓存：
 
@@ -100,6 +121,7 @@ npm run server
 │   ├── gen/android/     # Tauri Android 工程（首次 `tauri android init`）
 │   └── templates/ladder.html
 ├── docs/screenshots/    # README 界面截图
+├── site/                # GitHub Pages 产品页（搜索引擎抓取）
 ├── LICENSE
 ├── package.json
 └── README.md
@@ -121,13 +143,13 @@ npm run release:tag -- 0.2.0
 git push origin HEAD && git push origin v0.2.0
 ```
 
-推送 `v*` tag 后，GitHub Actions 的 **Build** 工作流会在 macOS arm64 / macOS x64 / Windows x64 / Android arm64 构建，并上传到该 tag 的 GitHub Release。也可 `npm run build:github` 或在 Actions 里手动运行 Build：不填 tag 只保留 Artifacts；填已有 tag 则补传安装包。
+推送 `v*` tag 后，GitHub Actions 的 **Build** 工作流会在 macOS arm64 / macOS x64 / Windows x64 / Android arm64 构建，并上传到该 tag 的 GitHub Release。`npm run tauri:build` / `npm run build:github` 或在 Actions 里手动运行 Build：不填 tag 只保留 Artifacts；填已有 tag 则补传安装包。
 
 ## 注意事项
 
 - 需要能访问 `data.10jqka.com.cn` 与 `push2delay.eastmoney.com`。
 - 页面结构若变更，解析可能失败；可在设置里把「最多抓取页数」设为 1 试跑。
-- 安装包未签名。macOS 请右键 App 选择「打开」；Windows 如遇 SmartScreen，选择「仍要运行」。Android APK 需允许「安装未知来源」；若为 debug keystore 签名，仅供自用/测试。
+- 安装包未做 Apple / Microsoft 公证。macOS 若提示「文件已损坏」，按上文终端命令处理，不要丢进废纸篓。Windows 如遇 SmartScreen，选择「仍要运行」。Android APK 需允许「安装未知来源」；若为 debug keystore 签名，仅供自用/测试。
 
 ## 免责说明
 

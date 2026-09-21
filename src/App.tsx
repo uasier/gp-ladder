@@ -33,6 +33,7 @@ import { Toolbar } from "./components/Toolbar"
 import { UpdateBanner } from "./components/UpdateBanner"
 import { downloadText, rowsToCsv, rowsToJson, timestampName } from "./files"
 import { isMobileApp } from "./platform"
+import { applyDocumentSeo } from "./seo"
 import { filterAndSort, hasActiveFilters, topIndustries, uniqueDays } from "./stock"
 import {
   DEFAULT_FILTERS,
@@ -185,6 +186,10 @@ export default function App() {
     document.documentElement.setAttribute("data-theme", theme)
     localStorage.setItem(THEME_KEY, theme)
   }, [theme])
+
+  useEffect(() => {
+    applyDocumentSeo(board)
+  }, [board])
 
   useEffect(() => {
     let cancelled = false

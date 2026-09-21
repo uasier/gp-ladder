@@ -19,11 +19,13 @@ const root = resolve(join(dirname(fileURLToPath(import.meta.url)), ".."))
 export const PROJECT_CLEAN_RELATIVE_PATHS = [
   "src-tauri/target",
   "dist",
+  "dist-android",
   "release",
   "src-tauri/gen/android/.gradle",
   "src-tauri/gen/android/build",
   "src-tauri/gen/android/app/build",
   "src-tauri/gen/android/buildSrc/build",
+  "src-tauri/gen/android/buildSrc/.gradle",
   "src-tauri/gen/android/app/src/main/assets",
   "src-tauri/gen/android/app/src/main/jniLibs",
 ]
@@ -119,7 +121,7 @@ export function planClean(opts, home = homedir(), repoRoot = root) {
 function printHelp() {
   console.log(`用法: node scripts/clean-local-build.mjs [--toolchains] [--dry-run]
 
-  默认删除仓库内 target / dist / release / Android 构建目录。
+  默认删除仓库内 target / dist / dist-android / release / Android 构建目录。
   --toolchains  再删除本机 Android SDK、Gradle 缓存，并卸掉非本机 Rust target。
   --dry-run     只统计，不删除。`)
 }

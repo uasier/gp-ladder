@@ -185,7 +185,8 @@ export function SettingsModal({
           <div className="settings-pane">
             <p className="muted tip">
               安装包由 GitHub Releases 发布。应用启动后会检查最新 tag；也可在此手动检查并下载当前系统对应的安装包（桌面为
-              dmg/exe，Android 为 APK）。
+              dmg/exe，Android 为 APK）。macOS 若提示「文件已损坏」，不是安装包坏了，按 README
+              里的终端命令处理。
             </p>
             <div className="about-grid">
               <div>

@@ -1,0 +1,57 @@
+name: Pages
+
+# 把静态产品页发到 GitHub Pages，供搜索引擎抓取。
+on:
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - "docs/screenshots/**"
+      - "public/og.png"
+      - "public/app-icon.png"
+      - "public/favicon.png"
+      - "public/apple-touch-icon.png"
+      - "public/robots.txt"
+      - "public/sitemap.xml"
+      - "public/manifest.webmanifest"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Assemble site
+        run: |
+          mkdir -p _site/screenshots
+          cp -R site/. _site/
+          cp public/og.png public/app-icon.png public/favicon.png public/apple-touch-icon.png _site/
+          cp public/robots.txt public/sitemap.xml public/manifest.webmanifest _site/
+          cp docs/screenshots/*.jpg _site/screenshots/
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

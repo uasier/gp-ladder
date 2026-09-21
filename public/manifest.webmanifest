@@ -1,0 +1,22 @@
+{
+  "name": "连涨天梯",
+  "short_name": "连涨天梯",
+  "description": "开源 A 股连涨榜、涨停天梯与昨日涨停工作台。",
+  "lang": "zh-CN",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0b0f17",
+  "theme_color": "#0b0f17",
+  "icons": [
+    {
+      "src": "/app-icon.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

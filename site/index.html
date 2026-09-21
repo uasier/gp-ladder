@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>连涨天梯 - A股连涨榜、涨停天梯与昨日涨停工作台</title>
+    <meta
+      name="description"
+      content="连涨天梯是开源的 A 股桌面与 Android 工作台：抓取同花顺连涨榜、东方财富涨停天梯和昨日涨停，叠加现价、涨跌幅、换手、成交额与散户资金，支持筛选、精选、导出和 DeepSeek 短线分析。"
+    />
+    <meta
+      name="keywords"
+      content="连涨天梯,涨停天梯,昨日涨停,连涨榜,涨停池,连板,同花顺,东方财富,A股,短线,竞价,gp-ladder"
+    />
+    <meta name="author" content="uasier" />
+    <meta name="robots" content="index,follow" />
+    <meta name="application-name" content="连涨天梯" />
+    <meta name="theme-color" content="#0b0f17" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="canonical" href="https://uasier.github.io/gp-ladder/" />
+    <link rel="icon" type="image/png" href="./app-icon.png" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="zh_CN" />
+    <meta property="og:site_name" content="连涨天梯" />
+    <meta property="og:title" content="连涨天梯 - A股连涨榜、涨停天梯与昨日涨停工作台" />
+    <meta
+      property="og:description"
+      content="连涨天梯是开源的 A 股桌面与 Android 工作台：抓取同花顺连涨榜、东方财富涨停天梯和昨日涨停，叠加现价、涨跌幅、换手、成交额与散户资金，支持筛选、精选、导出和 DeepSeek 短线分析。"
+    />
+    <meta property="og:url" content="https://uasier.github.io/gp-ladder/" />
+    <meta property="og:image" content="https://uasier.github.io/gp-ladder/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="连涨天梯：A股连涨榜、涨停天梯与昨日涨停工作台" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="连涨天梯 - A股连涨榜、涨停天梯与昨日涨停工作台" />
+    <meta
+      name="twitter:description"
+      content="连涨天梯是开源的 A 股桌面与 Android 工作台：抓取同花顺连涨榜、东方财富涨停天梯和昨日涨停，叠加现价、涨跌幅、换手、成交额与散户资金，支持筛选、精选、导出和 DeepSeek 短线分析。"
+    />
+    <meta name="twitter:image" content="https://uasier.github.io/gp-ladder/og.png" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "SoftwareApplication",
+            "name": "连涨天梯",
+            "alternateName": ["gp-ladder", "涨停天梯", "昨日涨停"],
+            "applicationCategory": "FinanceApplication",
+            "operatingSystem": "macOS, Windows, Android",
+            "inLanguage": "zh-CN",
+            "description": "连涨天梯是开源的 A 股桌面与 Android 工作台：抓取同花顺连涨榜、东方财富涨停天梯和昨日涨停，叠加现价、涨跌幅、换手、成交额与散户资金，支持筛选、精选、导出和 DeepSeek 短线分析。",
+            "url": "https://uasier.github.io/gp-ladder/",
+            "downloadUrl": "https://github.com/uasier/gp-ladder/releases",
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "CNY" },
+            "author": {
+              "@type": "Person",
+              "name": "uasier",
+              "url": "https://github.com/uasier"
+            }
+          },
+          {
+            "@type": "WebSite",
+            "name": "连涨天梯",
+            "url": "https://uasier.github.io/gp-ladder/",
+            "inLanguage": "zh-CN"
+          },
+          {
+            "@type": "FAQPage",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "连涨天梯是什么软件？",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "连涨天梯是开源的 A 股行情浏览工作台，可在 macOS、Windows 和 Android 上使用。它从同花顺抓取连续上涨榜，从东方财富读取涨停池、昨日涨停和当日行情，在本地筛选、精选并导出，不构成投资建议。"
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "连涨榜、涨停天梯和昨日涨停分别看什么？",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "连涨榜来自同花顺连续上涨排名；涨停天梯来自东方财富涨停池，按连板高度分档；昨日涨停看昨天涨停、今日竞价后仍红盘且涨幅在 2% 到 8% 的标的。"
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "数据从哪里来？需要一直联网吗？",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "连涨榜来自同花顺，涨停与行情来自东方财富。打开软件只读本地快照；点击「刷新实时数据」才会联网。页面结构若变更，解析可能失败。"
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "如何下载连涨天梯？",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "到 GitHub Releases 下载 macOS dmg、Windows 安装包或 Android APK。应用内设置 → 关于也可检查更新并下载当前系统对应的安装包。"
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "连涨天梯会给出买入卖出建议吗？",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "不会。榜单、筛选、精选标记、评分和模型生成的文字只供学习交流，不能替代独立研究或持牌投资顾问意见。"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    </script>
+    <style>
+      :root {
+        --bg: #0b0f17;
+        --surface: #121824;
+        --card: #151d2c;
+        --border: rgba(255, 255, 255, 0.08);
+        --text: #f8fafc;
+        --muted: #94a3b8;
+        --sub: #cbd5e1;
+        --accent: #6366f1;
+        --up: #f43f5e;
+        font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
+          "Segoe UI", "Microsoft YaHei", sans-serif;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+      }
+      body {
+        background-image: radial-gradient(
+            1000px circle at 12% -8%,
+            rgba(56, 189, 248, 0.1),
+            transparent 42%
+          ),
+          radial-gradient(900px circle at 90% 0%, rgba(99, 102, 241, 0.1), transparent 46%);
+      }
+      a {
+        color: #a5b4fc;
+      }
+      img {
+        max-width: 100%;
+        height: auto;
+      }
+      .wrap {
+        width: min(1080px, calc(100% - 32px));
+        margin: 0 auto;
+      }
+      header.hero {
+        padding: 48px 0 28px;
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 28px;
+        align-items: center;
+      }
+      .logo {
+        width: 96px;
+        height: 96px;
+        border-radius: 24px;
+        background: var(--card);
+        border: 1px solid var(--border);
+      }
+      h1 {
+        margin: 0 0 10px;
+        font-size: clamp(32px, 6vw, 52px);
+        letter-spacing: 0.04em;
+      }
+      .lead {
+        margin: 0 0 18px;
+        color: var(--sub);
+        font-size: 18px;
+        line-height: 1.6;
+        max-width: 42rem;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 16px;
+        border-radius: 10px;
+        text-decoration: none;
+        border: 1px solid var(--border);
+        color: var(--text);
+        background: var(--surface);
+      }
+      .btn.primary {
+        background: var(--accent);
+        border-color: transparent;
+        color: #fff;
+      }
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 16px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .chip {
+        padding: 4px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.03);
+      }
+      section {
+        padding: 28px 0;
+      }
+      h2 {
+        margin: 0 0 16px;
+        font-size: 24px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+      }
+      article,
+      .shot,
+      .faq {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 18px;
+      }
+      article h3,
+      .faq h3 {
+        margin: 0 0 8px;
+        font-size: 18px;
+      }
+      p,
+      li {
+        color: var(--sub);
+        line-height: 1.65;
+        overflow-wrap: break-word;
+      }
+      .shots {
+        display: grid;
+        gap: 16px;
+      }
+      .shot img {
+        width: 100%;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+      }
+      .shot h3 {
+        margin: 12px 0 6px;
+      }
+      footer {
+        padding: 28px 0 48px;
+        color: var(--muted);
+        font-size: 13px;
+        border-top: 1px solid var(--border);
+      }
+      .warn {
+        color: #fda4af;
+      }
+      @media (max-width: 800px) {
+        header.hero {
+          grid-template-columns: 1fr;
+          padding-top: 28px;
+        }
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <header class="hero">
+        <img class="logo" src="./app-icon.png" width="96" height="96" alt="连涨天梯图标" />
+        <div>
+          <h1>连涨天梯</h1>
+          <p class="lead">
+            开源的 A 股连涨榜、涨停天梯与昨日涨停工作台。从同花顺抓取连续上涨榜，叠加东方财富当日行情，在
+            macOS、Windows 和 Android 窗口里筛选、精选并导出。
+          </p>
+          <div class="actions">
+            <a class="btn primary" href="https://github.com/uasier/gp-ladder/releases">下载安装包</a>
+            <a class="btn" href="https://github.com/uasier/gp-ladder">查看源码</a>
+          </div>
+          <div class="meta">
+            <span class="chip">macOS</span>
+            <span class="chip">Windows</span>
+            <span class="chip">Android</span>
+            <span class="chip">MIT 开源</span>
+            <span class="chip">仅供学习交流</span>
+          </div>
+        </div>
+      </header>
+
+      <section aria-labelledby="boards">
+        <h2 id="boards">三个榜单</h2>
+        <div class="grid">
+          <article>
+            <h3>连涨天梯</h3>
+            <p>
+              读取同花顺连续上涨榜，按连涨天数分档，叠加现价、涨跌幅、今开高低、换手、成交额、市盈率和散户资金。
+            </p>
+          </article>
+          <article>
+            <h3>涨停天梯</h3>
+            <p>读取东方财富涨停池，按连板高度分档，观察涨停梯队而不是只看一张混排列表。</p>
+          </article>
+          <article>
+            <h3>昨日涨停</h3>
+            <p>看昨天涨停、今日竞价后仍红盘且涨幅 2%–8% 的标的，用来跟竞价强度和回封节奏。</p>
+          </article>
+        </div>
+      </section>
+
+      <section aria-labelledby="features">
+        <h2 id="features">能做什么</h2>
+        <div class="grid">
+          <article>
+            <h3>本地筛选</h3>
+            <p>按行业、天数/连板、涨幅、换手、散户指数和精选标记过滤，卡片或列表两种视图。</p>
+          </article>
+          <article>
+            <h3>短线分析</h3>
+            <p>右键或长按个股，按 1–5 个交易日视角调用 DeepSeek 看盘，并给出 0–100 短线评分。</p>
+          </article>
+          <article>
+            <h3>导出与更新</h3>
+            <p>导出 HTML / CSV / JSON。设置里检查 GitHub Release，下载当前系统对应的安装包。</p>
+          </article>
+        </div>
+      </section>
+
+      <section aria-labelledby="shots">
+        <h2 id="shots">界面</h2>
+        <div class="shots">
+          <figure class="shot">
+            <img
+              src="./screenshots/lxsz.jpg"
+              width="2000"
+              height="1156"
+              alt="连涨天梯界面：同花顺连涨榜叠加东方财富行情，按连涨天数分档"
+            />
+            <h3>连涨天梯</h3>
+            <p>同花顺连涨榜叠加东方财富行情，按天数、行业、精选筛选。</p>
+          </figure>
+          <figure class="shot">
+            <img
+              src="./screenshots/zt.jpg"
+              width="2000"
+              height="1156"
+              alt="涨停天梯界面：东方财富涨停池按连板高度分档"
+            />
+            <h3>涨停天梯</h3>
+            <p>东方财富涨停池，按连板高度分档。</p>
+          </figure>
+          <figure class="shot">
+            <img
+              src="./screenshots/jjzt.jpg"
+              width="2000"
+              height="1156"
+              alt="昨日涨停界面：昨天涨停、今日竞价后红盘且涨幅 2% 至 8%"
+            />
+            <h3>昨日涨停</h3>
+            <p>昨天涨停，今日竞价后红盘且涨幅 2%–8%。</p>
+          </figure>
+          <figure class="shot">
+            <img
+              src="./screenshots/analysis.jpg"
+              width="2000"
+              height="1200"
+              alt="DeepSeek 短线分析：个股动能、量价与 0 到 100 短线评分"
+            />
+            <h3>DeepSeek 短线分析</h3>
+            <p>按 1–5 个交易日视角看盘，并给出 0–100 短线评分。</p>
+          </figure>
+        </div>
+      </section>
+
+      <section aria-labelledby="download">
+        <h2 id="download">下载</h2>
+        <article>
+          <p>
+            安装包在
+            <a href="https://github.com/uasier/gp-ladder/releases">GitHub Releases</a>
+            ：macOS 用 <code>gp-ladder_*_aarch64.dmg</code> 或
+            <code>gp-ladder_*_x64.dmg</code>，Windows 用
+            <code>gp-ladder_*_x64-setup.exe</code>，Android 用
+            <code>gp-ladder_*_aarch64.apk</code>。
+          </p>
+          <p>
+            macOS 若提示「文件已损坏」，不是下载坏了，按
+            <a href="https://github.com/uasier/gp-ladder#macos-提示文件已损坏">仓库说明</a>
+            在终端给应用补临时签名。Windows 如遇 SmartScreen 选择「仍要运行」。Android 需允许安装未知来源。
+          </p>
+        </article>
+      </section>
+
+      <section aria-labelledby="faq">
+        <h2 id="faq">常见问题</h2>
+        <div class="shots">
+          <article class="faq">
+            <h3>连涨天梯是什么软件？</h3>
+            <p>
+              连涨天梯是开源的 A 股行情浏览工作台，可在 macOS、Windows 和 Android 上使用。它从同花顺抓取连续上涨榜，从东方财富读取涨停池、昨日涨停和当日行情，在本地筛选、精选并导出，不构成投资建议。
+            </p>
+          </article>
+          <article class="faq">
+            <h3>连涨榜、涨停天梯和昨日涨停分别看什么？</h3>
+            <p>
+              连涨榜来自同花顺连续上涨排名；涨停天梯来自东方财富涨停池，按连板高度分档；昨日涨停看昨天涨停、今日竞价后仍红盘且涨幅在 2% 到 8% 的标的。
+            </p>
+          </article>
+          <article class="faq">
+            <h3>数据从哪里来？需要一直联网吗？</h3>
+            <p>
+              连涨榜来自同花顺，涨停与行情来自东方财富。打开软件只读本地快照；点击「刷新实时数据」才会联网。页面结构若变更，解析可能失败。
+            </p>
+          </article>
+          <article class="faq">
+            <h3>如何下载连涨天梯？</h3>
+            <p>
+              到 GitHub Releases 下载 macOS dmg、Windows 安装包或 Android APK。应用内设置 → 关于也可检查更新并下载当前系统对应的安装包。
+            </p>
+          </article>
+          <article class="faq">
+            <h3>连涨天梯会给出买入卖出建议吗？</h3>
+            <p>
+              不会。榜单、筛选、精选标记、评分和模型生成的文字只供学习交流，不能替代独立研究或持牌投资顾问意见。
+            </p>
+          </article>
+        </div>
+      </section>
+    </main>
+    <footer>
+      <div class="wrap">
+        <p class="warn">
+          本项目仅供学习交流，不构成任何投资建议，也不是证券公司或投资顾问产品。行情可能延迟、不准或中断。
+        </p>
+        <p>
+          <a href="https://github.com/uasier/gp-ladder">GitHub</a>
+          ·
+          <a href="https://github.com/uasier/gp-ladder/blob/main/LICENSE">MIT License</a>
+          ·
+          <a href="https://github.com/uasier/gp-ladder#%E5%85%8D%E8%B4%A3%E8%AF%B4%E6%98%8E">免责说明</a>
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>

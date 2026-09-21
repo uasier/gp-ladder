@@ -149,7 +149,9 @@ jobs:
             - Windows 64 位：`gp-ladder_*_x64-setup.exe`
             - Android arm64：`gp-ladder_*_aarch64.apk`
 
-            安装包未签名。macOS 请右键 App 选择「打开」；Windows 如遇 SmartScreen，选择「仍要运行」；Android 需允许安装未知来源。
+            安装包未做 Apple / Microsoft 公证。macOS 15+ 若提示「文件已损坏」，不是下载坏了：把 App 拖到「应用程序」后执行
+            `xattr -cr /Applications/连涨天梯.app && codesign --force --deep --sign - /Applications/连涨天梯.app && open /Applications/连涨天梯.app`。
+            Windows 如遇 SmartScreen，选择「仍要运行」；Android 需允许安装未知来源。
 
             应用内「设置 → 关于」可检查更新并下载当前系统对应安装包。
           releaseDraft: false
@@ -158,6 +160,29 @@ jobs:
           # GitHub Release 资源名用 ASCII，避免中文产品名被剥成 `_0.1.0_*.dmg`
           releaseAssetNamePattern: gp-ladder_[version]_[arch][setup][ext]
           retryAttempts: 2
+
+      # Apple Silicon 链接器会给可执行文件打临时签名，但不密封 .app 资源。
+      # 未设置 signingIdentity 时，macOS 15+ 会把下载的 App 提示成「文件已损坏」。
+      - name: Verify macOS ad-hoc signature
+        if: runner.os == 'macOS'
+        run: |
+          set -euo pipefail
+          TARGET="${{ matrix.rust_targets }}"
+          if [ -n "$TARGET" ]; then
+            APP="src-tauri/target/${TARGET}/release/bundle/macos/连涨天梯.app"
+          else
+            APP="src-tauri/target/release/bundle/macos/连涨天梯.app"
+          fi
+          echo "app=$APP"
+          test -d "$APP"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          codesign -dv --verbose=2 "$APP" 2>&1 | tee /tmp/codesign-app.txt
+          grep -q "Signature=adhoc" /tmp/codesign-app.txt
+          grep -q "Sealed Resources version=2" /tmp/codesign-app.txt
+          if grep -q "Sealed Resources=none" /tmp/codesign-app.txt; then
+            echo "App bundle 未密封资源，Gatekeeper 会提示文件损坏" >&2
+            exit 1
+          fi
 
       - name: Upload workflow artifacts
         uses: actions/upload-artifact@v4

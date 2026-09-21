@@ -1,6 +1,7 @@
 # 依赖与构建（安装包请在 GitHub Actions 编译，勿把 target/ 提交或长期留在本机）
 node_modules/
 dist/
+dist-android/
 src-tauri/target/
 .gp-desktop-data/
 
