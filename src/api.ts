@@ -11,6 +11,7 @@ import type {
   SettingsView,
   Snapshot,
   BoardKind,
+  ReleaseInfo,
   UpdateCheck,
 } from "./types"
 
@@ -147,6 +148,11 @@ export async function revealAppLog() {
 export function checkUpdate(force = false) {
   if (isTauri()) return invoke<UpdateCheck>("check_update", { force })
   return http<UpdateCheck>(`/api/update?force=${force ? 1 : 0}`)
+}
+
+export function listReleaseHistory() {
+  if (isTauri()) return invoke<ReleaseInfo[]>("list_releases")
+  return http<ReleaseInfo[]>("/api/update/history")
 }
 
 export function openReleasePage(url?: string) {

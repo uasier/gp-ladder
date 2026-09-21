@@ -364,9 +364,9 @@ export default function App() {
     setUpdateNotice(false)
   }
 
-  async function handleOpenRelease() {
+  async function handleOpenRelease(url?: string) {
     try {
-      await openReleasePage(update?.htmlUrl)
+      await openReleasePage(url || update?.htmlUrl)
     } catch (e) {
       setUpdateError(String(e))
     }
@@ -552,7 +552,7 @@ export default function App() {
         updateError={updateError}
         onClose={() => setSettingsOpen(false)}
         onCheckUpdate={() => void runUpdateCheck(true, false)}
-        onOpenRelease={() => void handleOpenRelease()}
+        onOpenRelease={(url) => void handleOpenRelease(url)}
         onInstallUpdate={() => void handleInstallUpdate()}
         onSave={async (patch) => {
           setSettingsSaving(true)

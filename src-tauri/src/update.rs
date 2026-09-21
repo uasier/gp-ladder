@@ -21,6 +21,19 @@ pub struct UpdateCheck {
     pub repo: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ReleaseInfo {
+    pub version: String,
+    pub name: String,
+    pub notes: String,
+    pub published_at: String,
+    pub html_url: String,
+    pub prerelease: bool,
+    pub current: bool,
+    pub latest: bool,
+}
+
 #[derive(Debug, Deserialize)]
 struct GithubRelease {
     tag_name: String,
@@ -34,6 +47,8 @@ struct GithubRelease {
     draft: bool,
     #[serde(default)]
     prerelease: bool,
+    #[serde(default)]
+    published_at: Option<String>,
     #[serde(default)]
     assets: Vec<GithubAsset>,
 }
@@ -163,43 +178,131 @@ fn from_release(rel: &GithubRelease, platform: &str) -> UpdateCheck {
             rel.name.clone()
         },
         notes: rel.body.trim().to_string(),
-        html_url: if rel.html_url.trim().is_empty() {
-            format!("https://github.com/{}/releases/tag/{}", github_repo(), rel.tag_name)
-        } else {
-            rel.html_url.clone()
-        },
+        html_url: release_html_url(rel),
         asset_name: asset.map(|a| a.name.clone()).unwrap_or_default(),
         asset_url: asset.map(|a| a.browser_download_url.clone()).unwrap_or_default(),
         repo: github_repo(),
     }
 }
 
-fn fetch_latest_release() -> Result<Option<GithubRelease>, String> {
+fn github_get(url: &str) -> Result<(u16, String), String> {
     let repo = github_repo();
-    let url = format!("https://api.github.com/repos/{repo}/releases/latest");
-    let ua = format!("gp-ladder/{ver} (+https://github.com/{repo})", ver = current_version());
+    let ua = format!(
+        "gp-ladder/{ver} (+https://github.com/{repo})",
+        ver = current_version()
+    );
     let client = reqwest::blocking::Client::builder()
         .timeout(Duration::from_secs(20))
         .user_agent(ua)
         .build()
         .map_err(|e| format!("创建 HTTP 客户端失败: {e}"))?;
-    let response = client
-        .get(&url)
+    let mut request = client
+        .get(url)
         .header("Accept", "application/vnd.github+json")
-        .header("X-GitHub-Api-Version", "2022-11-28")
+        .header("X-GitHub-Api-Version", "2022-11-28");
+    if let Ok(token) = std::env::var("GITHUB_TOKEN") {
+        let token = token.trim();
+        if !token.is_empty() {
+            request = request.header("Authorization", format!("Bearer {token}"));
+        }
+    }
+    let response = request
         .send()
         .map_err(|e| format!("请求 GitHub Releases 失败: {e}"))?;
-    let status = response.status();
-    if status.as_u16() == 404 {
-        return Ok(None);
-    }
+    let status = response.status().as_u16();
     let text = response
         .text()
         .map_err(|e| format!("读取 GitHub 响应失败: {e}"))?;
-    if !status.is_success() {
-        return Err(format!("GitHub API HTTP {status}: {}", text.chars().take(180).collect::<String>()));
+    Ok((status, text))
+}
+
+fn fetch_latest_release() -> Result<Option<GithubRelease>, String> {
+    let repo = github_repo();
+    let url = format!("https://api.github.com/repos/{repo}/releases/latest");
+    let (status, text) = github_get(&url)?;
+    if status == 404 {
+        return Ok(None);
     }
-    serde_json::from_str(&text).map(Some).map_err(|e| format!("解析 GitHub Release JSON 失败: {e}"))
+    if !(200..300).contains(&status) {
+        return Err(format!(
+            "GitHub API HTTP {status}: {}",
+            text.chars().take(180).collect::<String>()
+        ));
+    }
+    serde_json::from_str(&text)
+        .map(Some)
+        .map_err(|e| format!("解析 GitHub Release JSON 失败: {e}"))
+}
+
+fn release_html_url(rel: &GithubRelease) -> String {
+    if rel.html_url.trim().is_empty() {
+        format!(
+            "https://github.com/{}/releases/tag/{}",
+            github_repo(),
+            rel.tag_name
+        )
+    } else {
+        rel.html_url.clone()
+    }
+}
+
+fn release_version(rel: &GithubRelease) -> String {
+    rel.tag_name
+        .trim()
+        .trim_start_matches(['v', 'V'])
+        .to_string()
+}
+
+/// 去掉草稿，按 GitHub 返回顺序（新→旧）标记当前版与最新正式版。
+pub(crate) fn collect_releases(rels: Vec<GithubRelease>, current: &str) -> Vec<ReleaseInfo> {
+    let visible: Vec<GithubRelease> = rels.into_iter().filter(|rel| !rel.draft).collect();
+    let latest_idx = visible.iter().position(|rel| !rel.prerelease);
+    visible
+        .into_iter()
+        .enumerate()
+        .map(|(idx, rel)| {
+            let version = release_version(&rel);
+            let name = if rel.name.trim().is_empty() {
+                format!("v{version}")
+            } else {
+                rel.name.clone()
+            };
+            ReleaseInfo {
+                current: parse_semver(&version) == parse_semver(current)
+                    && parse_semver(&version).is_some(),
+                latest: latest_idx == Some(idx),
+                version,
+                name,
+                notes: rel.body.trim().to_string(),
+                published_at: rel
+                    .published_at
+                    .as_deref()
+                    .unwrap_or("")
+                    .trim()
+                    .to_string(),
+                html_url: release_html_url(&rel),
+                prerelease: rel.prerelease,
+            }
+        })
+        .collect()
+}
+
+pub fn list_releases() -> Result<Vec<ReleaseInfo>, String> {
+    let repo = github_repo();
+    let url = format!("https://api.github.com/repos/{repo}/releases?per_page=30");
+    let (status, text) = github_get(&url)?;
+    if status == 404 {
+        return Ok(vec![]);
+    }
+    if !(200..300).contains(&status) {
+        return Err(format!(
+            "GitHub API HTTP {status}: {}",
+            text.chars().take(180).collect::<String>()
+        ));
+    }
+    let rels: Vec<GithubRelease> =
+        serde_json::from_str(&text).map_err(|e| format!("解析 GitHub Release JSON 失败: {e}"))?;
+    Ok(collect_releases(rels, current_version()))
 }
 
 /// `force` 预留：当前每次都访问 GitHub；前端用本地缓存控制频率。
@@ -436,6 +539,7 @@ mod tests {
             html_url: "https://github.com/uasier/gp-ladder/releases/tag/v9.9.9".into(),
             draft: false,
             prerelease: false,
+            published_at: Some("2026-09-20T14:32:46Z".into()),
             assets: vec![asset("连涨天梯_9.9.9_aarch64.dmg")],
         };
         let info = from_release(&rel, "macos-arm64");
@@ -458,6 +562,7 @@ mod tests {
             html_url: String::new(),
             draft: false,
             prerelease: false,
+            published_at: Some("2026-09-18T06:40:15Z".into()),
             assets: vec![],
         };
         let info = from_release(&rel, "macos-arm64");
@@ -470,5 +575,39 @@ mod tests {
         assert!(safe_file_name("连涨天梯_0.1.0_aarch64.dmg").is_ok());
         assert!(safe_file_name("../evil.exe").is_err());
         assert!(safe_file_name("").is_err());
+    }
+
+    fn sample_rel(tag: &str, draft: bool, pre: bool) -> GithubRelease {
+        GithubRelease {
+            tag_name: tag.into(),
+            name: format!("连涨天梯 {tag}"),
+            body: "更新说明".into(),
+            html_url: format!("https://github.com/uasier/gp-ladder/releases/tag/{tag}"),
+            draft,
+            prerelease: pre,
+            published_at: Some("2026-09-20T14:32:46Z".into()),
+            assets: vec![],
+        }
+    }
+
+    #[test]
+    fn collect_releases_skips_drafts_and_marks_current() {
+        let rows = collect_releases(
+            vec![
+                sample_rel("v0.2.1-rc", false, true),
+                sample_rel("v0.2.0", false, false),
+                sample_rel("v0.1.0", true, false),
+            ],
+            "0.2.0",
+        );
+        assert_eq!(rows.len(), 2);
+        assert_eq!(rows[0].version, "0.2.1-rc");
+        assert!(rows[0].prerelease);
+        assert!(!rows[0].latest);
+        assert!(!rows[0].current);
+        assert_eq!(rows[1].version, "0.2.0");
+        assert!(rows[1].latest);
+        assert!(rows[1].current);
+        assert!(!rows[1].prerelease);
     }
 }

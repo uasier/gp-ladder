@@ -136,6 +136,8 @@ describe("product landing", () => {
     expect(html).toContain(`<title>${TITLE}</title>`)
     expect(html).toContain(`<h1>连涨天梯</h1>`)
     expect(html).toContain("三个榜单")
+    expect(html).toContain("更新历史")
+    expect(html).toContain("api.github.com/repos/uasier/gp-ladder/releases")
     expect(html).toContain("涨停天梯")
     expect(html).toContain("昨日涨停")
     expect(html).toContain("screenshots/lxsz.jpg")

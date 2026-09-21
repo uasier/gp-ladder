@@ -93,6 +93,17 @@ export type UpdateCheck = {
   repo: string
 }
 
+export type ReleaseInfo = {
+  version: string
+  name: string
+  notes: string
+  publishedAt: string
+  htmlUrl: string
+  prerelease: boolean
+  current: boolean
+  latest: boolean
+}
+
 export type HighlightRule = {
   retailMax: number
   todayTurnoverMax: number

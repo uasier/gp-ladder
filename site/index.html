@@ -270,6 +270,31 @@
       .warn {
         color: #fda4af;
       }
+      .history-head {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: baseline;
+        margin-bottom: 8px;
+        cursor: pointer;
+        list-style: none;
+      }
+      .history-head::-webkit-details-marker {
+        display: none;
+      }
+      .history-head h3 {
+        margin: 0;
+      }
+      .history-date {
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .history-notes {
+        white-space: pre-wrap;
+        margin: 0;
+        font: inherit;
+        color: var(--sub);
+      }
       @media (max-width: 800px) {
         header.hero {
           grid-template-columns: 1fr;
@@ -408,6 +433,20 @@
         </article>
       </section>
 
+      <section aria-labelledby="changelog">
+        <h2 id="changelog">更新历史</h2>
+        <div id="release-history" class="shots">
+          <article class="faq">
+            <h3>GitHub Releases</h3>
+            <p>
+              每个版本的说明和安装包在
+              <a href="https://github.com/uasier/gp-ladder/releases">GitHub Releases</a>
+              。应用内「设置 → 关于」也会列出同一份历史。
+            </p>
+          </article>
+        </div>
+      </section>
+
       <section aria-labelledby="faq">
         <h2 id="faq">常见问题</h2>
         <div class="shots">
@@ -458,5 +497,48 @@
         </p>
       </div>
     </footer>
+    <script>
+      (function () {
+        var box = document.getElementById("release-history")
+        if (!box) return
+        function esc(value) {
+          return String(value).replace(/[&<>"']/g, function (ch) {
+            return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]
+          })
+        }
+        fetch("https://api.github.com/repos/uasier/gp-ladder/releases")
+          .then(function (res) {
+            if (!res.ok) throw new Error("HTTP " + res.status)
+            return res.json()
+          })
+          .then(function (rows) {
+            var html = (rows || [])
+              .filter(function (row) {
+                return row && !row.draft
+              })
+              .map(function (row, index) {
+                var version = String(row.tag_name || "").replace(/^v/i, "")
+                var name = row.name || "v" + version
+                var day = String(row.published_at || "").slice(0, 10)
+                var notes = (row.body || "").trim() || "无更新说明。"
+                var open = index === 0 ? " open" : ""
+                return (
+                  "<details class=\"faq\"" +
+                  open +
+                  "><summary class=\"history-head\"><h3>" +
+                  esc(name) +
+                  "</h3>" +
+                  (day ? "<span class=\"history-date\">" + esc(day) + "</span>" : "") +
+                  "</summary><pre class=\"history-notes\">" +
+                  esc(notes) +
+                  "</pre></details>"
+                )
+              })
+              .join("")
+            if (html) box.innerHTML = html
+          })
+          .catch(function () {})
+      })()
+    </script>
   </body>
 </html>

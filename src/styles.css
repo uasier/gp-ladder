@@ -275,6 +275,68 @@ html.is-mobile table.list td {
   color: var(--text);
   margin: 0 0 4px;
 }
+.release-history {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.release-history h3 {
+  margin: 0;
+  font-size: 13px;
+}
+.release-item {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-input);
+  padding: 0 10px 10px;
+}
+.release-item summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  cursor: pointer;
+  list-style: none;
+  padding: 10px 2px;
+}
+.release-item summary::-webkit-details-marker {
+  display: none;
+}
+.release-ver {
+  font-weight: 600;
+}
+.release-date {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+}
+.release-badge {
+  font-size: 11px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+.release-badge.latest {
+  color: #fff;
+  background: var(--accent);
+  border-color: transparent;
+}
+.release-badge.current {
+  color: var(--text);
+  border-color: var(--accent);
+}
+.release-badge.pre {
+  color: var(--gold, #d97706);
+  border-color: var(--gold, #d97706);
+}
+.release-item .update-notes {
+  margin: 0 0 8px;
+}
+.release-item .btn {
+  margin-top: 2px;
+}
 .update-banner {
   justify-content: space-between;
   gap: 12px;

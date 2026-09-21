@@ -227,6 +227,12 @@ async fn check_update(force: Option<bool>) -> Result<update::UpdateCheck, String
 
 #[cfg(feature = "desktop")]
 #[tauri::command]
+async fn list_releases() -> Result<Vec<update::ReleaseInfo>, String> {
+    block_in(update::list_releases).await
+}
+
+#[cfg(feature = "desktop")]
+#[tauri::command]
 async fn open_release_page(app: tauri::AppHandle, url: Option<String>) -> Result<(), String> {
     let target = match url {
         Some(u) if !u.trim().is_empty() => u,
@@ -342,6 +348,7 @@ pub fn run() {
             write_app_log,
             reveal_app_log,
             check_update,
+            list_releases,
             open_release_page,
             install_update
         ])

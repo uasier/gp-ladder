@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react"
+import { listReleaseHistory } from "../api"
 import { DEFAULT_ANALYSIS_PROMPT, DEFAULT_SCORE_PROMPT } from "../prompt"
-import type { SettingsView, UpdateCheck } from "../types"
+import { formatReleaseDate, shouldOpenRelease } from "../releaseHistory"
+import type { ReleaseInfo, SettingsView, UpdateCheck } from "../types"
 
 type Tab = "crawl" | "deepseek" | "about"
 
@@ -23,7 +25,7 @@ type Props = {
     scorePrompt: string
   }) => Promise<void>
   onCheckUpdate: () => void
-  onOpenRelease: () => void
+  onOpenRelease: (url?: string) => void
   onInstallUpdate: () => void
 }
 
@@ -49,6 +51,9 @@ export function SettingsModal({
   const [model, setModel] = useState("deepseek-chat")
   const [analysisPrompt, setAnalysisPrompt] = useState(DEFAULT_ANALYSIS_PROMPT)
   const [scorePrompt, setScorePrompt] = useState(DEFAULT_SCORE_PROMPT)
+  const [history, setHistory] = useState<ReleaseInfo[]>([])
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [historyError, setHistoryError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open || !settings) return
@@ -60,6 +65,27 @@ export function SettingsModal({
     setScorePrompt(settings.scorePrompt || DEFAULT_SCORE_PROMPT)
     setTab(initialTab)
   }, [open, settings, initialTab])
+
+  useEffect(() => {
+    if (!open || tab !== "about") return
+    let cancelled = false
+    setHistoryLoading(true)
+    setHistoryError(null)
+    listReleaseHistory()
+      .then((rows) => {
+        if (cancelled) return
+        setHistory(rows)
+        setHistoryLoading(false)
+      })
+      .catch((e) => {
+        if (cancelled) return
+        setHistoryError(String(e))
+        setHistoryLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [open, tab, update?.latestVersion])
 
   if (!open) return null
 
@@ -214,12 +240,16 @@ export function SettingsModal({
             {update?.assetName ? (
               <p className="resolved-hint muted">安装包：{update.assetName}</p>
             ) : null}
-            {update?.notes ? <pre className="update-notes">{update.notes}</pre> : null}
             <div className="about-actions">
               <button type="button" className="btn" disabled={updateChecking} onClick={onCheckUpdate}>
                 {updateChecking ? "检查中…" : "检查更新"}
               </button>
-              <button type="button" className="btn" disabled={!update?.htmlUrl} onClick={onOpenRelease}>
+              <button
+                type="button"
+                className="btn"
+                disabled={!update?.htmlUrl}
+                onClick={() => onOpenRelease(update?.htmlUrl)}
+              >
                 打开发布页
               </button>
               <button
@@ -235,6 +265,42 @@ export function SettingsModal({
                     : "下载并打开安装包"}
               </button>
             </div>
+            <section className="release-history" aria-labelledby="release-history-title">
+              <h3 id="release-history-title">更新历史</h3>
+              {historyLoading ? <p className="resolved-hint muted">正在读取 GitHub Releases…</p> : null}
+              {historyError ? <p className="resolved-hint warn">{historyError}</p> : null}
+              {historyError && update?.notes ? <pre className="update-notes">{update.notes}</pre> : null}
+              {!historyLoading && !historyError && history.length === 0 ? (
+                <p className="resolved-hint muted">暂无发布记录。</p>
+              ) : null}
+              {history.map((item, index) => (
+                <details
+                  key={item.version}
+                  className="release-item"
+                  open={shouldOpenRelease(item, index)}
+                >
+                  <summary>
+                    <span className="release-ver">v{item.version}</span>
+                    {item.latest ? <span className="release-badge latest">最新</span> : null}
+                    {item.current ? <span className="release-badge current">当前</span> : null}
+                    {item.prerelease ? <span className="release-badge pre">预发布</span> : null}
+                    {formatReleaseDate(item.publishedAt) ? (
+                      <time className="release-date" dateTime={item.publishedAt}>
+                        {formatReleaseDate(item.publishedAt)}
+                      </time>
+                    ) : null}
+                  </summary>
+                  {item.notes ? <pre className="update-notes">{item.notes}</pre> : <p className="muted">无更新说明。</p>}
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => onOpenRelease(item.htmlUrl)}
+                  >
+                    打开 v{item.version}
+                  </button>
+                </details>
+              ))}
+            </section>
           </div>
         )}
         {tab === "about" ? null : (

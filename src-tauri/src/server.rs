@@ -210,6 +210,10 @@ async fn check_update(Query(q): Query<UpdateQuery>) -> Result<Json<update::Updat
     block_in(move || update::check_update(force)).await.map(Json)
 }
 
+async fn list_releases() -> Result<Json<Vec<update::ReleaseInfo>>, ApiError> {
+    block_in(update::list_releases).await.map(Json)
+}
+
 async fn open_release_page(Json(body): Json<OpenReleaseBody>) -> Result<StatusCode, ApiError> {
     block_in(move || update::open_release(body.url)).await?;
     Ok(StatusCode::NO_CONTENT)
@@ -246,6 +250,7 @@ fn api_router() -> Router<AppState> {
         .route("/logs/path", get(get_app_log_path))
         .route("/logs/reveal", post(reveal_app_log))
         .route("/update", get(check_update))
+        .route("/update/history", get(list_releases))
         .route("/update/open", post(open_release_page))
         .route("/update/install", post(install_update))
 }
