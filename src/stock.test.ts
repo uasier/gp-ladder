@@ -2,13 +2,17 @@ import { describe, expect, it } from "vitest"
 import { DEFAULT_FILTERS, DEFAULT_HIGHLIGHT, type StockRow } from "./types"
 import {
   buildDetailUrl,
+  countByDay,
+  daysFromCounts,
   filterAndSort,
+  filtersWithoutFacet,
   getAvgPct,
   getBodyPct,
   getPrice,
   getRetailIndex,
   hasActiveFilters,
   shouldHighlight,
+  topIndustries,
 } from "./stock"
 
 const qualified: StockRow = {
@@ -86,6 +90,37 @@ describe("helpers", () => {
     expect(getRetailIndex(qualified)).toBeCloseTo(-6.2)
     expect(getAvgPct(qualified)).toBeCloseTo(3)
     expect(getPrice(qualified)).toBeCloseTo(10.2)
+  })
+
+  it("does not zero other day chips when one day is selected", () => {
+    const rows = [
+      { ...qualified, 股票代码: "1", 连涨天数: "3" },
+      { ...qualified, 股票代码: "2", 连涨天数: "4" },
+    ]
+    const filters = { ...DEFAULT_FILTERS, onlyHighlight: false, exactDay: 3 }
+    expect(filterAndSort(rows, filters, DEFAULT_HIGHLIGHT)).toHaveLength(1)
+    const facet = filterAndSort(rows, filtersWithoutFacet(filters, "exactDay"), DEFAULT_HIGHLIGHT)
+    const counts = countByDay(facet)
+    expect(counts[3]).toBe(1)
+    expect(counts[4]).toBe(1)
+    expect(daysFromCounts(counts, filters.exactDay)).toEqual([4, 3])
+  })
+
+  it("industry chip counts follow 仅精选 so empty industries are not advertised", () => {
+    const rows = [
+      qualified,
+      { ...qualified, 股票代码: "2", 所属行业: "白酒", 散户指数: "2.00%", 今日换手率: "1%" },
+    ]
+    const facet = filterAndSort(
+      rows,
+      filtersWithoutFacet(DEFAULT_FILTERS, "industry"),
+      DEFAULT_HIGHLIGHT,
+    )
+    const chips = topIndustries(facet, 12, "all")
+    expect(chips.find((item) => item.name === "银行")?.count).toBe(1)
+    expect(chips.find((item) => item.name === "白酒")).toBeUndefined()
+    const listed = filterAndSort(rows, { ...DEFAULT_FILTERS, industry: "银行" }, DEFAULT_HIGHLIGHT)
+    expect(listed).toHaveLength(1)
   })
 
   it("detects active filters", () => {

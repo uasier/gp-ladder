@@ -145,16 +145,48 @@ export function uniqueDays(rows: StockRow[]): number[] {
   return [...new Set(rows.map((item) => Number(item["连涨天数"]) || 0))].sort((a, b) => b - a)
 }
 
-export function topIndustries(rows: StockRow[], limit = 12): { name: string; count: number }[] {
+export function countByDay(rows: StockRow[]): Record<number, number> {
+  const counts: Record<number, number> = {}
+  for (const item of rows) {
+    const day = Number(item["连涨天数"]) || 0
+    counts[day] = (counts[day] ?? 0) + 1
+  }
+  return counts
+}
+
+export function daysFromCounts(counts: Record<number, number>, keep?: number | null): number[] {
+  const days = new Set(Object.keys(counts).map(Number))
+  if (keep != null) days.add(keep)
+  return [...days].sort((a, b) => b - a)
+}
+
+export function topIndustries(
+  rows: StockRow[],
+  limit = 12,
+  keep?: string | null,
+): { name: string; count: number }[] {
   const counts = new Map<string, number>()
   for (const item of rows) {
     const name = item["所属行业"] || "未知"
     counts.set(name, (counts.get(name) ?? 0) + 1)
   }
-  return [...counts.entries()]
+  const ranked = [...counts.entries()]
     .sort((a, b) => b[1] - a[1])
     .slice(0, limit)
     .map(([name, count]) => ({ name, count }))
+  if (keep && keep !== "all" && !ranked.some((item) => item.name === keep)) {
+    ranked.push({ name: keep, count: counts.get(keep) ?? 0 })
+  }
+  return ranked
+}
+
+/** 统计芯片数量时去掉自身条件，避免点开后变成 0。 */
+export function filtersWithoutFacet(
+  filters: FilterState,
+  facet: "exactDay" | "industry",
+): FilterState {
+  if (facet === "exactDay") return { ...filters, exactDay: null }
+  return { ...filters, industry: "all" }
 }
 
 export function hasActiveFilters(filters: FilterState): boolean {

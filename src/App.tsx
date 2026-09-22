@@ -34,7 +34,14 @@ import { UpdateBanner } from "./components/UpdateBanner"
 import { downloadText, rowsToCsv, rowsToJson, timestampName } from "./files"
 import { isMobileApp } from "./platform"
 import { applyDocumentSeo } from "./seo"
-import { filterAndSort, hasActiveFilters, topIndustries, uniqueDays } from "./stock"
+import {
+  countByDay,
+  daysFromCounts,
+  filterAndSort,
+  filtersWithoutFacet,
+  hasActiveFilters,
+  topIndustries,
+} from "./stock"
 import {
   DEFAULT_FILTERS,
   DEFAULT_HIGHLIGHT,
@@ -106,16 +113,30 @@ export default function App() {
     () => filterAndSort(snapshot.rows, filters, rule),
     [snapshot.rows, filters, rule],
   )
-  const days = useMemo(() => uniqueDays(snapshot.rows), [snapshot.rows])
-  const dayCounts = useMemo(() => {
-    const counts: Record<number, number> = {}
-    for (const item of filtered) {
-      const day = Number(item["连涨天数"]) || 0
-      counts[day] = (counts[day] ?? 0) + 1
+  const dayFacetRows = useMemo(
+    () => filterAndSort(snapshot.rows, filtersWithoutFacet(filters, "exactDay"), rule),
+    [snapshot.rows, filters, rule],
+  )
+  const dayCounts = useMemo(() => countByDay(dayFacetRows), [dayFacetRows])
+  const days = useMemo(
+    () => daysFromCounts(dayCounts, filters.exactDay),
+    [dayCounts, filters.exactDay],
+  )
+  const industryFacetRows = useMemo(
+    () => filterAndSort(snapshot.rows, filtersWithoutFacet(filters, "industry"), rule),
+    [snapshot.rows, filters, rule],
+  )
+  const industries = useMemo(
+    () => topIndustries(industryFacetRows, 12, filters.industry),
+    [industryFacetRows, filters.industry],
+  )
+  const industryOptions = useMemo(() => {
+    const names = [...new Set(industryFacetRows.map((row) => row["所属行业"] || "未知"))].sort()
+    if (filters.industry !== "all" && !names.includes(filters.industry)) {
+      return [filters.industry, ...names]
     }
-    return counts
-  }, [filtered])
-  const industries = useMemo(() => topIndustries(snapshot.rows), [snapshot.rows])
+    return names
+  }, [industryFacetRows, filters.industry])
   const selected = useMemo(
     () => snapshot.rows.find((row) => row["股票代码"] === selectedCode) ?? null,
     [snapshot.rows, selectedCode],
@@ -464,7 +485,7 @@ export default function App() {
           <KpiGrid snapshot={snapshot} board={board} />
           <FilterBar
             filters={filters}
-            industries={snapshot.industries}
+            industries={industryOptions}
             visible={filtered.length}
             total={snapshot.count}
             showReset={hasActiveFilters(filters)}
@@ -477,7 +498,7 @@ export default function App() {
             <DayPills
               days={days}
               counts={dayCounts}
-              total={filtered.length}
+              total={dayFacetRows.length}
               exactDay={filters.exactDay}
               unit={board === "lxsz" ? "天" : "板"}
               allLabel={board === "lxsz" ? "全部天数" : "全部连板"}
