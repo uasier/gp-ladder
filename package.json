@@ -1,7 +1,7 @@
 {
   "name": "gp-ladder",
   "private": true,
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "连涨天梯：同花顺连涨榜、东方财富涨停天梯与昨日涨停桌面/Android 工作台",
   "homepage": "https://uasier.github.io/gp-ladder/",
   "repository": {
