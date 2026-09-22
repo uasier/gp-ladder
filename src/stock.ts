@@ -103,6 +103,24 @@ export function getPrice(item: StockRow): number | null {
   return null
 }
 
+export const NEAR_DAY_HIGH_RATIO = 0.005
+
+export function getHighPrice(item: StockRow): number | null {
+  const live = String(item["今高"] ?? "").trim()
+  if (live) return normalizeNumber(live)
+  const crawl = String(item["最高价(元)"] ?? "").trim()
+  if (crawl) return normalizeNumber(crawl)
+  return null
+}
+
+/** 现价视为当日最高：与今高相差不超过 0.5%。缺行情时不算。 */
+export function isNearDayHigh(item: StockRow, ratio = NEAR_DAY_HIGH_RATIO): boolean {
+  const price = getPrice(item)
+  const high = getHighPrice(item)
+  if (price === null || high === null || high <= 0) return false
+  return Math.abs(high - price) / high <= ratio + 1e-12
+}
+
 export function shouldHighlight(item: StockRow, rule: HighlightRule): boolean {
   const retail = getRetailIndex(item)
   const todayTurnover = getTodayTurnover(item)
@@ -209,7 +227,8 @@ export function hasActiveFilters(filters: FilterState): boolean {
     filters.turnTotalMin !== null ||
     filters.turnTotalMax !== null ||
     filters.retailMin !== null ||
-    filters.retailMax !== null
+    filters.retailMax !== null ||
+    filters.nearDayHigh
   )
 }
 
@@ -253,6 +272,7 @@ export function filterAndSort(
       if (filters.todayPctMax !== null && todayPct > filters.todayPctMax) return false
     }
     const price = getPrice(item)
+    if (filters.nearDayHigh && !isNearDayHigh(item)) return false
     if (filters.priceRange && filters.priceRange !== "all") {
       if (price === null) return false
       if (presetPriceMin !== null && price < presetPriceMin) return false

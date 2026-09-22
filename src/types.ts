@@ -144,6 +144,7 @@ export type FilterState = {
   sort: SortKey
   excludeSt: boolean
   onlyHighlight: boolean
+  nearDayHigh: boolean
   viewMode: ViewMode
 }
 
@@ -175,6 +176,7 @@ export const DEFAULT_FILTERS: FilterState = {
   sort: "days",
   excludeSt: true,
   onlyHighlight: true,
+  nearDayHigh: false,
   viewMode: "cards",
 }
 

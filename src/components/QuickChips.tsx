@@ -45,6 +45,14 @@ export function QuickChips({ filters, onChange }: Props) {
       >
         散户净流出 🌊
       </button>
+      <button
+        type="button"
+        className={`chip ${filters.nearDayHigh ? "on" : ""}`}
+        title="现价与今高相差不超过 0.5%"
+        onClick={() => onChange({ nearDayHigh: !filters.nearDayHigh })}
+      >
+        现价近最高
+      </button>
       {PRICE_CHIPS.map((chip) => (
         <button
           key={chip.value}

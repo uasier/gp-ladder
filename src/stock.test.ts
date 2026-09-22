@@ -11,6 +11,7 @@ import {
   getPrice,
   getRetailIndex,
   hasActiveFilters,
+  isNearDayHigh,
   shouldHighlight,
   topIndustries,
 } from "./stock"
@@ -92,6 +93,13 @@ describe("helpers", () => {
     expect(getPrice(qualified)).toBeCloseTo(10.2)
   })
 
+  it("detects active filters", () => {
+    expect(hasActiveFilters(DEFAULT_FILTERS)).toBe(false)
+    expect(hasActiveFilters({ ...DEFAULT_FILTERS, keyword: "平安" })).toBe(true)
+    expect(hasActiveFilters({ ...DEFAULT_FILTERS, onlyHighlight: false })).toBe(true)
+    expect(hasActiveFilters({ ...DEFAULT_FILTERS, nearDayHigh: true })).toBe(true)
+  })
+
   it("does not zero other day chips when one day is selected", () => {
     const rows = [
       { ...qualified, 股票代码: "1", 连涨天数: "3" },
@@ -123,9 +131,25 @@ describe("helpers", () => {
     expect(listed).toHaveLength(1)
   })
 
-  it("detects active filters", () => {
-    expect(hasActiveFilters(DEFAULT_FILTERS)).toBe(false)
-    expect(hasActiveFilters({ ...DEFAULT_FILTERS, keyword: "平安" })).toBe(true)
-    expect(hasActiveFilters({ ...DEFAULT_FILTERS, onlyHighlight: false })).toBe(true)
+  it("treats price within 0.5% of the day high as 现价近最高", () => {
+    expect(isNearDayHigh({ ...qualified, 现价: "10.00", 今高: "10.00" })).toBe(true)
+    expect(isNearDayHigh({ ...qualified, 现价: "9.95", 今高: "10.00" })).toBe(true)
+    expect(isNearDayHigh({ ...qualified, 现价: "10.05", 今高: "10.00" })).toBe(true)
+    expect(isNearDayHigh({ ...qualified, 现价: "9.94", 今高: "10.00" })).toBe(false)
+    expect(isNearDayHigh({ ...qualified, 现价: "10.00", 今高: "" })).toBe(false)
+  })
+
+  it("filters 现价近最高", () => {
+    const rows = [
+      { ...qualified, 股票代码: "1", 现价: "10.00", 今高: "10.00" },
+      { ...qualified, 股票代码: "2", 现价: "9.80", 今高: "10.00" },
+    ]
+    const filtered = filterAndSort(
+      rows,
+      { ...DEFAULT_FILTERS, onlyHighlight: false, nearDayHigh: true },
+      DEFAULT_HIGHLIGHT,
+    )
+    expect(filtered.map((r) => r["股票代码"])).toEqual(["1"])
   })
 })
+
