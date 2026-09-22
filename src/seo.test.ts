@@ -143,6 +143,11 @@ describe("product landing", () => {
     expect(html).toContain("screenshots/lxsz.jpg")
     expect(html).toContain("alt=")
     expect(html).toContain("FAQPage")
+    expect(html).toContain('id="download"')
+    expect(html).toContain("gp-ladder_*_aarch64.dmg")
+    expect(html).toContain("gp-ladder_*_x64-setup.exe")
+    expect(html).toContain("./styles.css")
+    expect(html).toContain("./app.js")
     for (const item of FAQ_ITEMS) {
       expect(html).toContain(item.question)
       expect(html).toContain(item.answer)
