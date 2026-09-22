@@ -1,6 +1,6 @@
 [package]
 name = "gp-ladder"
-version = "0.2.0"
+version = "0.2.1"
 description = "连涨天梯工作台（桌面 / Android）"
 authors = ["you"]
 license = "MIT"
