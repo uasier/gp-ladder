@@ -218,7 +218,7 @@
         <p class="kicker">Product</p>
         <h2 id="shots">界面</h2>
         <p class="section-lead">四个画面：连涨天梯、涨停天梯、昨日涨停，以及 DeepSeek 短线分析。</p>
-        <div class="showcase-tabs" role="tablist" aria-label="界面预览">
+        <div class="showcase-tabs" id="showcase-tabs" role="tablist" aria-label="界面预览">
           <button type="button" role="tab" data-shot="0" aria-selected="true">连涨天梯</button>
           <button type="button" role="tab" data-shot="1" aria-selected="false">涨停天梯</button>
           <button type="button" role="tab" data-shot="2" aria-selected="false">昨日涨停</button>
@@ -227,22 +227,41 @@
         <div class="window">
           <div class="window-bar">
             <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
-            <span class="window-title">连涨天梯</span>
+            <span class="window-title" id="showcase-title">连涨天梯</span>
           </div>
-          <img
-            id="showcase-img"
-            src="./screenshots/lxsz.jpg"
-            width="2000"
-            height="1156"
-            alt="连涨天梯界面：同花顺连涨榜叠加东方财富行情，按连涨天数分档"
-          />
+          <div class="showcase-stage">
+            <img
+              class="is-on"
+              data-frame="0"
+              src="screenshots/lxsz.jpg"
+              width="2000"
+              height="1156"
+              alt="连涨天梯界面：同花顺连涨榜叠加东方财富行情，按连涨天数分档"
+            />
+            <img
+              data-frame="1"
+              src="screenshots/zt.jpg"
+              width="2000"
+              height="1156"
+              alt="涨停天梯界面：东方财富涨停池按连板高度分档"
+            />
+            <img
+              data-frame="2"
+              src="screenshots/jjzt.jpg"
+              width="2000"
+              height="1156"
+              alt="昨日涨停界面：昨天涨停、今日竞价后红盘且涨幅 2% 至 8%"
+            />
+            <img
+              data-frame="3"
+              src="screenshots/analysis.jpg"
+              width="2000"
+              height="1200"
+              alt="DeepSeek 短线分析：个股动能、量价与 0 到 100 短线评分"
+            />
+          </div>
         </div>
         <p class="shot-cap" id="showcase-cap">同花顺连涨榜叠加东方财富行情，按天数、行业、精选筛选。</p>
-        <noscript>
-          <img src="./screenshots/zt.jpg" alt="涨停天梯界面：东方财富涨停池按连板高度分档" />
-          <img src="./screenshots/jjzt.jpg" alt="昨日涨停界面：昨天涨停、今日竞价后红盘且涨幅 2% 至 8%" />
-          <img src="./screenshots/analysis.jpg" alt="DeepSeek 短线分析：个股动能、量价与 0 到 100 短线评分" />
-        </noscript>
       </section>
 
       <section class="wrap" aria-labelledby="features">

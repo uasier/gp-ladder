@@ -313,6 +313,14 @@ li {
   color: var(--muted);
   font-size: 14px;
 }
+.showcase-stage img {
+  width: 100%;
+  height: auto;
+  display: none;
+}
+.showcase-stage img.is-on {
+  display: block;
+}
 
 .split {
   display: grid;

@@ -38,44 +38,42 @@
   }
 
   var shots = [
-    {
-      src: "./screenshots/lxsz.jpg",
-      alt: "连涨天梯界面：同花顺连涨榜叠加东方财富行情，按连涨天数分档",
-      cap: "同花顺连涨榜叠加东方财富行情，按天数、行业、精选筛选。",
-    },
-    {
-      src: "./screenshots/zt.jpg",
-      alt: "涨停天梯界面：东方财富涨停池按连板高度分档",
-      cap: "东方财富涨停池，按连板高度分档。",
-    },
-    {
-      src: "./screenshots/jjzt.jpg",
-      alt: "昨日涨停界面：昨天涨停、今日竞价后红盘且涨幅 2% 至 8%",
-      cap: "昨天涨停，今日竞价后红盘且涨幅 2%–8%。",
-    },
-    {
-      src: "./screenshots/analysis.jpg",
-      alt: "DeepSeek 短线分析：个股动能、量价与 0 到 100 短线评分",
-      cap: "按 1–5 个交易日视角看盘，并给出 0–100 短线评分。",
-    },
+    { cap: "同花顺连涨榜叠加东方财富行情，按天数、行业、精选筛选。", title: "连涨天梯" },
+    { cap: "东方财富涨停池，按连板高度分档。", title: "涨停天梯" },
+    { cap: "昨天涨停，今日竞价后红盘且涨幅 2%–8%。", title: "昨日涨停" },
+    { cap: "按 1–5 个交易日视角看盘，并给出 0–100 短线评分。", title: "短线分析" },
   ]
 
-  var tabs = document.querySelectorAll("[data-shot]")
-  var img = document.getElementById("showcase-img")
-  var cap = document.getElementById("showcase-cap")
-  tabs.forEach(function (tab) {
-    tab.addEventListener("click", function () {
-      var index = Number(tab.getAttribute("data-shot")) || 0
-      tabs.forEach(function (item) {
-        item.setAttribute("aria-selected", item === tab ? "true" : "false")
-      })
-      if (img && shots[index]) {
-        img.src = shots[index].src
-        img.alt = shots[index].alt
-      }
-      if (cap && shots[index]) cap.textContent = shots[index].cap
+  function showShot(index) {
+    var i = Number(index)
+    if (!Number.isInteger(i) || i < 0 || i >= shots.length) return
+    var tabs = document.querySelectorAll("#showcase-tabs [data-shot]")
+    for (var t = 0; t < tabs.length; t += 1) {
+      tabs[t].setAttribute("aria-selected", t === i ? "true" : "false")
+    }
+    var frames = document.querySelectorAll(".showcase-stage img[data-frame]")
+    for (var f = 0; f < frames.length; f += 1) {
+      var on = Number(frames[f].getAttribute("data-frame")) === i
+      frames[f].classList.toggle("is-on", on)
+    }
+    var shot = shots[i]
+    var cap = document.getElementById("showcase-cap")
+    var title = document.getElementById("showcase-title")
+    if (cap) cap.textContent = shot.cap
+    if (title) title.textContent = shot.title
+  }
+
+  var tablist = document.getElementById("showcase-tabs")
+  if (tablist) {
+    tablist.addEventListener("click", function (event) {
+      var node = event.target
+      if (node && node.nodeType === 3) node = node.parentElement
+      var tab = node && node.closest ? node.closest("[data-shot]") : null
+      if (!tab || !tablist.contains(tab)) return
+      event.preventDefault()
+      showShot(tab.getAttribute("data-shot"))
     })
-  })
+  }
 
   var platform = detectPlatform()
   document.querySelectorAll("[data-platform]").forEach(function (card) {
