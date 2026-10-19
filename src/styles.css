@@ -109,10 +109,6 @@ html.is-mobile table.list td {
   border-color: var(--gold);
 }
 
-.export-wrap {
-  display: inline-flex;
-}
-
 /* =========================================================
    弹窗与设置模态框 (Modal & Settings)
    ========================================================= */

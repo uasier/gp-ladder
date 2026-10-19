@@ -427,58 +427,6 @@ button:active:not(:disabled) {
   to { transform: rotate(360deg); }
 }
 
-/* 导出按钮包装器 */
-.export-wrap {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-}
-
-.export-select-wrap {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-}
-
-.export-icon-prefix {
-  position: absolute;
-  left: 10px;
-  pointer-events: none;
-  color: var(--muted);
-  display: flex;
-  align-items: center;
-  font-size: 13px;
-}
-
-.export-select {
-  appearance: none;
-  -webkit-appearance: none;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 6px 28px 6px 30px;
-  color: var(--text);
-  font-size: 12.5px;
-  font-weight: 500;
-  cursor: pointer;
-  box-shadow: var(--shadow-sm);
-  transition: all var(--transition-fast);
-}
-
-.export-select:hover {
-  border-color: var(--border-strong);
-  background: var(--surface-card-hover);
-}
-
-.export-select-arrow {
-  position: absolute;
-  right: 10px;
-  pointer-events: none;
-  color: var(--muted);
-  width: 12px;
-  height: 12px;
-}
-
 /* 主题切换按钮 */
 .theme-toggle-btn {
   width: 34px;
@@ -1759,11 +1707,6 @@ html.is-mobile .refresh-btn {
   font-size: 12px;
 }
 
-html.is-mobile .export-select-wrap {
-  flex: 0 0 auto;
-}
-
-html.is-mobile .export-select,
 html.is-mobile .btn,
 html.is-mobile .theme-toggle-btn {
   min-height: 38px;

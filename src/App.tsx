@@ -63,6 +63,12 @@ import {
   type UpdateCheck,
 } from "./types"
 
+type BannerState = {
+  text: string
+  tone: "busy" | "success" | "error" | null
+  reason?: "missing-deepseek-key"
+}
+
 const THEME_KEY = "gp_theme_pref"
 const SKIP_VERSION_KEY = "gp_skip_version"
 const UPDATE_CHECKED_KEY = "gp_update_checked_at"
@@ -130,6 +136,7 @@ export default function App() {
     [filters],
   )
   const [settings, setSettings] = useState<SettingsView | null>(null)
+  const hasDeepseekKey = Boolean(settings?.hasDeepseekKey || settings?.deepseekApiKey?.trim())
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsTab, setSettingsTab] = useState<"crawl" | "deepseek" | "about">("crawl")
   const [settingsPromptScene, setSettingsPromptScene] = useState<PromptEditorScene>("lxsz")
@@ -140,7 +147,7 @@ export default function App() {
   const [updateInstalling, setUpdateInstalling] = useState(false)
   const [updateError, setUpdateError] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
-  const [banner, setBanner] = useState<{ text: string; tone: "busy" | "success" | "error" | null }>({
+  const [banner, setBanner] = useState<BannerState>({
     text: "",
     tone: null,
   })
@@ -201,13 +208,20 @@ export default function App() {
     [snapshot.rows, selectedCode],
   )
 
-  const showBanner = useCallback((text: string, tone: "busy" | "success" | "error" | null) => {
+  const showBanner = useCallback((text: string, tone: BannerState["tone"], reason?: BannerState["reason"]) => {
     if (bannerTimer.current != null) window.clearTimeout(bannerTimer.current)
-    setBanner({ text, tone })
+    setBanner({ text, tone, reason })
     if (tone === "success") {
       bannerTimer.current = window.setTimeout(() => setBanner({ text: "", tone: null }), 1800)
     }
   }, [])
+
+  useEffect(() => {
+    if (!hasDeepseekKey) return
+    setBanner((current) =>
+      current.reason === "missing-deepseek-key" ? { text: "", tone: null } : current,
+    )
+  }, [hasDeepseekKey])
 
   const loadSnapshot = useCallback(async (kind: BoardKind) => {
     const requestId = ++snapshotLoadId.current
@@ -514,9 +528,9 @@ export default function App() {
       showBanner("当前筛选结果为空，请先调整筛选条件", "error")
       return
     }
-    if (!settings?.hasDeepseekKey && !settings?.deepseekApiKey) {
+    if (!hasDeepseekKey) {
       openPickSettings()
-      showBanner("请先在设置中填写 DeepSeek API Key", "error")
+      showBanner("请先在设置中填写 DeepSeek API Key", "error", "missing-deepseek-key")
       return
     }
     pickBusy.current = true
@@ -544,11 +558,11 @@ export default function App() {
     const name = (item["股票简称"] || "").trim()
     analyzeTarget.current = item
     setMenu(null)
-    if (!settings?.hasDeepseekKey && !settings?.deepseekApiKey) {
+    if (!hasDeepseekKey) {
       setSettingsTab("deepseek")
       setSettingsPromptScene(board)
       setSettingsOpen(true)
-      showBanner("请先在设置中填写 DeepSeek API Key", "error")
+      showBanner("请先在设置中填写 DeepSeek API Key", "error", "missing-deepseek-key")
       return
     }
     setAnalyzeTitle(`${name || "未命名"} ${code}`.trim())
@@ -600,7 +614,6 @@ export default function App() {
               setSettingsOpen(true)
             }}
             onOpenAbout={openAbout}
-            onExport={(fmt) => void handleExport(fmt)}
             theme={theme}
             onToggleTheme={() => setTheme((cur) => (cur === "dark" ? "light" : "dark"))}
             update={updateNotice ? update : null}
