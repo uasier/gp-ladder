@@ -172,6 +172,19 @@ html.is-mobile table.list td {
   border: 1px solid var(--border);
   font-family: var(--font-mono);
 }
+.settings-help {
+  margin: 0 0 14px;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.settings-help > summary {
+  color: var(--muted);
+  cursor: pointer;
+}
+.settings-help .tip {
+  margin: 8px 0 0;
+}
+
 .field {
   display: flex;
   flex-direction: column;

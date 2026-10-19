@@ -6,10 +6,12 @@ import {
   daysFromCounts,
   filterAndSort,
   filtersWithoutFacet,
+  formatVolumeRatio,
   getAvgPct,
   getBodyPct,
   getPrice,
   getRetailIndex,
+  getVolumeRatio,
   hasActiveFilters,
   isNearDayHigh,
   shouldHighlight,
@@ -77,6 +79,74 @@ describe("filterAndSort", () => {
       DEFAULT_HIGHLIGHT,
     )
     expect(filtered.map((r) => r["股票代码"])).toEqual(["1"])
+  })
+})
+
+describe("volume ratio", () => {
+  it.each([
+    ["1.25", 1.25], [" 2.00 ", 2], ["0.00", 0],
+    [undefined, null], ["", null], [" ", null], ["-", null], ["--", null],
+    ["NaN", null], ["Infinity", null], ["-1.00", null], ["1.25%", null],
+  ])("parses %s without treating missing values as zero", (raw, expected) => {
+    expect(getVolumeRatio(raw === undefined ? {} : { 量比: raw })).toBe(expected)
+  })
+
+  it("formats ratios as multiples and missing data as a dash", () => {
+    expect(formatVolumeRatio({ 量比: "1.2" })).toBe("1.20 倍")
+    expect(formatVolumeRatio({ 量比: "0" })).toBe("0.00 倍")
+    expect(formatVolumeRatio({})).toBe("--")
+    expect(formatVolumeRatio({ 量比: "-" })).toBe("--")
+  })
+
+  const rows: StockRow[] = [
+    { ...qualified, 股票代码: "zero", 量比: "0.00" },
+    { ...qualified, 股票代码: "low", 量比: "0.80" },
+    { ...qualified, 股票代码: "min", 量比: "1.00" },
+    { ...qualified, 股票代码: "mid", 量比: "1.25" },
+    { ...qualified, 股票代码: "max", 量比: "2.00" },
+    { ...qualified, 股票代码: "high", 量比: "2.01" },
+    { ...qualified, 股票代码: "missing" },
+    { ...qualified, 股票代码: "blank", 量比: "" },
+    { ...qualified, 股票代码: "placeholder", 量比: "-" },
+    { ...qualified, 股票代码: "invalid", 量比: "NaN" },
+  ]
+
+  it.each([
+    [1, 2, ["min", "mid", "max"]],
+    [1.25, null, ["mid", "max", "high"]],
+    [null, 1, ["zero", "low", "min"]],
+    [0, 0, ["zero"]],
+    [1.25, 1.25, ["mid"]],
+    [2, 1, []],
+  ] as [number | null, number | null, string[]][])(
+    "filters inclusive range %s to %s",
+    (volumeRatioMin, volumeRatioMax, expected) => {
+      const filtered = filterAndSort(
+        rows, { ...DEFAULT_FILTERS, volumeRatioMin, volumeRatioMax }, DEFAULT_HIGHLIGHT,
+      )
+      expect(filtered.map((row) => row["股票代码"])).toEqual(expected)
+    },
+  )
+
+  it("keeps old snapshots and clears the range with the default filters", () => {
+    expect(filterAndSort(rows, DEFAULT_FILTERS, DEFAULT_HIGHLIGHT)).toHaveLength(rows.length)
+    expect(hasActiveFilters({ ...DEFAULT_FILTERS, volumeRatioMin: 0 })).toBe(true)
+    expect(hasActiveFilters({ ...DEFAULT_FILTERS, volumeRatioMax: 2 })).toBe(true)
+    expect(hasActiveFilters(DEFAULT_FILTERS)).toBe(false)
+  })
+
+  it("combines with other filters and remains active in facet counts", () => {
+    const filtered = filterAndSort(
+      rows,
+      { ...DEFAULT_FILTERS, volumeRatioMin: 1, volumeRatioMax: 2, keyword: "mid" },
+      DEFAULT_HIGHLIGHT,
+    )
+    expect(filtered.map((row) => row["股票代码"])).toEqual(["mid"])
+    const filters = { ...DEFAULT_FILTERS, volumeRatioMin: 1, volumeRatioMax: 2, exactDay: 4 }
+    expect(filterAndSort(rows, filters, DEFAULT_HIGHLIGHT)).toHaveLength(0)
+    const facet = filterAndSort(rows, filtersWithoutFacet(filters, "exactDay"), DEFAULT_HIGHLIGHT)
+    expect(countByDay(facet)).toEqual({ 3: 3 })
+    expect(topIndustries(facet)).toEqual([{ name: "银行", count: 3 }])
   })
 })
 

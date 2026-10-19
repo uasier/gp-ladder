@@ -102,7 +102,7 @@ export function SettingsModal({
         onClick={(e) => e.stopPropagation()}
       >
         <header>
-          <h2>软件与算法设置</h2>
+          <h2>设置</h2>
           <button type="button" className="btn" onClick={onClose}>
             关闭
           </button>
@@ -119,7 +119,7 @@ export function SettingsModal({
               <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
               <path d="M16 16h5v5" />
             </svg>
-            抓取配置
+            抓取
           </button>
           <button
             type="button"
@@ -129,7 +129,7 @@ export function SettingsModal({
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
             </svg>
-            DeepSeek AI
+            DeepSeek
             {settings?.hasDeepseekKey ? " · 已配置" : ""}
           </button>
           <button
@@ -142,17 +142,17 @@ export function SettingsModal({
               <line x1="12" y1="16" x2="12" y2="12" />
               <line x1="12" y1="8" x2="12.01" y2="8" />
             </svg>
-            关于与更新
+            关于
             {update?.available ? " · 有新版本" : ""}
           </button>
         </div>
         {tab === "crawl" ? (
           <div className="settings-pane">
             <p className="muted tip">
-              抓取直接在软件内部执行：高效并发请求同花顺连涨榜和东方财富实时盘口。快照保存在本机缓存中。
+              数据来自同花顺、东方财富，快照保存在本机。
             </p>
             <label className="field">
-              <span>最多抓取页数（0 表示全量翻页抓取全部标的）</span>
+              <span>最多抓取页数（0 为全部）</span>
               <input
                 type="number"
                 min={0}
@@ -160,19 +160,27 @@ export function SettingsModal({
                 onChange={(e) => setMaxPages(Number(e.target.value) || 0)}
               />
             </label>
-            <p className="resolved-hint muted">
-              {settings?.cachePath ? `快照缓存目录：${settings.cachePath}` : ""}
-            </p>
+            {settings?.cachePath ? (
+              <details className="settings-help">
+                <summary>缓存位置</summary>
+                <p className="muted tip">{settings.cachePath}</p>
+              </details>
+            ) : null}
           </div>
         ) : tab === "deepseek" ? (
           <div className="settings-pane">
             <p className="muted tip">
-              右键或长按标的可按短线视角（未来 1–5 个交易日）调用 DeepSeek AI 分析行情动能与风险，并给出短线评分。API Key 仅保存在本机。
-              提示词里的 <code>______</code> / <code>{"{name}"}</code> / <code>{"{code}"}</code> 会自动替换成股票信息；
-              评分提示词里的 <code>{"{analysis}"}</code> 会自动替换为分析正文。
+              短线分析与评分（1–5 个交易日）。API Key 保存在本机。
             </p>
+            <details className="settings-help">
+              <summary>提示词变量</summary>
+              <p className="muted tip">
+                <code>______</code>、<code>{"{name}"}</code>、<code>{"{code}"}</code> 替换为股票信息；
+                <code>{"{analysis}"}</code> 替换为分析正文。
+              </p>
+            </details>
             <label className="field">
-              <span>DeepSeek API Key</span>
+              <span>API Key</span>
               <div className="field-inline">
                 <input
                   type={showKey ? "text" : "password"}
@@ -192,7 +200,7 @@ export function SettingsModal({
               </div>
             </label>
             <label className="field">
-              <span>接口地址 (Base URL)</span>
+              <span>接口地址</span>
               <input
                 value={baseUrl}
                 onChange={(e) => setBaseUrl(e.target.value)}
@@ -200,7 +208,7 @@ export function SettingsModal({
               />
             </label>
             <label className="field">
-              <span>模型名称 (Model)</span>
+              <span>模型</span>
               <input
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
@@ -208,7 +216,7 @@ export function SettingsModal({
               />
             </label>
             <label className="field">
-              <span>短线分析提示词</span>
+              <span>分析提示词</span>
               <textarea
                 className="prompt-box"
                 rows={9}
@@ -221,11 +229,11 @@ export function SettingsModal({
                 style={{ alignSelf: "flex-start", marginTop: 4 }}
                 onClick={() => setAnalysisPrompt(DEFAULT_ANALYSIS_PROMPT)}
               >
-                恢复默认分析提示词
+                恢复默认
               </button>
             </label>
             <label className="field">
-              <span>短线评分提示词</span>
+              <span>评分提示词</span>
               <textarea
                 className="prompt-box"
                 rows={7}
@@ -238,14 +246,14 @@ export function SettingsModal({
                 style={{ alignSelf: "flex-start", marginTop: 4 }}
                 onClick={() => setScorePrompt(DEFAULT_SCORE_PROMPT)}
               >
-                恢复默认评分提示词
+                恢复默认
               </button>
             </label>
           </div>
         ) : (
           <div className="settings-pane">
             <p className="muted tip">
-              安装包由 GitHub Releases 发布。软件会在启动后检查最新 tag；也可在此手动检查并下载当前系统对应的安装包（桌面为 dmg/exe，Android 为 APK）。macOS 若提示「文件已损坏」，不是安装包坏了，按 README 里的终端命令处理。
+              更新来自 GitHub Releases。macOS 提示「文件已损坏」时，请按 README 处理。
             </p>
             <div className="about-grid">
               <div>
@@ -271,7 +279,7 @@ export function SettingsModal({
             </div>
             {updateError ? <p className="resolved-hint warn">{updateError}</p> : null}
             {update?.assetName ? (
-              <p className="resolved-hint muted">安装包文件名：{update.assetName}</p>
+              <p className="resolved-hint muted">安装包：{update.assetName}</p>
             ) : null}
             <div className="about-actions">
               <button type="button" className="btn" disabled={updateChecking} onClick={onCheckUpdate}>

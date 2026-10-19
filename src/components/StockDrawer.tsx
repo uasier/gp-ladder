@@ -4,6 +4,7 @@ import { isPhoneUi } from "../platform"
 import type { HighlightRule, StockRow } from "../types"
 import {
   buildDetailUrl,
+  formatVolumeRatio,
   getAvgPct,
   getAvgTurnover,
   getRetailIndex,
@@ -96,7 +97,7 @@ export function StockDrawer({ item, rule, onClose, onAnalyze, analyzeLabel = "AI
           </button>
         </div>
         <div>
-          <div className="drawer-section-title">当日盘口表现</div>
+          <div className="drawer-section-title">今日行情</div>
           <div className="kv-card">
             <div className="kv-item">
               <span>现价</span>
@@ -115,6 +116,10 @@ export function StockDrawer({ item, rule, onClose, onAnalyze, analyzeLabel = "AI
               <b>{item["今日换手率"] || "--"}</b>
             </div>
             <div className="kv-item">
+              <span>量比</span>
+              <b>{formatVolumeRatio(item)}</b>
+            </div>
+            <div className="kv-item">
               <span>成交额</span>
               <b>{item["成交额"] || "--"}</b>
             </div>
@@ -127,7 +132,7 @@ export function StockDrawer({ item, rule, onClose, onAnalyze, analyzeLabel = "AI
           </div>
         </div>
         <div>
-          <div className="drawer-section-title">{item["连板天数"] ? "涨停天梯数据" : "连涨天梯数据"}</div>
+          <div className="drawer-section-title">{item["连板天数"] ? "连板数据" : "连涨数据"}</div>
           <div className="kv-card">
             <div className="kv-item">
               <span>{item["连板天数"] ? "连板天数" : "连涨天数"}</span>
@@ -194,7 +199,7 @@ export function StockDrawer({ item, rule, onClose, onAnalyze, analyzeLabel = "AI
           </div>
         </div>
         <div>
-          <div className="drawer-section-title">资金情绪与估值</div>
+          <div className="drawer-section-title">资金与估值</div>
           <div className="kv-card">
             <div className="kv-item">
               <span>散户指数 (小单占比)</span>
@@ -226,14 +231,14 @@ export function StockDrawer({ item, rule, onClose, onAnalyze, analyzeLabel = "AI
               <polyline points="15 3 21 3 21 9" />
               <line x1="10" y1="14" x2="21" y2="3" />
             </svg>
-            打开东财行情
+            打开东财
           </button>
           {onAnalyze ? (
             <button
               type="button"
               className="analyze-act-btn"
               onClick={() => onAnalyze(item)}
-              title="使用 DeepSeek AI 对该标的进行短线多维度分析"
+              title="DeepSeek 短线分析"
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
@@ -261,7 +266,7 @@ export function StockDrawer({ item, rule, onClose, onAnalyze, analyzeLabel = "AI
           </button>
         </div>
         <div className="hint">
-          {isPhoneUi() ? "点遮罩关闭详情；可点击 AI 分析或在东财查看盘口" : "按 Esc 键或点击外部遮罩退出详情"}
+          {isPhoneUi() ? "点空白处关闭" : "Esc 或点空白处关闭"}
         </div>
       </aside>
     </>

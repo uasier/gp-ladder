@@ -81,7 +81,7 @@ export function AnalyzeFloat({ open, loading, error, result, title, onClose, onR
         }}
       >
         <div>
-          <div className="analyze-float-kicker">DeepSeek 短线智能分析</div>
+          <div className="analyze-float-kicker">DeepSeek 短线分析</div>
           <strong>{title}</strong>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -124,25 +124,22 @@ export function AnalyzeFloat({ open, loading, error, result, title, onClose, onR
         <div className="score-meta">
           <div className="score-label">
             {loading
-              ? "正在深度推演与评分…"
+              ? "分析中…"
               : result?.scoreLabel
                 ? result.scoreLabel
                 : error
                   ? "未完成评分"
                   : "待评分"}
           </div>
-          <div className="muted">
-            {loading
-              ? "结合盘口动能、换手率与主力博弈模型生成短线策略"
-              : result?.scoreReason || error || result?.model || ""}
-          </div>
+          {!loading ? (
+            <div className="muted">{result?.scoreReason || result?.model || ""}</div>
+          ) : null}
         </div>
       </div>
       <div className="analyze-float-body">
         {loading ? (
           <div className="an-loading">
             <div className="an-loading-bar" />
-            <p>正在按短线视角提炼盘面核心要素与风险点，请稍候…</p>
           </div>
         ) : error ? (
           <div className="analyze-error">

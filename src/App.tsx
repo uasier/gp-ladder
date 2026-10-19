@@ -19,6 +19,7 @@ import {
 import { AnalyzeFloat } from "./components/AnalyzeFloat"
 import { DayPills } from "./components/DayPills"
 import { FilterBar } from "./components/FilterBar"
+import { FloatingToolbox } from "./components/FloatingToolbox"
 import { IndustryPills } from "./components/IndustryPills"
 import { KpiGrid } from "./components/KpiGrid"
 import { Ladder } from "./components/Ladder"
@@ -79,6 +80,48 @@ export default function App() {
   const setFilters =
     board === "zt" ? setZtFilters : board === "jjzt" ? setJjztFilters : setLxszFilters
   const [rule, setRule] = useState<HighlightRule>(DEFAULT_HIGHLIGHT)
+  const [showKpi, setShowKpi] = useState<boolean>(() => {
+    const saved = localStorage.getItem("gp_show_kpi")
+    return saved !== null ? saved === "true" : false
+  })
+  const [showQuickChips, setShowQuickChips] = useState<boolean>(() => {
+    const saved = localStorage.getItem("gp_show_quick_chips")
+    return saved !== null ? saved === "true" : true
+  })
+  const [moreFiltersOpen, setMoreFiltersOpen] = useState(false)
+
+  const handleToggleKpi = useCallback(() => {
+    setShowKpi((prev) => {
+      const next = !prev
+      localStorage.setItem("gp_show_kpi", String(next))
+      return next
+    })
+  }, [])
+
+  const handleToggleQuickChips = useCallback(() => {
+    setShowQuickChips((prev) => {
+      const next = !prev
+      localStorage.setItem("gp_show_quick_chips", String(next))
+      return next
+    })
+  }, [])
+
+  const activeMoreCount = useMemo(
+    () =>
+      [
+        filters.pctRange !== "all",
+        filters.turnoverRange !== "all",
+        filters.volumeRatioMin != null || filters.volumeRatioMax != null,
+        filters.pctTotalMin != null || filters.pctTotalMax != null,
+        filters.todayPctMin != null || filters.todayPctMax != null,
+        filters.priceRange !== "all",
+        filters.priceMin != null || filters.priceMax != null,
+        filters.turnTotalMin != null || filters.turnTotalMax != null,
+        filters.retailRange !== "all",
+        filters.retailMin != null || filters.retailMax != null,
+      ].filter(Boolean).length,
+    [filters],
+  )
   const [settings, setSettings] = useState<SettingsView | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsTab, setSettingsTab] = useState<"crawl" | "deepseek" | "about">("crawl")
@@ -502,7 +545,7 @@ export default function App() {
             />
           ) : null}
           <RefreshBanner text={banner.text} tone={banner.tone} />
-          <KpiGrid snapshot={snapshot} board={board} />
+          {showKpi ? <KpiGrid snapshot={snapshot} board={board} /> : null}
           <FilterBar
             filters={filters}
             industries={industryOptions}
@@ -512,8 +555,12 @@ export default function App() {
             onChange={(patch) => setFilters((cur) => ({ ...cur, ...patch }))}
             onReset={() => setFilters(board === "lxsz" ? DEFAULT_FILTERS : ZT_FILTERS)}
             keywordRef={keywordRef}
+            onOpenMoreFilters={() => setMoreFiltersOpen(true)}
+            activeMoreCount={activeMoreCount}
           />
-          <QuickChips filters={filters} onChange={(patch) => setFilters((cur) => ({ ...cur, ...patch }))} />
+          {showQuickChips ? (
+            <QuickChips filters={filters} onChange={(patch) => setFilters((cur) => ({ ...cur, ...patch }))} />
+          ) : null}
           <div className="days-section">
             <DayPills
               days={days}
@@ -531,6 +578,8 @@ export default function App() {
             />
           </div>
           <MoreFilters
+            open={moreFiltersOpen}
+            onClose={() => setMoreFiltersOpen(false)}
             filters={filters}
             rule={rule}
             onChange={(patch) => setFilters((cur) => ({ ...cur, ...patch }))}
@@ -551,19 +600,30 @@ export default function App() {
               board={board}
             />
           </main>
-          <button
-            type="button"
-            className={`back-to-top ${showBackTop ? "visible" : ""}`}
-            onClick={() => pageScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" })}
-            title="回到顶部"
-            aria-label="回到顶部"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <polyline points="18 15 12 9 6 15" />
-            </svg>
-          </button>
         </div>
       </div>
+      <FloatingToolbox
+        showKpi={showKpi}
+        onToggleKpi={handleToggleKpi}
+        showQuickChips={showQuickChips}
+        onToggleQuickChips={handleToggleQuickChips}
+        showLogBar={logOpen}
+        onToggleLogBar={() => setLogOpen((v) => !v)}
+        onOpenMoreFilters={() => setMoreFiltersOpen(true)}
+        activeMoreCount={activeMoreCount}
+        onExport={(fmt) => void handleExport(fmt)}
+        onOpenSettings={() => {
+          setSettingsTab("crawl")
+          setSettingsOpen(true)
+        }}
+        update={update}
+        onOpenAbout={openAbout}
+        settings={settings}
+        theme={theme}
+        onToggleTheme={() => setTheme((cur) => (cur === "dark" ? "light" : "dark"))}
+        onScrollTop={() => pageScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" })}
+        showBackTop={showBackTop}
+      />
       <StockDrawer
         item={selected}
         rule={rule}

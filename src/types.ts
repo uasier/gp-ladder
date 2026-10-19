@@ -127,6 +127,8 @@ export type FilterState = {
   industry: string
   pctRange: string
   turnoverRange: string
+  volumeRatioMin: number | null
+  volumeRatioMax: number | null
   pctTotalMin: number | null
   pctTotalMax: number | null
   todayPctMin: number | null
@@ -159,6 +161,8 @@ export const DEFAULT_FILTERS: FilterState = {
   industry: "all",
   pctRange: "all",
   turnoverRange: "all",
+  volumeRatioMin: null,
+  volumeRatioMax: null,
   pctTotalMin: null,
   pctTotalMax: null,
   todayPctMin: null,

@@ -1376,6 +1376,16 @@
           </select>
         </div>
         <div class="filter-item">
+          <label>量比区间（倍）</label>
+          <div class="filter-range" role="group" aria-label="量比区间">
+            <input id="volumeRatioMin" type="number" step="0.01" min="0" placeholder="最小量比" aria-label="最小量比" />
+            <span>～</span>
+            <input id="volumeRatioMax" type="number" step="0.01" min="0" placeholder="最大量比" aria-label="最大量比" />
+          </div>
+          <small class="muted">含边界，留空不限；缺失量比不参与范围筛选</small>
+          <small class="up" id="volumeRatioError" role="status" hidden>最小量比不能大于最大量比</small>
+        </div>
+        <div class="filter-item">
           <label>累计涨跌幅区间（%）</label>
           <div class="filter-range">
             <input id="pctTotalMin" type="number" step="0.1" placeholder="最小" />
@@ -1601,6 +1611,8 @@
     const industrySelect = document.getElementById('industrySelect');
     const pctRangeSelect = document.getElementById('pctRange');
     const turnoverRangeSelect = document.getElementById('turnoverRange');
+    const volumeRatioMinInput = document.getElementById('volumeRatioMin');
+    const volumeRatioMaxInput = document.getElementById('volumeRatioMax');
     const pctTotalMinInput = document.getElementById('pctTotalMin');
     const pctTotalMaxInput = document.getElementById('pctTotalMax');
     const todayPctMinInput = document.getElementById('todayPctMin');
@@ -1753,6 +1765,8 @@
         Number(daysRange.value) > 0 ||
         pctRangeSelect.value !== 'all' ||
         turnoverRangeSelect.value !== 'all' ||
+        volumeRatioMinInput.value !== '' ||
+        volumeRatioMaxInput.value !== '' ||
         (priceRangeSelect && priceRangeSelect.value !== 'all') ||
         (priceMinInput && priceMinInput.value !== '') ||
         (priceMaxInput && priceMaxInput.value !== '');
@@ -1766,6 +1780,8 @@
       industrySelect.value = 'all';
       pctRangeSelect.value = 'all';
       turnoverRangeSelect.value = 'all';
+      volumeRatioMinInput.value = '';
+      volumeRatioMaxInput.value = '';
       retailRangeSelect.value = 'all';
       pctTotalMinInput.value = '';
       pctTotalMaxInput.value = '';
@@ -1793,7 +1809,7 @@
       [keywordInput, industrySelect, pctRangeSelect, turnoverRangeSelect, retailRangeSelect, sortSelect, priceRangeSelect].forEach(el => {
         if (el) el.addEventListener(el.tagName === 'INPUT' ? 'input' : 'change', onChange);
       });
-      [pctTotalMinInput, pctTotalMaxInput, todayPctMinInput, todayPctMaxInput, turnTotalMinInput, turnTotalMaxInput, retailMinInput, retailMaxInput, priceMinInput, priceMaxInput].forEach(el => {
+      [pctTotalMinInput, pctTotalMaxInput, todayPctMinInput, todayPctMaxInput, turnTotalMinInput, turnTotalMaxInput, retailMinInput, retailMaxInput, priceMinInput, priceMaxInput, volumeRatioMinInput, volumeRatioMaxInput].forEach(el => {
         if (el) el.addEventListener('input', onChange);
       });
       excludeStCheckbox.addEventListener('change', onChange);
@@ -1914,6 +1930,16 @@
       if (!text) return null;
       return normalizeNumber(text);
     }
+    function getVolumeRatio(item) {
+      const text = String(item['量比'] ?? '').trim();
+      if (!text) return null;
+      const value = Number(text);
+      return Number.isFinite(value) && value >= 0 ? value : null;
+    }
+    function formatVolumeRatio(item) {
+      const value = getVolumeRatio(item);
+      return value === null ? '--' : `${value.toFixed(2)} 倍`;
+    }
     function getPrice(item) {
       const live = String(item['现价'] ?? '').trim();
       if (live) return normalizeNumber(live);
@@ -1950,6 +1976,11 @@
       const industry = industrySelect.value;
       const pctRange = pctRangeSelect.value;
       const turnoverRange = turnoverRangeSelect.value;
+      const volumeRatioMin = toNullableNumber(volumeRatioMinInput.value);
+      const volumeRatioMax = toNullableNumber(volumeRatioMaxInput.value);
+      document.getElementById('volumeRatioError').hidden = !(
+        volumeRatioMin !== null && volumeRatioMax !== null && volumeRatioMin > volumeRatioMax
+      );
       const pctTotalMin = toNullableNumber(pctTotalMinInput.value);
       const pctTotalMax = toNullableNumber(pctTotalMaxInput.value);
       const todayPctMin = toNullableNumber(todayPctMinInput && todayPctMinInput.value);
@@ -1986,6 +2017,12 @@
           if (todayPct === null) return false;
           if (todayPctMin !== null && todayPct < todayPctMin) return false;
           if (todayPctMax !== null && todayPct > todayPctMax) return false;
+        }
+        if (volumeRatioMin !== null || volumeRatioMax !== null) {
+          const volumeRatio = getVolumeRatio(item);
+          if (volumeRatio === null) return false;
+          if (volumeRatioMin !== null && volumeRatio < volumeRatioMin) return false;
+          if (volumeRatioMax !== null && volumeRatio > volumeRatioMax) return false;
         }
         const price = getPrice(item);
         if (pricePreset && pricePreset !== 'all') {
@@ -2084,6 +2121,7 @@
           </div>
           <div class="tags">
             <span class="tag">${item['所属行业'] || '未知'}</span>
+            <span class="tag">量比 ${formatVolumeRatio(item)}</span>
             <span class="tag ${retailClass}">散户 ${item['散户指数'] || '--'} ${retailIcon}</span>
           </div>
         </button>`;
@@ -2157,6 +2195,7 @@
             <td class="num ${pctClass(todayPct ?? 0)}" style="font-weight:600;">${item['今日涨跌幅'] || '--'}</td>
             <td class="num ${retailColor}">${item['散户指数'] || '--'}</td>
             <td class="num">${item['今日换手率'] || '--'}</td>
+            <td class="num">${formatVolumeRatio(item)}</td>
             <td><span class="tag" style="margin:0;">${item['所属行业'] || ''}</span></td>
           </tr>`;
         }).join('');
@@ -2172,6 +2211,7 @@
                   <th class="num">今日涨跌</th>
                   <th class="num">散户指数</th>
                   <th class="num">今日换手</th>
+                  <th class="num">量比（倍）</th>
                   <th>所属行业</th>
                 </tr>
               </thead>
@@ -2225,6 +2265,7 @@
             <div class="kv-item"><span>现价</span><b>${item['现价'] || '--'} 元</b></div>
             <div class="kv-item"><span>今日涨跌幅</span><b class="${pctClass(todayPct ?? 0)}">${item['今日涨跌幅'] || '--'}</b></div>
             <div class="kv-item"><span>今日换手率</span><b>${item['今日换手率'] || '--'}</b></div>
+            <div class="kv-item"><span>量比</span><b>${formatVolumeRatio(item)}</b></div>
             <div class="kv-item"><span>成交额</span><b>${item['成交额'] || '--'}</b></div>
             <div class="kv-item" style="grid-column: 1 / -1;">
               <span>今开 / 最高 / 最低</span>

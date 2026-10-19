@@ -10,6 +10,8 @@ type Props = {
   onChange: (patch: Partial<FilterState>) => void
   onReset: () => void
   keywordRef: RefObject<HTMLInputElement | null>
+  onOpenMoreFilters?: () => void
+  activeMoreCount?: number
 }
 
 export function FilterBar({
@@ -21,6 +23,8 @@ export function FilterBar({
   onChange,
   onReset,
   keywordRef,
+  onOpenMoreFilters,
+  activeMoreCount,
 }: Props) {
   return (
     <div className="toolbar bar">
@@ -34,7 +38,7 @@ export function FilterBar({
         <input
           ref={keywordRef}
           type="search"
-          placeholder="搜索名称 / 股票代码..."
+          placeholder="名称 / 代码"
           value={filters.keyword}
           onChange={(e) => onChange({ keyword: e.target.value })}
         />
@@ -108,6 +112,26 @@ export function FilterBar({
           列表
         </button>
       </div>
+
+      {onOpenMoreFilters ? (
+        <button
+          type="button"
+          className={`btn-more-filter ${activeMoreCount && activeMoreCount > 0 ? "is-active" : ""}`}
+          onClick={onOpenMoreFilters}
+          title="高级筛选与精选规则"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+          </svg>
+          <span>高级筛选</span>
+          {activeMoreCount && activeMoreCount > 0 ? (
+            <span className="badge" style={{ fontSize: 10, padding: "0 6px" }}>
+              {activeMoreCount}
+            </span>
+          ) : null}
+        </button>
+      ) : null}
+
       {showReset ? (
         <button type="button" className="btn-reset-filter show" onClick={onReset} title="重置当前所有筛选条件">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
@@ -118,7 +142,7 @@ export function FilterBar({
         </button>
       ) : null}
       <div className="count">
-        符合条件 <b>{visible}</b> / {total} 只
+        筛选结果 <b>{visible}</b> / {total} 只
       </div>
     </div>
   )

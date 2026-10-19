@@ -1,6 +1,7 @@
 import type { BoardKind, HighlightRule, StockRow, ViewMode } from "../types"
 import { useLongPress } from "../longPress"
 import {
+  formatVolumeRatio,
   getBodyPct,
   getRetailIndex,
   getTodayPct,
@@ -41,7 +42,7 @@ export function Ladder({
     return (
       <div className="empty">
         <div className="empty-icon">📡</div>
-        <p>尚未刷新实时数据，当前没有缓存榜单</p>
+        <p>暂无数据，请先刷新</p>
         <button type="button" onClick={onRefresh} disabled={refreshing}>
           {refreshing ? "正在刷新…" : "刷新实时数据"}
         </button>
@@ -52,12 +53,9 @@ export function Ladder({
     return (
       <div className="empty">
         <div className="empty-icon">🔍</div>
-        <p>
-          暂无符合当前筛选条件的
-          {board === "jjzt" ? "昨涨今红" : board === "zt" ? "涨停" : "连涨"}标的
-        </p>
+        <p>暂无符合条件的股票</p>
         <button type="button" onClick={onReset}>
-          重置所有筛选条件
+          重置筛选
         </button>
       </div>
     )
@@ -76,6 +74,7 @@ export function Ladder({
               <th className="num">实体涨幅</th>
               <th className="num">散户指数</th>
               <th className="num">今日换手</th>
+              <th className="num">量比（倍）</th>
               <th>所属行业</th>
               <th style={{ width: 44, textAlign: "center" }}>操作</th>
             </tr>
@@ -105,8 +104,7 @@ export function Ladder({
           <div className="group-h">
             <span className="group-badge">{group.day}</span>
             <div className="t">
-              {board === "jjzt" ? "昨涨今红" : board === "zt" ? "涨停天梯" : "连涨天梯"} <b>{group.day}</b>
-              {board === "lxsz" ? " 连涨阶梯" : " 连板"} · 包含 <b>{group.items.length}</b> 只标的
+              {board === "lxsz" ? "连涨" : board === "jjzt" ? "昨日连板" : "连板"} · <b>{group.items.length}</b> 只
             </div>
           </div>
           <div className="cards">
@@ -194,6 +192,7 @@ function StockTableRow({
       </td>
       <td className={`num ${retailColor}`}>{item["散户指数"] || "--"}</td>
       <td className="num">{item["今日换手率"] || "--"}</td>
+      <td className="num">{formatVolumeRatio(item)}</td>
       <td>
         <span className="tag" style={{ margin: 0 }}>
           {item["所属行业"] || ""}
@@ -318,6 +317,7 @@ function StockCard({
       </div>
       <div className="tags">
         <span className="tag">{item["所属行业"] || "未知"}</span>
+        <span className="tag">量比 {formatVolumeRatio(item)}</span>
         <span className={`tag ${retailClass}`}>
           散户 {item["散户指数"] || "--"} {retailIcon}
         </span>

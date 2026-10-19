@@ -47,10 +47,10 @@ export function Toolbar({
           </div>
           <div className="brand-desc">
             {board === "zt"
-              ? "A股涨停连板梯队 · 东方财富涨停池"
+              ? "东方财富涨停池"
               : board === "jjzt"
-                ? "昨天涨停 · 今日竞价后红盘 2%–8%"
-                : "A股同花顺强势连涨动能追踪仪表盘"}
+                ? "昨日涨停 · 今开涨幅 2%–8%"
+                : "同花顺连涨榜"}
           </div>
         </div>
         <div className="board-tabs" role="tablist" aria-label="行情榜单切换">
@@ -90,22 +90,21 @@ export function Toolbar({
           onClick={onOpenSettings}
           title={
             settings?.hasDeepseekKey
-              ? "抓取内置；DeepSeek 已配置，可右键或长按分析股票"
-              : "抓取内置；右键或长按分析前请在设置中填写 DeepSeek API Key"
+              ? "右键或长按股票可分析"
+              : "设置 API Key 后可分析"
           }
         >
           <span className="status-dot" aria-hidden="true" />
           <div className="chip-content">
-            <span className="chip-title">内置引擎</span>
+            <span className="chip-title">DeepSeek</span>
             <span className="chip-sub">
-              {settings?.hasDeepseekKey ? "DeepSeek 已配置" : "DeepSeek 未配置"}
-              {settings?.maxPages ? ` · 最多 ${settings.maxPages} 页` : " · 全量翻页"}
+              {settings?.hasDeepseekKey ? "已配置" : "未配置"}
             </span>
           </div>
         </button>
         <div className="refresh-panel">
           <div className="refresh-meta">
-            <span className="refresh-label">数据刷新时间</span>
+            <span className="refresh-label">上次刷新</span>
             <time>{updatedAt || "尚未刷新"}</time>
           </div>
           {refreshing ? (

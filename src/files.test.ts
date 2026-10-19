@@ -18,6 +18,19 @@ describe("rowsToCsv", () => {
     expect(csv).toContain("000001")
     expect(csv).toContain("-6.20%")
   })
+
+  it("exports volume ratio as a number column and leaves old snapshots blank", () => {
+    const rows = [
+      { 股票代码: "000001", 量比: "1.25" },
+      { 股票代码: "000002", 量比: "0.00" },
+      { 股票代码: "000003" },
+    ]
+    const [header, ...data] = rowsToCsv(rows).trim().split("\n")
+    const column = header.split(",").indexOf("量比")
+    expect(column).toBeGreaterThan(-1)
+    expect(data.map((line) => line.split(",")[column])).toEqual(["1.25", "0.00", ""])
+    expect(JSON.parse(rowsToJson(rows))).toEqual(rows)
+  })
 })
 
 describe("timestampName", () => {

@@ -15,7 +15,7 @@ const EASTMONEY_ULIST_URLS: &[&str] = &[
     "https://push2delay.eastmoney.com/api/qt/ulist.np/get",
     "https://push2.eastmoney.com/api/qt/ulist.np/get",
 ];
-const EASTMONEY_ULIST_FIELDS: &str = "f12,f2,f3,f6,f8,f9,f15,f16,f17,f18,f84,f87,f124";
+const EASTMONEY_ULIST_FIELDS: &str = "f12,f2,f3,f6,f8,f9,f10,f15,f16,f17,f18,f84,f87,f124";
 
 static WORKING: Mutex<Option<(String, bool)>> = Mutex::new(None);
 
@@ -25,6 +25,7 @@ pub struct QuoteMetrics {
     pub change_pct: Option<f64>,
     pub amount: Option<f64>,
     pub turnover: Option<f64>,
+    pub volume_ratio: Option<f64>,
     pub pe: Option<f64>,
     pub high: Option<f64>,
     pub low: Option<f64>,
@@ -33,6 +34,28 @@ pub struct QuoteMetrics {
     pub retail_amount: Option<f64>,
     pub retail_pct: Option<f64>,
     pub quote_ts: Option<f64>,
+}
+
+impl QuoteMetrics {
+    fn from_eastmoney(item: &Value) -> Self {
+        Self {
+            price: json_to_optional_float(&item["f2"]),
+            change_pct: json_to_optional_float(&item["f3"]),
+            amount: json_to_optional_float(&item["f6"]),
+            turnover: json_to_optional_float(&item["f8"]),
+            // fltt=2 返回以倍为单位的量比，无需按百分比缩放。
+            volume_ratio: json_to_optional_float(&item["f10"])
+                .filter(|value| value.is_finite() && *value >= 0.0),
+            pe: json_to_optional_float(&item["f9"]),
+            high: json_to_optional_float(&item["f15"]),
+            low: json_to_optional_float(&item["f16"]),
+            open: json_to_optional_float(&item["f17"]),
+            prev_close: json_to_optional_float(&item["f18"]),
+            retail_amount: json_to_optional_float(&item["f84"]),
+            retail_pct: json_to_optional_float(&item["f87"]),
+            quote_ts: json_to_optional_float(&item["f124"]),
+        }
+    }
 }
 
 pub fn build_eastmoney_secid(code: &str) -> Option<String> {
@@ -158,23 +181,7 @@ pub fn fetch_eastmoney_snapshots(
             if code.is_empty() {
                 continue;
             }
-            metrics.insert(
-                code,
-                QuoteMetrics {
-                    price: json_to_optional_float(item.get("f2").unwrap_or(&Value::Null)),
-                    change_pct: json_to_optional_float(item.get("f3").unwrap_or(&Value::Null)),
-                    amount: json_to_optional_float(item.get("f6").unwrap_or(&Value::Null)),
-                    turnover: json_to_optional_float(item.get("f8").unwrap_or(&Value::Null)),
-                    pe: json_to_optional_float(item.get("f9").unwrap_or(&Value::Null)),
-                    high: json_to_optional_float(item.get("f15").unwrap_or(&Value::Null)),
-                    low: json_to_optional_float(item.get("f16").unwrap_or(&Value::Null)),
-                    open: json_to_optional_float(item.get("f17").unwrap_or(&Value::Null)),
-                    prev_close: json_to_optional_float(item.get("f18").unwrap_or(&Value::Null)),
-                    retail_amount: json_to_optional_float(item.get("f84").unwrap_or(&Value::Null)),
-                    retail_pct: json_to_optional_float(item.get("f87").unwrap_or(&Value::Null)),
-                    quote_ts: json_to_optional_float(item.get("f124").unwrap_or(&Value::Null)),
-                },
-            );
+            metrics.insert(code, QuoteMetrics::from_eastmoney(&item));
         }
     }
     Ok(metrics)
@@ -186,6 +193,11 @@ pub fn annotate_with_live_quotes(
     on_progress: impl Fn(&str),
 ) -> Result<(), String> {
     let snapshots = fetch_eastmoney_snapshots(rows, cancel, on_progress)?;
+    apply_quote_metrics(rows, &snapshots);
+    Ok(())
+}
+
+fn apply_quote_metrics(rows: &mut [StockRow], snapshots: &HashMap<String, QuoteMetrics>) {
     for row in rows.iter_mut() {
         let code = row.get("股票代码").map(|s| s.trim().to_string()).unwrap_or_default();
         let item = snapshots.get(&code).cloned().unwrap_or_default();
@@ -207,6 +219,7 @@ pub fn annotate_with_live_quotes(
         row.insert("今高".into(), format_price(item.high));
         row.insert("今低".into(), format_price(item.low));
         row.insert("今日换手率".into(), format_signed_percent(item.turnover));
+        row.insert("量比".into(), format_price(item.volume_ratio));
         row.insert("成交额".into(), format_fund_amount(item.amount));
         row.insert("行情时间".into(), format_quote_time(item.quote_ts));
         row.insert(
@@ -216,12 +229,54 @@ pub fn annotate_with_live_quotes(
         row.insert("散户指数".into(), format_signed_percent(item.retail_pct));
         row.insert("散户净额".into(), format_fund_amount(item.retail_amount));
     }
-    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn volume_ratio_parses_numbers_and_missing_values() {
+        assert!(EASTMONEY_ULIST_FIELDS.split(',').any(|field| field == "f10"));
+        for value in [serde_json::json!(1.25), serde_json::json!("1.25")] {
+            let metrics = QuoteMetrics::from_eastmoney(&serde_json::json!({"f10": value}));
+            assert_eq!(metrics.volume_ratio, Some(1.25));
+        }
+        assert_eq!(
+            QuoteMetrics::from_eastmoney(&serde_json::json!({"f10": 0})).volume_ratio,
+            Some(0.0),
+        );
+        for value in [
+            Value::Null, serde_json::json!("-"), serde_json::json!("--"),
+            serde_json::json!(""), serde_json::json!("NaN"), serde_json::json!("inf"),
+            serde_json::json!(-1), serde_json::json!(false),
+        ] {
+            assert_eq!(
+                QuoteMetrics::from_eastmoney(&serde_json::json!({"f10": value})).volume_ratio,
+                None,
+            );
+        }
+        assert_eq!(QuoteMetrics::from_eastmoney(&serde_json::json!({})).volume_ratio, None);
+    }
+
+    #[test]
+    fn volume_ratio_is_saved_in_snapshot_rows_without_percent_scaling() {
+        let mut rows = vec![
+            StockRow::from([("股票代码".into(), "600519".into())]),
+            StockRow::from([("股票代码".into(), "000001".into()), ("量比".into(), "9.99".into())]),
+            StockRow::from([("股票代码".into(), "000002".into())]),
+        ];
+        let metrics = HashMap::from([
+            ("600519".into(), QuoteMetrics::from_eastmoney(&serde_json::json!({"f10": 1.25, "f2": 15.5, "f8": 3.2}))),
+            ("000002".into(), QuoteMetrics::from_eastmoney(&serde_json::json!({"f10": 0}))),
+        ]);
+        apply_quote_metrics(&mut rows, &metrics);
+        assert_eq!(rows[0]["量比"], "1.25");
+        assert_eq!(rows[0]["现价"], "15.50");
+        assert_eq!(rows[0]["今日换手率"], "3.20%");
+        assert_eq!(rows[1]["量比"], "");
+        assert_eq!(rows[2]["量比"], "0.00");
+    }
 
     #[test]
     fn secid_by_exchange_prefix() {

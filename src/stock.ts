@@ -95,6 +95,18 @@ export function getTodayTurnover(item: StockRow): number | null {
   return normalizeNumber(text)
 }
 
+export function getVolumeRatio(item: StockRow): number | null {
+  const text = String(item["量比"] ?? "").trim()
+  if (!text) return null
+  const value = Number(text)
+  return Number.isFinite(value) && value >= 0 ? value : null
+}
+
+export function formatVolumeRatio(item: StockRow): string {
+  const value = getVolumeRatio(item)
+  return value === null ? "--" : `${value.toFixed(2)} 倍`
+}
+
 export function getPrice(item: StockRow): number | null {
   const live = String(item["现价"] ?? "").trim()
   if (live) return normalizeNumber(live)
@@ -219,6 +231,8 @@ export function hasActiveFilters(filters: FilterState): boolean {
     filters.minDays > 0 ||
     filters.pctRange !== "all" ||
     filters.turnoverRange !== "all" ||
+    filters.volumeRatioMin !== null ||
+    filters.volumeRatioMax !== null ||
     filters.priceRange !== "all" ||
     filters.priceMin !== null ||
     filters.priceMax !== null ||
@@ -270,6 +284,12 @@ export function filterAndSort(
       if (todayPct === null) return false
       if (filters.todayPctMin !== null && todayPct < filters.todayPctMin) return false
       if (filters.todayPctMax !== null && todayPct > filters.todayPctMax) return false
+    }
+    if (filters.volumeRatioMin !== null || filters.volumeRatioMax !== null) {
+      const volumeRatio = getVolumeRatio(item)
+      if (volumeRatio === null) return false
+      if (filters.volumeRatioMin !== null && volumeRatio < filters.volumeRatioMin) return false
+      if (filters.volumeRatioMax !== null && volumeRatio > filters.volumeRatioMax) return false
     }
     const price = getPrice(item)
     if (filters.nearDayHigh && !isNearDayHigh(item)) return false
