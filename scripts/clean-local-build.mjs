@@ -9,7 +9,7 @@
 
 import { existsSync, rmSync } from "node:fs"
 import { homedir } from "node:os"
-import { dirname, join, resolve, sep } from "node:path"
+import { dirname, join, parse, resolve, sep } from "node:path"
 import { spawnSync } from "node:child_process"
 import { fileURLToPath, pathToFileURL } from "node:url"
 
@@ -57,7 +57,7 @@ export function assertSafeToRemove(absPath, home, repoRoot) {
   const resolved = resolve(absPath)
   const homeRes = resolve(home)
   const rootRes = resolve(repoRoot)
-  if (resolved === "/" || resolved === homeRes || resolved === rootRes) {
+  if (resolved === parse(resolved).root || resolved === homeRes || resolved === rootRes) {
     throw new Error(`拒绝删除危险路径: ${resolved}`)
   }
   const underRoot = resolved.startsWith(rootRes + sep)

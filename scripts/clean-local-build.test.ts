@@ -1,5 +1,5 @@
 import { homedir } from "node:os"
-import { join } from "node:path"
+import { join, resolve } from "node:path"
 import { describe, expect, it } from "vitest"
 import {
   PROJECT_CLEAN_RELATIVE_PATHS,
@@ -43,8 +43,8 @@ describe("PROJECT_CLEAN_RELATIVE_PATHS", () => {
 })
 
 describe("assertSafeToRemove", () => {
-  const home = "/Users/demo"
-  const repo = "/Users/demo/project"
+  const home = resolve("/Users/demo")
+  const repo = join(home, "project")
 
   it("allows repo target and android sdk cache", () => {
     expect(assertSafeToRemove(join(repo, "src-tauri/target"), home, repo)).toBe(

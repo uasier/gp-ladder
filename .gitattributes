@@ -1,0 +1,2 @@
+# Keep scripts and generated text identical across macOS, Windows, and Linux.
+* text=auto eol=lf
