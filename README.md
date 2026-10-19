@@ -148,13 +148,13 @@ npm run server
 
 ## 发布
 
-三个版本号必须一致：`package.json`、`src-tauri/tauri.conf.json`、`src-tauri/Cargo.toml`。
+五份版本文件必须一致：`package.json`、`package-lock.json`、`src-tauri/tauri.conf.json`、`src-tauri/Cargo.toml`、`src-tauri/Cargo.lock`。
 
 ```bash
 # 只校验
 npm run version:check
 
-# 同步三个文件到指定版本（不提交）
+# 同步版本文件到指定版本（不提交）
 npm run version:set -- 0.2.0
 
 # 同步版本、提交并打 annotated tag（不推送）
@@ -162,7 +162,9 @@ npm run release:tag -- 0.2.0
 git push origin HEAD && git push origin v0.2.0
 ```
 
-推送 `v*` tag 后，GitHub Actions 的 **Build** 工作流会在 macOS arm64 / macOS x64 / Windows x64 / Android arm64 构建，并上传到该 tag 的 GitHub Release。`npm run tauri:build` / `npm run build:github` 或在 Actions 里手动运行 Build：不填 tag 只保留 Artifacts；填已有 tag 则补传安装包。
+推送 `v*` tag 后，GitHub Actions 的 **Build** 工作流会先准备一份 Release 草稿，再并行构建 macOS arm64 / macOS x64 / Windows x64 / Android arm64。所有构建、macOS 签名检查及资源上传成功后，校验四个安装包与两份 macOS 更新归档的版本、大小和 SHA-256 元数据，再统一发布为最新版本。失败时草稿保持不公开，可修复后重跑失败任务。
+
+发布说明放在 `docs/releases/vX.Y.Z.md`，工作流会自动使用；没有该文件时使用 GitHub 生成的说明。`npm run tauri:build` / `npm run build:github` 或在 Actions 里手动运行 Build：不填 tag 只保留 Artifacts；填已有 tag 则补传安装包，保留该 Release 的公开状态。
 
 ## 注意事项
 

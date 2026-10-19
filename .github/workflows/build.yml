@@ -1,7 +1,7 @@
 name: Build
 
 # 本仓库的安装包编译只在 GitHub 上跑，避免本机生成数 GB 的 target/。
-# - 推送 v* tag：编译并上传到该 GitHub Release
+# - 推送 v* tag：先上传到同一份草稿；所有平台成功并校验资源后统一发布
 # - 手动 Run workflow：默认只上传 Actions Artifacts；填 release_tag 则额外挂到已有 Release
 on:
   workflow_dispatch:
@@ -28,6 +28,7 @@ jobs:
     outputs:
       publish_tag: ${{ steps.meta.outputs.tag }}
       publish_name: ${{ steps.meta.outputs.name }}
+      release_id: ${{ steps.release.outputs.id }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -74,6 +75,24 @@ jobs:
           else
             node scripts/sync-version.mjs --check
           fi
+
+      - name: Prepare release
+        if: steps.meta.outputs.tag != ''
+        id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          if ! gh release view "$TAG" --json databaseId > "$RUNNER_TEMP/release.json"; then
+            NOTES="docs/releases/$TAG.md"
+            if [[ -f "$NOTES" ]]; then
+              gh release create "$TAG" --verify-tag --draft --title "连涨天梯 $TAG" --notes-file "$NOTES"
+            else
+              gh release create "$TAG" --verify-tag --draft --title "连涨天梯 $TAG" --generate-notes
+            fi
+            gh release view "$TAG" --json databaseId > "$RUNNER_TEMP/release.json"
+          fi
+          echo "id=$(jq -er .databaseId "$RUNNER_TEMP/release.json")" >> "$GITHUB_OUTPUT"
 
   build:
     needs: verify
@@ -138,6 +157,7 @@ jobs:
           projectPath: .
           tauriScript: npm run tauri
           args: ${{ matrix.args }}
+          releaseId: ${{ needs.verify.outputs.release_id }}
           tagName: ${{ needs.verify.outputs.publish_tag }}
           releaseName: ${{ needs.verify.outputs.publish_name }}
           releaseBody: |
@@ -154,7 +174,7 @@ jobs:
             Windows 如遇 SmartScreen，选择「仍要运行」；Android 需允许安装未知来源。
 
             应用内「设置 → 关于」可检查更新并下载当前系统对应安装包。
-          releaseDraft: false
+          releaseDraft: true
           prerelease: false
           uploadUpdaterJson: false
           # GitHub Release 资源名用 ASCII，避免中文产品名被剥成 `_0.1.0_*.dmg`
@@ -298,3 +318,27 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ needs.verify.outputs.publish_tag }}
         run: gh release upload "$TAG" dist-android/*.apk --clobber
+
+  publish:
+    needs: [verify, build, android]
+    if: github.event_name == 'push' && needs.verify.outputs.publish_tag != ''
+    runs-on: ubuntu-latest
+    name: Publish complete release
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Verify assets and publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.verify.outputs.publish_tag }}
+          RELEASE_ID: ${{ needs.verify.outputs.release_id }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" > "$RUNNER_TEMP/release.json"
+          node scripts/verify-release-assets.mjs "$RUNNER_TEMP/release.json" "$TAG"
+          gh release edit "$TAG" --draft=false --latest
