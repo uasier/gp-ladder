@@ -1,0 +1,53 @@
+services:
+  website:
+    image: node:24-bookworm-slim
+    container_name: gp-website
+    network_mode: host
+    user: "1000:1000"
+    working_dir: /app
+    command: ["node", "deploy/website/server.mjs"]
+    environment:
+      HOST: 127.0.0.1
+      PORT: "40500"
+      SITE_ROOT: /app/.site-dist
+      SITE_DATA: /data
+    volumes:
+      - ./current:/app:ro
+      - ./data:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:40500/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+  tls:
+    image: nginx:alpine
+    container_name: gp-website-tls
+    network_mode: host
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./tls:/etc/nginx/tls:ro
+    restart: unless-stopped
+    depends_on:
+      website:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

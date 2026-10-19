@@ -34,8 +34,9 @@ html.is-mobile table.list td {
 .page-scroll {
   flex: 1 1 auto;
   min-height: 0;
-  overflow-y: auto;
+  overflow-y: scroll;
   overflow-x: hidden;
+  scrollbar-gutter: stable;
   scroll-behavior: smooth;
 }
 .sr-only {
@@ -172,6 +173,19 @@ html.is-mobile table.list td {
   border: 1px solid var(--border);
   font-family: var(--font-mono);
 }
+.settings-help {
+  margin: 0 0 14px;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.settings-help > summary {
+  color: var(--muted);
+  cursor: pointer;
+}
+.settings-help .tip {
+  margin: 8px 0 0;
+}
+
 .field {
   display: flex;
   flex-direction: column;
@@ -303,6 +317,255 @@ html[data-theme="light"] .settings-tabs button.active {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-bg);
+}
+
+/* DeepSeek 配置卡片化 */
+.settings-section-card {
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 12px);
+  padding: 14px 16px;
+}
+
+.section-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.section-card-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.section-card-hint {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+/* 场景切换标签栏 */
+.prompt-scene-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+
+.prompt-scene-tab {
+  background: var(--surface-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 8px);
+  padding: 6px 14px;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all var(--transition-fast);
+}
+
+.prompt-scene-tab:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.prompt-scene-tab.active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-bg);
+  box-shadow: var(--shadow-sm);
+}
+
+.scene-modified-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gold);
+}
+
+/* 场景功能导引卡片 */
+.prompt-scene-guide {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 8px);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.scene-guide-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.scene-guide-desc {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-sub);
+  line-height: 1.45;
+}
+
+.scene-guide-factors {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.factor-tag {
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 10.5px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+
+/* 场景专属微标 */
+.badge-lxsz {
+  background: rgba(99, 102, 241, 0.12);
+  color: var(--accent);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+}
+
+.badge-zt {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--up);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.badge-jjzt {
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--gold);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+/* 动态变量工具栏 */
+.prompt-variables-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  padding: 6px 10px;
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm, 8px);
+}
+
+.var-hint {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.var-btn {
+  background: var(--surface-input);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 7px;
+  font-size: 11px;
+  color: var(--text-sub);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all var(--transition-fast);
+}
+
+.var-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.var-btn.highlight {
+  border-color: var(--gold-border);
+  color: var(--gold);
+}
+
+.var-btn code {
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+/* 关于页面美化 */
+.about-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.about-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md, 12px);
+  background: linear-gradient(135deg, #6366f1, #ec4899);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+}
+
+.about-badge svg {
+  width: 24px;
+  height: 24px;
+  color: #fff;
+}
+
+.about-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.about-title-row h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 750;
+  color: var(--text);
+}
+
+.about-version {
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.about-subtitle {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.about-update-card {
+  margin-top: 14px;
+  padding: 14px 16px;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 12px);
+}
+
+.about-update-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 /* 关于与版本卡片 */

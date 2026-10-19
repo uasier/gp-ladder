@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.2.3",
   "description": "连涨天梯：同花顺连涨榜、东方财富涨停天梯与昨日涨停桌面/Android 工作台",
-  "homepage": "https://uasier.github.io/gp-ladder/",
+  "homepage": "https://gp.uasier.com/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/uasier/gp-ladder.git"
@@ -28,6 +28,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "site:build": "node scripts/build-site.mjs",
     "tauri": "node scripts/tauri-cli.mjs",
     "test": "vitest run",
     "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml -- --test-threads=1",

@@ -3,6 +3,8 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event"
 import type {
   AnalyzeRequest,
   AnalyzeResult,
+  StockPickRequest,
+  StockPickResult,
   AppLogEntry,
   ExportResult,
   RefreshEvent,
@@ -99,6 +101,20 @@ export function saveSettings(patch: SettingsPatch) {
   })
 }
 
+export function testDeepseek(params: { apiKey: string; baseUrl?: string; model?: string }): Promise<string> {
+  if (isTauri()) {
+    return invoke<string>("test_deepseek_connection", {
+      apiKey: params.apiKey,
+      baseUrl: params.baseUrl || null,
+      model: params.model || null,
+    })
+  }
+  return http<{ message: string }>("/api/deepseek/test", {
+    method: "POST",
+    body: JSON.stringify(params),
+  }).then((r) => r.message)
+}
+
 export function probeRuntime() {
   if (isTauri()) return invoke<SettingsView>("probe_runtime")
   return http<SettingsView>("/api/runtime")
@@ -115,6 +131,14 @@ export function exportSnapshot(format: string, path: string, board: BoardKind = 
 export function analyzeStock(request: AnalyzeRequest) {
   if (isTauri()) return invoke<AnalyzeResult>("analyze_stock", { request })
   return http<AnalyzeResult>("/api/analyze", {
+    method: "POST",
+    body: JSON.stringify(request),
+  })
+}
+
+export function pickStocks(request: StockPickRequest) {
+  if (isTauri()) return invoke<StockPickResult>("pick_stocks", { request })
+  return http<StockPickResult>("/api/stocks/pick", {
     method: "POST",
     body: JSON.stringify(request),
   })

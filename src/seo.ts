@@ -1,7 +1,7 @@
 import type { BoardKind } from "./types"
 
-/** 对外产品页（GitHub Pages），搜索引擎与社交分享以此为准。 */
-export const SITE_URL = "https://uasier.github.io/gp-ladder"
+/** 对外下载官网，搜索引擎与社交分享以此为准。 */
+export const SITE_URL = "https://gp.uasier.com"
 
 export const REPO_URL = "https://github.com/uasier/gp-ladder"
 
@@ -154,7 +154,7 @@ export const FAQ_ITEMS: { question: string; answer: string }[] = [
   {
     question: "如何下载连涨天梯？",
     answer:
-      "到 GitHub Releases 下载 macOS dmg、Windows 安装包或 Android APK。应用内设置 → 关于也可检查更新并下载当前系统对应的安装包。",
+      "在官网下载区选择版本与系统，下载 macOS DMG、Windows 安装包或 Android APK。安装包来自 GitHub Releases，应用内「设置 → 关于」也可检查更新。",
   },
   {
     question: "连涨天梯会给出买入卖出建议吗？",

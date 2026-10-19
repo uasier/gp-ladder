@@ -1,3 +1,5 @@
+import { TonghuashunButton } from "./TonghuashunButton"
+
 type Props = {
   x: number
   y: number
@@ -35,6 +37,7 @@ export function StockContextMenu({
           </svg>
           {analyzeLabel}
         </button>
+        <TonghuashunButton code={code} name={name} label="打开同花顺" onOpen={onClose} />
         <button type="button" role="menuitem" onClick={onDetail}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="12" cy="12" r="10" />

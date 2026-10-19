@@ -18,6 +18,7 @@ const EXTRA_FIELDS: &[&str] = &[
     "今高",
     "今低",
     "今日换手率",
+    "量比",
     "成交额",
     "行情时间",
     "市盈率",
@@ -196,7 +197,7 @@ mod tests {
     use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
-    fn json_export_writes_rows_and_selected() {
+    fn exports_keep_volume_ratio_and_selected_stocks() {
         let nanos = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
@@ -209,6 +210,7 @@ mod tests {
         row.insert("连涨天数".into(), "3".into());
         row.insert("散户指数".into(), "-6.20%".into());
         row.insert("今日换手率".into(), "4.50%".into());
+        row.insert("量比".into(), "1.25".into());
         row.insert("平均涨幅/天".into(), "3.00%".into());
         let snap = snapshot::build_snapshot(vec![row], Some("2026-09-11 12:00:00".into()));
         let out = dir.join("out.json");
@@ -218,6 +220,19 @@ mod tests {
         let text = fs::read_to_string(&out).unwrap();
         assert!(text.contains("000001"));
         assert!(Path::new(&result.selected_path).is_file());
+        let json_rows: Vec<StockRow> = serde_json::from_str(&text).unwrap();
+        assert_eq!(json_rows[0]["量比"], "1.25");
+        let csv_path = dir.join("out.csv");
+        write_snapshot_file(&snap, &csv_path, "csv").unwrap();
+        let csv = fs::read_to_string(csv_path).unwrap();
+        let mut lines = csv.trim_start_matches('\u{FEFF}').lines();
+        let ratio_column = lines.next().unwrap().split(',').position(|field| field == "量比").unwrap();
+        assert_eq!(lines.next().unwrap().split(',').nth(ratio_column), Some("1.25"));
+        let html_path = dir.join("out.html");
+        write_snapshot_file(&snap, &html_path, "html").unwrap();
+        let html = fs::read_to_string(html_path).unwrap();
+        assert!(html.contains("\"量比\":\"1.25\""));
+        assert!(!html.contains("__DATA_JSON__"));
         let _ = fs::remove_dir_all(&dir);
     }
 

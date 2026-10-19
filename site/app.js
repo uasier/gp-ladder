@@ -1,160 +1,252 @@
-(function () {
-  var API = "https://api.github.com/repos/uasier/gp-ladder/releases"
-  var FALLBACK = "https://github.com/uasier/gp-ladder/releases/latest"
+import {
+  PLATFORMS,
+  REPO,
+  normalizeReleases,
+  latestStable,
+  assetFor,
+  sizeLabel,
+  escapeHtml as esc,
+  renderNotes,
+} from "./releases.js";
 
-  function esc(value) {
-    return String(value).replace(/[&<>"']/g, function (ch) {
-      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]
-    })
+const $ = (selector) => document.querySelector(selector);
+const shots = [
+  { title: "连涨天梯", cap: "按连涨天数分档，把市场梯队展开来看。" },
+  { title: "涨停天梯", cap: "按连板高度排列，观察涨停梯队的变化。" },
+  {
+    title: "昨日涨停",
+    cap: "跟踪昨日涨停、今日竞价后红盘且涨幅 2%–8% 的标的。",
+  },
+  { title: "短线分析", cap: "结合量价、动能与风险，多一个整理思路的视角。" },
+];
+
+function showShot(index, focus = false) {
+  const i = Number(index);
+  if (!Number.isInteger(i) || i < 0 || i >= shots.length) return;
+  document
+    .querySelectorAll("#showcase-tabs [data-shot]")
+    .forEach((tab, position) => {
+      const active = position === i;
+      tab.setAttribute("aria-selected", String(active));
+      tab.tabIndex = active ? 0 : -1;
+      if (active && focus) tab.focus();
+    });
+  document
+    .querySelectorAll(".showcase-stage [data-frame]")
+    .forEach((frame, position) => {
+      frame.classList.toggle("is-on", position === i);
+      frame.hidden = position !== i;
+    });
+  $("#showcase-title").textContent = shots[i].title;
+  $("#showcase-cap").textContent = shots[i].cap;
+}
+
+const tablist = $("#showcase-tabs");
+tablist.addEventListener("click", (event) => {
+  const tab = event.target.closest("[data-shot]");
+  if (tab) showShot(tab.dataset.shot);
+});
+tablist.addEventListener("keydown", (event) => {
+  const active = Number(
+    tablist.querySelector('[aria-selected="true"]').dataset.shot,
+  );
+  const positions = {
+    ArrowRight: (active + 1) % shots.length,
+    ArrowLeft: (active + shots.length - 1) % shots.length,
+    Home: 0,
+    End: shots.length - 1,
+  };
+  if (!(event.key in positions)) return;
+  event.preventDefault();
+  showShot(positions[event.key], true);
+});
+
+const menu = $("#site-menu");
+const menuToggle = $(".menu-toggle");
+function closeMenu() {
+  menu.classList.remove("is-open");
+  menuToggle.setAttribute("aria-expanded", "false");
+  menuToggle.setAttribute("aria-label", "展开导航");
+}
+menuToggle.addEventListener("click", () => {
+  const open = menu.classList.toggle("is-open");
+  menuToggle.setAttribute("aria-expanded", String(open));
+  menuToggle.setAttribute("aria-label", open ? "收起导航" : "展开导航");
+});
+menu.addEventListener("click", (event) => {
+  if (event.target.closest("a")) closeMenu();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && menu.classList.contains("is-open")) {
+    closeMenu();
+    menuToggle.focus();
   }
+});
+document.addEventListener("click", (event) => {
+  if (!event.target.closest(".nav")) closeMenu();
+  if (event.target.closest('a[href="#install-help"]'))
+    $("#install-help").open = true;
+});
+matchMedia("(min-width: 601px)").addEventListener("change", closeMenu);
 
-  function detectPlatform() {
-    var ua = navigator.userAgent || ""
-    if (/Android/i.test(ua)) return "android"
-    if (/Windows/i.test(ua)) return "windows"
-    if (/Mac/i.test(ua) && !/iPhone|iPad|iPod/i.test(ua)) return "mac"
-    return "other"
-  }
+const ua = navigator.userAgent;
+const platform = /Android/i.test(ua)
+  ? "android"
+  : /Windows/i.test(ua)
+    ? "windows"
+    : /Macintosh/i.test(ua) && navigator.maxTouchPoints < 2
+      ? "mac"
+      : "other";
+document
+  .querySelectorAll("[data-platform]")
+  .forEach((card) =>
+    card.classList.toggle("preferred", card.dataset.platform === platform),
+  );
+const labels = {
+  mac: "下载 macOS 版",
+  windows: "下载 Windows 版",
+  android: "下载 Android 版",
+  other: "免费下载",
+};
+$("#hero-download span").textContent = labels[platform];
+$("#year").textContent = new Date().getFullYear();
 
-  function findAsset(assets, test) {
-    for (var i = 0; i < assets.length; i += 1) {
-      if (test(assets[i].name || "")) return assets[i]
-    }
-    return null
-  }
+// Reveal installation help when navigating directly to its anchor.
+function openAnchoredHelp() {
+  if (location.hash === "#install-help") $("#install-help").open = true;
+}
+addEventListener("hashchange", openAnchoredHelp);
+openAnchoredHelp();
 
-  function setLink(id, asset, fallbackName) {
-    var node = document.getElementById(id)
-    if (!node) return
+let releases = [];
+let latest = null;
+const selector = $("#version-select");
+const status = $("#release-status");
+const dateLabel = (value) => {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? ""
+    : new Intl.DateTimeFormat("zh-CN", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        timeZone: "Asia/Shanghai",
+      }).format(date);
+};
+
+function selectRelease(tag) {
+  const release = releases.find((row) => row.tag_name === tag);
+  if (!release) return;
+  $("#release-date").textContent =
+    `${dateLabel(release.published_at)} 发布${release.prerelease ? " · 预览版" : ""}`;
+  for (const platform of PLATFORMS) {
+    const asset = assetFor(release, platform.id);
+    const link = $(`#dl-${platform.id}`);
+    const filename = $(`[data-file="${platform.id}"]`);
+    const meta = $(`[data-meta="${platform.id}"]`);
     if (asset) {
-      node.href = asset.browser_download_url
-      var name = document.querySelector('[data-file="' + id + '"]')
-      if (name) name.textContent = asset.name
+      link.href = asset.browser_download_url;
+      link.removeAttribute("aria-disabled");
+      link.removeAttribute("tabindex");
+      link.setAttribute(
+        "aria-label",
+        `下载 ${release.tag_name} ${platform.label} ${sizeLabel(asset.size)}`,
+      );
+      link.innerHTML = `下载 ${platform.extension} <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>`;
+      filename.textContent = asset.name;
+      meta.textContent = [sizeLabel(asset.size), platform.extension]
+        .filter(Boolean)
+        .join(" · ");
     } else {
-      node.href = FALLBACK
-      var empty = document.querySelector('[data-file="' + id + '"]')
-      if (empty && fallbackName) empty.textContent = fallbackName
+      link.removeAttribute("href");
+      link.setAttribute("aria-disabled", "true");
+      link.setAttribute("tabindex", "-1");
+      link.setAttribute(
+        "aria-label",
+        `${release.tag_name} 未提供 ${platform.label} 安装包`,
+      );
+      link.textContent = "此版本未提供";
+      filename.textContent = "可选择其他版本";
+      meta.textContent = "暂无安装包";
     }
   }
+}
+selector.addEventListener("change", () => selectRelease(selector.value));
 
-  var shots = [
-    { cap: "同花顺连涨榜叠加东方财富行情，按天数、行业、精选筛选。", title: "连涨天梯" },
-    { cap: "东方财富涨停池，按连板高度分档。", title: "涨停天梯" },
-    { cap: "昨天涨停，今日竞价后红盘且涨幅 2%–8%。", title: "昨日涨停" },
-    { cap: "按 1–5 个交易日视角看盘，并给出 0–100 短线评分。", title: "短线分析" },
-  ]
+function renderHistory() {
+  $("#release-history").innerHTML = releases
+    .map((release) => {
+      const isLatest = release.tag_name === latest?.tag_name;
+      const badge = release.prerelease
+        ? '<span class="badge preview">预览版</span>'
+        : isLatest
+          ? '<span class="badge latest">最新稳定版</span>'
+          : "";
+      const downloads = PLATFORMS.map((platform) => {
+        const asset = assetFor(release, platform.id);
+        return asset
+          ? `<a href="${esc(asset.browser_download_url)}" aria-label="下载 ${esc(release.tag_name)} ${esc(platform.label)}" title="${esc(asset.name)}"><span>${esc(platform.label)}</span><small>${esc(sizeLabel(asset.size))} ↓</small></a>`
+          : `<span class="history-missing">${esc(platform.label)} · 未提供</span>`;
+      }).join("");
+      return `<details class="history-item"${isLatest ? " open" : ""}><summary class="history-head"><span class="history-version">${esc(release.tag_name)}</span>${badge}<time class="history-date" datetime="${esc(release.published_at)}">${esc(dateLabel(release.published_at))}</time></summary><div class="history-content"><div class="history-notes">${renderNotes(release.body)}</div><div class="history-assets">${downloads}<a class="release-link" href="${esc(release.html_url)}" target="_blank" rel="noopener noreferrer">完整发布说明与附件 ↗</a></div></div></details>`;
+    })
+    .join("");
+}
 
-  function showShot(index) {
-    var i = Number(index)
-    if (!Number.isInteger(i) || i < 0 || i >= shots.length) return
-    var tabs = document.querySelectorAll("#showcase-tabs [data-shot]")
-    for (var t = 0; t < tabs.length; t += 1) {
-      tabs[t].setAttribute("aria-selected", t === i ? "true" : "false")
+async function fetchJson(url, timeout = 7000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function loadReleases() {
+  const sources = [document.body.dataset.releasesApi, "./releases.json"];
+  for (const [index, source] of sources.entries()) {
+    try {
+      const payload = await fetchJson(source);
+      releases = normalizeReleases(payload);
+      if (!releases.length) throw new Error("No published releases");
+      latest = latestStable(releases, payload.latest);
+      const selected = latest || releases[0];
+      selector.innerHTML = releases
+        .map(
+          (release) =>
+            `<option value="${esc(release.tag_name)}">${esc(release.tag_name)}${release.prerelease ? " · 预览版" : release.tag_name === latest?.tag_name ? " · 最新稳定版" : ""}</option>`,
+        )
+        .join("");
+      selector.disabled = false;
+      selector.value = selected.tag_name;
+      $("#latest-version").textContent = latest
+        ? `${latest.tag_name} 已发布 · 查看更新`
+        : `${selected.tag_name} · 预览版`;
+      selectRelease(selected.tag_name);
+      renderHistory();
+      const cached = index > 0 || payload.stale;
+      status.classList.toggle("is-warning", Boolean(cached));
+      status.textContent = cached
+        ? `显示已缓存的版本${payload.updatedAt ? `（${dateLabel(payload.updatedAt)}）` : ""}。最新发布以 GitHub 为准。`
+        : "";
+      return;
+    } catch {
+      /* Try the bundled manifest if the release service is unavailable. */
     }
-    var frames = document.querySelectorAll(".showcase-stage img[data-frame]")
-    for (var f = 0; f < frames.length; f += 1) {
-      var on = Number(frames[f].getAttribute("data-frame")) === i
-      frames[f].classList.toggle("is-on", on)
-    }
-    var shot = shots[i]
-    var cap = document.getElementById("showcase-cap")
-    var title = document.getElementById("showcase-title")
-    if (cap) cap.textContent = shot.cap
-    if (title) title.textContent = shot.title
   }
-
-  var tablist = document.getElementById("showcase-tabs")
-  if (tablist) {
-    tablist.addEventListener("click", function (event) {
-      var node = event.target
-      if (node && node.nodeType === 3) node = node.parentElement
-      var tab = node && node.closest ? node.closest("[data-shot]") : null
-      if (!tab || !tablist.contains(tab)) return
-      event.preventDefault()
-      showShot(tab.getAttribute("data-shot"))
-    })
-  }
-
-  var platform = detectPlatform()
-  document.querySelectorAll("[data-platform]").forEach(function (card) {
-    if (card.getAttribute("data-platform") === platform) card.classList.add("preferred")
-  })
-
-  var hero = document.getElementById("hero-download")
-  var heroLabel = {
-    mac: "下载 macOS 版",
-    windows: "下载 Windows 版",
-    android: "下载 Android 版",
-    other: "下载安装包",
-  }
-  if (hero) hero.textContent = heroLabel[platform] || heroLabel.other
-
-  fetch(API)
-    .then(function (res) {
-      if (!res.ok) throw new Error("HTTP " + res.status)
-      return res.json()
-    })
-    .then(function (rows) {
-      var list = (rows || []).filter(function (row) {
-        return row && !row.draft
-      })
-      var stable = list.find(function (row) {
-        return !row.prerelease
-      })
-      var latest = stable || list[0]
-      if (latest) {
-        var ver = String(latest.tag_name || "").replace(/^v/i, "")
-        var verNode = document.getElementById("latest-version")
-        if (verNode) verNode.textContent = "最新 v" + ver
-        var assets = latest.assets || []
-        var macArm = findAsset(assets, function (n) {
-          return /aarch64\.dmg$/i.test(n)
-        })
-        var macIntel = findAsset(assets, function (n) {
-          return /x64\.dmg$/i.test(n)
-        })
-        var win = findAsset(assets, function (n) {
-          return /x64-setup\.exe$/i.test(n)
-        })
-        var apk = findAsset(assets, function (n) {
-          return /aarch64\.apk$/i.test(n)
-        })
-        setLink("dl-mac-arm", macArm, "gp-ladder_*_aarch64.dmg")
-        setLink("dl-mac-intel", macIntel, "gp-ladder_*_x64.dmg")
-        setLink("dl-win", win, "gp-ladder_*_x64-setup.exe")
-        setLink("dl-android", apk, "gp-ladder_*_aarch64.apk")
-        if (hero) {
-          var map = { mac: macArm, windows: win, android: apk }
-          var chosen = map[platform]
-          hero.href = chosen ? chosen.browser_download_url : FALLBACK
-        }
-      }
-
-      var box = document.getElementById("release-history")
-      if (!box) return
-      var html = list
-        .map(function (row, index) {
-          var version = String(row.tag_name || "").replace(/^v/i, "")
-          var name = row.name || "v" + version
-          var day = String(row.published_at || "").slice(0, 10)
-          var notes = (row.body || "").trim() || "无更新说明。"
-          var open = index === 0 ? " open" : ""
-          var latestBadge = index === 0 ? '<span class="badge latest">最新</span>' : ""
-          return (
-            "<details class=\"history-item\"" +
-            open +
-            "><summary class=\"history-head\"><h3>" +
-            esc(name) +
-            "</h3>" +
-            latestBadge +
-            (day ? '<span class="history-date">' + esc(day) + "</span>" : "") +
-            "</summary><pre class=\"history-notes\">" +
-            esc(notes) +
-            "</pre></details>"
-          )
-        })
-        .join("")
-      if (html) box.innerHTML = html
-    })
-    .catch(function () {})
-})()
+  selector.innerHTML = "<option>版本列表暂不可用</option>";
+  status.classList.add("is-warning");
+  status.innerHTML = `暂时无法获取版本，请前往 <a href="${REPO}/releases">GitHub Releases ↗</a> 下载。`;
+  $("#release-history").innerHTML =
+    `<p class="history-empty">更新记录暂不可用。<a class="text-link" href="${REPO}/releases">前往 GitHub 查看 ↗</a></p>`;
+  document.querySelectorAll(".download-button").forEach((link) => {
+    link.textContent = "前往 GitHub ↗";
+  });
+}
+loadReleases();

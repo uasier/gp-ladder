@@ -1,7 +1,10 @@
+import { useEffect } from "react"
 import { DEFAULT_HIGHLIGHT, type FilterState, type HighlightRule } from "../types"
 import { toNullableNumber } from "../stock"
 
 type Props = {
+  open: boolean
+  onClose: () => void
   filters: FilterState
   rule: HighlightRule
   onChange: (patch: Partial<FilterState>) => void
@@ -11,7 +14,7 @@ type Props = {
 function numInput(
   value: number | null,
   onValue: (v: number | null) => void,
-  extra: { step?: string; min?: string; placeholder?: string } = {},
+  extra: { step?: string; min?: string; placeholder?: string; label?: string } = {},
 ) {
   return (
     <input
@@ -19,16 +22,18 @@ function numInput(
       step={extra.step ?? "0.1"}
       min={extra.min}
       placeholder={extra.placeholder}
+      aria-label={extra.label}
       value={value ?? ""}
       onChange={(e) => onValue(toNullableNumber(e.target.value))}
     />
   )
 }
 
-export function MoreFilters({ filters, rule, onChange, onRuleChange }: Props) {
+export function MoreFilters({ open, onClose, filters, rule, onChange, onRuleChange }: Props) {
   const activeCount = [
     filters.pctRange !== "all",
     filters.turnoverRange !== "all",
+    filters.volumeRatioMin != null || filters.volumeRatioMax != null,
     filters.pctTotalMin != null || filters.pctTotalMax != null,
     filters.todayPctMin != null || filters.todayPctMax != null,
     filters.priceRange !== "all",
@@ -42,6 +47,8 @@ export function MoreFilters({ filters, rule, onChange, onRuleChange }: Props) {
     onChange({
       pctRange: "all",
       turnoverRange: "all",
+      volumeRatioMin: null,
+      volumeRatioMax: null,
       pctTotalMin: null,
       pctTotalMax: null,
       todayPctMin: null,
@@ -57,172 +64,243 @@ export function MoreFilters({ filters, rule, onChange, onRuleChange }: Props) {
     })
   }
 
+  useEffect(() => {
+    if (!open) return
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose()
+    }
+    window.addEventListener("keydown", handleKey)
+    return () => window.removeEventListener("keydown", handleKey)
+  }, [open, onClose])
+
+  if (!open) return null
+
   return (
-    <details className="more-filters">
-      <summary>
-        <div className="summary-left">
-          <svg className="summary-arrow" viewBox="0 0 24 24">
-            <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
-          </svg>
-          <span>更多高级筛选与精选条件</span>
-          {activeCount > 0 ? (
-            <span className="badge" style={{ fontSize: 11, padding: "1px 7px" }}>
-              {activeCount} 项已生效
-            </span>
-          ) : null}
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 11.5, color: "var(--muted)", fontWeight: "normal" }}>
-            涨跌幅、换手率区间与主力散户模型
-          </span>
-        </div>
-      </summary>
-      <section className="filters">
-        <div className="filter-item">
-          <label>平均涨幅区间</label>
-          <select value={filters.pctRange} onChange={(e) => onChange({ pctRange: e.target.value })}>
-            <option value="all">全部平均涨幅</option>
-            <option value="0-5">0% - 5%</option>
-            <option value="5-10">5% - 10%</option>
-            <option value="10-15">10% - 15%</option>
-            <option value="15+">15%+</option>
-          </select>
-        </div>
-        <div className="filter-item">
-          <label>平均换手率区间</label>
-          <select
-            value={filters.turnoverRange}
-            onChange={(e) => onChange({ turnoverRange: e.target.value })}
-          >
-            <option value="all">全部平均换手率</option>
-            <option value="0-5">0% - 5%</option>
-            <option value="5-10">5% - 10%</option>
-            <option value="10-20">10% - 20%</option>
-            <option value="20+">20%+</option>
-          </select>
-        </div>
-        <div className="filter-item">
-          <label>累计涨跌幅区间（%）</label>
-          <div className="filter-range">
-            {numInput(filters.pctTotalMin, (v) => onChange({ pctTotalMin: v }), { placeholder: "最小" })}
-            <span>～</span>
-            {numInput(filters.pctTotalMax, (v) => onChange({ pctTotalMax: v }), { placeholder: "最大" })}
+    <div className="modal-backdrop" onClick={onClose} role="presentation">
+      <div
+        className="modal more-filters-modal"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="more-filters-title"
+      >
+        <header className="modal-header">
+          <div className="modal-title-wrap">
+            <h3 id="more-filters-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span>高级筛选</span>
+              {activeCount > 0 ? (
+                <span className="badge" style={{ fontSize: 11, padding: "1px 8px" }}>
+                  {activeCount} 项已生效
+                </span>
+              ) : null}
+            </h3>
           </div>
-        </div>
-        <div className="filter-item">
-          <label>今日涨跌幅区间（%）</label>
-          <div className="filter-range">
-            {numInput(filters.todayPctMin, (v) => onChange({ todayPctMin: v }), { placeholder: "最小" })}
-            <span>～</span>
-            {numInput(filters.todayPctMax, (v) => onChange({ todayPctMax: v }), { placeholder: "最大" })}
+          <button type="button" className="modal-close" onClick={onClose} aria-label="关闭高级筛选 (Esc)">
+            ✕
+          </button>
+        </header>
+
+        <div className="modal-body more-filters-body">
+          <div className="more-filters-section-title">涨幅与股价</div>
+          <section className="filters modal-filters-grid">
+            <div className="filter-item">
+              <label>平均涨幅</label>
+              <select value={filters.pctRange} onChange={(e) => onChange({ pctRange: e.target.value })}>
+                <option value="all">全部平均涨幅</option>
+                <option value="0-5">0% - 5%</option>
+                <option value="5-10">5% - 10%</option>
+                <option value="10-15">10% - 15%</option>
+                <option value="15+">15%+</option>
+              </select>
+            </div>
+            <div className="filter-item">
+              <label>累计涨跌幅（%）</label>
+              <div className="filter-range">
+                {numInput(filters.pctTotalMin, (v) => onChange({ pctTotalMin: v }), { placeholder: "最小" })}
+                <span>～</span>
+                {numInput(filters.pctTotalMax, (v) => onChange({ pctTotalMax: v }), { placeholder: "最大" })}
+              </div>
+            </div>
+            <div className="filter-item">
+              <label>今日涨跌幅（%）</label>
+              <div className="filter-range">
+                {numInput(filters.todayPctMin, (v) => onChange({ todayPctMin: v }), { placeholder: "最小" })}
+                <span>～</span>
+                {numInput(filters.todayPctMax, (v) => onChange({ todayPctMax: v }), { placeholder: "最大" })}
+              </div>
+            </div>
+            <div className="filter-item">
+              <label>股价区间</label>
+              <select value={filters.priceRange} onChange={(e) => onChange({ priceRange: e.target.value })}>
+                <option value="all">全部股价</option>
+                <option value="0-10">10 元以下</option>
+                <option value="10-20">10 – 20 元</option>
+                <option value="20-50">20 – 50 元</option>
+                <option value="50-100">50 – 100 元</option>
+                <option value="100+">100 元以上</option>
+              </select>
+            </div>
+            <div className="filter-item">
+              <label>自定义股价（元）</label>
+              <div className="filter-range">
+                {numInput(filters.priceMin, (v) => onChange({ priceMin: v }), { step: "0.01", min: "0", placeholder: "最低价" })}
+                <span>～</span>
+                {numInput(filters.priceMax, (v) => onChange({ priceMax: v }), { step: "0.01", min: "0", placeholder: "最高价" })}
+              </div>
+            </div>
+          </section>
+
+          <div className="more-filters-section-title" style={{ marginTop: 20 }}>
+            换手、量比与资金
           </div>
-        </div>
-        <div className="filter-item">
-          <label>当前股价区间</label>
-          <select value={filters.priceRange} onChange={(e) => onChange({ priceRange: e.target.value })}>
-            <option value="all">全部股价</option>
-            <option value="0-10">10 元以下</option>
-            <option value="10-20">10 – 20 元</option>
-            <option value="20-50">20 – 50 元</option>
-            <option value="50-100">50 – 100 元</option>
-            <option value="100+">100 元以上</option>
-          </select>
-        </div>
-        <div className="filter-item">
-          <label>当前股价自定义（元）</label>
-          <div className="filter-range">
-            {numInput(filters.priceMin, (v) => onChange({ priceMin: v }), { step: "0.01", min: "0", placeholder: "最低价" })}
-            <span>～</span>
-            {numInput(filters.priceMax, (v) => onChange({ priceMax: v }), { step: "0.01", min: "0", placeholder: "最高价" })}
+          <section className="filters modal-filters-grid">
+            <div className="filter-item">
+              <label>平均换手率</label>
+              <select
+                value={filters.turnoverRange}
+                onChange={(e) => onChange({ turnoverRange: e.target.value })}
+              >
+                <option value="all">全部平均换手率</option>
+                <option value="0-5">0% - 5%</option>
+                <option value="5-10">5% - 10%</option>
+                <option value="10-20">10% - 20%</option>
+                <option value="20+">20%+</option>
+              </select>
+            </div>
+            <div className="filter-item">
+              <label>量比区间（倍）</label>
+              <div className="filter-range" role="group" aria-label="量比区间">
+                {numInput(filters.volumeRatioMin, (v) => onChange({ volumeRatioMin: v }), {
+                  step: "0.01", min: "0", placeholder: "最小量比", label: "最小量比",
+                })}
+                <span>～</span>
+                {numInput(filters.volumeRatioMax, (v) => onChange({ volumeRatioMax: v }), {
+                  step: "0.01", min: "0", placeholder: "最大量比", label: "最大量比",
+                })}
+              </div>
+              <small className="muted">含边界 · 留空不限 · 筛选时排除缺失值</small>
+              {filters.volumeRatioMin != null && filters.volumeRatioMax != null &&
+                filters.volumeRatioMin > filters.volumeRatioMax ? (
+                  <small className="up" role="status">最小量比不能大于最大量比</small>
+                ) : null}
+            </div>
+            <div className="filter-item">
+              <label>累计换手率（%）</label>
+              <div className="filter-range">
+                {numInput(filters.turnTotalMin, (v) => onChange({ turnTotalMin: v }), { placeholder: "最小" })}
+                <span>～</span>
+                {numInput(filters.turnTotalMax, (v) => onChange({ turnTotalMax: v }), { placeholder: "最大" })}
+              </div>
+            </div>
+            <div className="filter-item">
+              <label>散户指数</label>
+              <select value={filters.retailRange} onChange={(e) => onChange({ retailRange: e.target.value })}>
+                <option value="all">全部散户指数</option>
+                <option value="out">净流出（&lt; 0%）</option>
+                <option value="-5-0">-5% ~ 0%</option>
+                <option value="0-5">0% ~ 5%</option>
+                <option value="5-10">5% ~ 10%</option>
+                <option value="10+">10%+</option>
+                <option value="in">净流入（&gt; 0%）</option>
+              </select>
+            </div>
+            <div className="filter-item">
+              <label>自定义散户指数（%）</label>
+              <div className="filter-range">
+                {numInput(filters.retailMin, (v) => onChange({ retailMin: v }), { placeholder: "最小" })}
+                <span>～</span>
+                {numInput(filters.retailMax, (v) => onChange({ retailMax: v }), { placeholder: "最大" })}
+              </div>
+            </div>
+          </section>
+
+          <div className="more-filters-section-title" style={{ marginTop: 20 }}>
+            ⭐️ 精选规则
           </div>
+          <section className="highlight-rule-box">
+            <div className="rule-box-header">
+              <span className="rule-box-hint">
+                满足全部条件即为精选
+              </span>
+              <button
+                type="button"
+                className="btn"
+                style={{ padding: "3px 10px", fontSize: 11 }}
+                onClick={() => onRuleChange(DEFAULT_HIGHLIGHT)}
+                title="恢复为系统默认阈值"
+              >
+                恢复默认规则
+              </button>
+            </div>
+            <div className="rule-inputs-row">
+              <div className="filter-item">
+                <label>散户指数上限</label>
+                <div className="filter-range">
+                  <span>&lt;</span>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={rule.retailMax}
+                    onChange={(e) => onRuleChange({ retailMax: Number(e.target.value) })}
+                  />
+                  <span>%</span>
+                </div>
+              </div>
+              <div className="filter-item">
+                <label>当日换手率上限</label>
+                <div className="filter-range">
+                  <span>&lt;</span>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={rule.todayTurnoverMax}
+                    onChange={(e) => onRuleChange({ todayTurnoverMax: Number(e.target.value) })}
+                  />
+                  <span>%</span>
+                </div>
+              </div>
+              <div className="filter-item">
+                <label>平均日涨幅下限</label>
+                <div className="filter-range">
+                  <span>&gt;</span>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={rule.avgPctMin}
+                    onChange={(e) => onRuleChange({ avgPctMin: Number(e.target.value) })}
+                  />
+                  <span>%</span>
+                </div>
+              </div>
+            </div>
+          </section>
         </div>
-        <div className="filter-item">
-          <label>累计换手率区间（%）</label>
-          <div className="filter-range">
-            {numInput(filters.turnTotalMin, (v) => onChange({ turnTotalMin: v }), { placeholder: "最小" })}
-            <span>～</span>
-            {numInput(filters.turnTotalMax, (v) => onChange({ turnTotalMax: v }), { placeholder: "最大" })}
+
+        <footer className="modal-footer" style={{ justifyContent: "space-between" }}>
+          <div>
+            {activeCount > 0 ? (
+              <button
+                type="button"
+                className="btn danger"
+                style={{ fontSize: 12, padding: "6px 14px" }}
+                onClick={resetMoreFilters}
+              >
+                重置高级筛选 ({activeCount})
+              </button>
+            ) : null}
           </div>
-        </div>
-        <div className="filter-item">
-          <label>散户指数</label>
-          <select value={filters.retailRange} onChange={(e) => onChange({ retailRange: e.target.value })}>
-            <option value="all">全部散户指数</option>
-            <option value="out">净流出（&lt; 0%）</option>
-            <option value="-5-0">-5% ~ 0%</option>
-            <option value="0-5">0% ~ 5%</option>
-            <option value="5-10">5% ~ 10%</option>
-            <option value="10+">10%+</option>
-            <option value="in">净流入（&gt; 0%）</option>
-          </select>
-        </div>
-        <div className="filter-item">
-          <label>散户指数自定义区间（%）</label>
-          <div className="filter-range">
-            {numInput(filters.retailMin, (v) => onChange({ retailMin: v }), { placeholder: "最小" })}
-            <span>～</span>
-            {numInput(filters.retailMax, (v) => onChange({ retailMax: v }), { placeholder: "最大" })}
-          </div>
-        </div>
-        <div className="filter-item filter-wide">
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <label style={{ fontWeight: 650, color: "var(--text)" }}>⭐️ 精选判定规则</label>
+          <div style={{ display: "flex", gap: 10 }}>
             <button
               type="button"
-              className="btn"
-              style={{ padding: "2px 8px", fontSize: 11 }}
-              onClick={() => onRuleChange(DEFAULT_HIGHLIGHT)}
-              title="恢复为系统推荐的精选阈值"
+              className="btn btn-primary"
+              style={{ fontSize: 13, padding: "6px 20px" }}
+              onClick={onClose}
             >
-              恢复默认规则
+              完成
             </button>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10, marginTop: 8 }}>
-            <div className="filter-range">
-              <span>散户指数 &lt;</span>
-              <input
-                type="number"
-                step="0.1"
-                value={rule.retailMax}
-                onChange={(e) => onRuleChange({ retailMax: Number(e.target.value) })}
-              />
-              <span>%</span>
-            </div>
-            <div className="filter-range">
-              <span>当日换手率 &lt;</span>
-              <input
-                type="number"
-                step="0.1"
-                value={rule.todayTurnoverMax}
-                onChange={(e) => onRuleChange({ todayTurnoverMax: Number(e.target.value) })}
-              />
-              <span>%</span>
-            </div>
-            <div className="filter-range">
-              <span>平均日涨幅 &gt;</span>
-              <input
-                type="number"
-                step="0.1"
-                value={rule.avgPctMin}
-                onChange={(e) => onRuleChange({ avgPctMin: Number(e.target.value) })}
-              />
-              <span>%</span>
-            </div>
-          </div>
-        </div>
-        {activeCount > 0 ? (
-          <div style={{ gridColumn: "1 / -1", display: "flex", justifyContent: "flex-end", marginTop: 4 }}>
-            <button
-              type="button"
-              className="btn danger"
-              style={{ fontSize: 12, padding: "4px 10px" }}
-              onClick={resetMoreFilters}
-            >
-              重置上述高级筛选
-            </button>
-          </div>
-        ) : null}
-      </section>
-    </details>
+        </footer>
+      </div>
+    </div>
   )
 }

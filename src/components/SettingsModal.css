@@ -1,0 +1,52 @@
+.model-connection-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 12px;
+}
+.model-connection-grid .field,
+.model-connection-grid input {
+  min-width: 0;
+  width: 100%;
+}
+.settings-modal .model-quick-chips,
+.settings-modal .prompt-scene-tabs,
+.settings-modal .prompt-kind-switch {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.prompt-editor-heading {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.prompt-editor-heading > div:first-child {
+  flex: 1 1 240px;
+}
+.prompt-reset-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.prompt-reset-actions .btn,
+.settings-modal > footer .btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.settings-modal > footer {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.settings-modal > footer > span {
+  flex: 1 1 220px;
+}
+.settings-modal > footer > div {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+@media (max-width: 640px) {
+  .model-connection-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .settings-modal > footer > span {
+    flex-basis: 100%;
+  }
+}

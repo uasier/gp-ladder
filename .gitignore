@@ -4,6 +4,12 @@ dist/
 dist-android/
 src-tauri/target/
 .gp-desktop-data/
+.site-dist/
+
+# 下载官网 TLS 证书（私钥不得入库）
+/*_nginx.zip
+/deploy/website/tls/
+/deploy/website/data/
 
 # 系统 / 编辑器
 .DS_Store

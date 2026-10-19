@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://uasier.github.io/gp-ladder/sitemap.xml
+Sitemap: https://gp.uasier.com/sitemap.xml

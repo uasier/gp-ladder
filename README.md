@@ -8,7 +8,7 @@
 
 Tonghuashun consecutive-gain rankings, East Money limit-up boards, and yesterday’s limit-up watchlist — a local A-share desktop / Android app.
 
-安装包见 [GitHub Releases](https://github.com/uasier/gp-ladder/releases)。产品页：[uasier.github.io/gp-ladder](https://uasier.github.io/gp-ladder/)
+安装包见 [下载官网](https://gp.uasier.com/#download) 或 [GitHub Releases](https://github.com/uasier/gp-ladder/releases)。官网：[gp.uasier.com](https://gp.uasier.com/)
 
 抓取在软件内部完成，不依赖本机 Python、uv 或仓库脚本。打开只读本地快照；点击「刷新实时数据」才会联网。
 
@@ -100,12 +100,24 @@ npm run server
 ## 功能
 
 - 连涨天梯、涨停天梯、昨日涨停（顶部「昨涨」：昨天涨停，今日竞价后红盘且涨幅 2%–8%）
-- 行业、天数、涨幅、换手、散户指数、精选筛选
+- 行业、天数、涨幅、换手、量比、散户指数、精选筛选
+- 量比展示于卡片、列表和个股详情；高级筛选支持量比上下限（倍，含边界，留空不限），CSV / JSON / HTML 导出保留量比。旧快照需手动刷新实时数据后补齐，缺失量比显示 `--`，启用量比范围筛选时排除缺失值。
 - 个股抽屉详情
 - 右键或长按股票按短线视角调用 DeepSeek 看盘（动能、量价、买点止损），并给出 0–100 短线评分
+- 工具箱内「AI 快速选股」：基于当前筛选结果，推荐最多 4 只短线观察候选，展示理由、风险与观察条件
 - 导出 HTML / CSV / JSON
 - 刷新进度与运行日志
 - 检查 GitHub Release 更新并下载安装包
+
+## AI 快速选股
+
+先在当前榜单设置搜索、行业、量比等筛选条件，再打开 **工具箱 → AI 快速选股**。系统会固定点击时的完整筛选列表及行情时间，交给已配置的 DeepSeek 模型比较，按优先级展示最多 4 只候选及相对评分、入选理由、主要风险和观察条件。三个榜单都可使用；不足 4 只时按实际数量分析，空列表不发起请求。
+
+候选较多时会分组比较，再汇总复评，全部候选都会进入初选。分析期间可收起窗口，从工具箱查看进度；完成后可点击「查看上次选股」，不会重复调用模型。改变页面筛选不会影响已发起的这次分析。模型返回列表外代码、重复股票或不完整结果时，会提示失败并允许重试，不展示未经验证的候选。
+
+提示词位于 **设置 → DeepSeek 智能模型 → AI 选股**，可单独修改或恢复默认，不改变原有个股分析与评分提示词。支持 `{scene}`（榜单）、`{count}`（本组数量）、`{limit}`（推荐数量）、`{quoteTime}`（行情时间）、`{stocks}`（候选行情 JSON）变量；即使删掉列表变量，后台也会补充候选数据。默认模板由前后端共用 `src-tauri/prompts/stock-pick.txt`。
+
+模型使用配置中的接口地址、模型和 API Key。它仅依据提供的快照做相对比较，不会联网核实公告，评分不代表上涨概率；候选较多时可能产生多次模型调用。
 
 ## 仓库结构
 
@@ -121,11 +133,18 @@ npm run server
 │   ├── gen/android/     # Tauri Android 工程（首次 `tauri android init`）
 │   └── templates/ladder.html
 ├── docs/screenshots/    # README 界面截图
-├── site/                # GitHub Pages 产品页（搜索引擎抓取）
+├── site/                # 下载官网（静态页面、版本清单）
+├── deploy/website/      # 官网服务、Nginx 和部署说明
 ├── LICENSE
 ├── package.json
 └── README.md
 ```
+
+## 下载官网
+
+官网地址：<https://gp.uasier.com/>。提供 macOS、Windows、Android 安装包、历史版本、更新说明和安装帮助。服务端每 15 分钟同步 GitHub Releases，保留缓存；尚未发布的应用功能不会自动成为可下载安装包的一部分。
+
+运行 `npm run site:build` 生成 `.site-dist/` 静态产物，不编译桌面安装包。服务器部署、端口、证书更新与回滚见 [官网部署说明](deploy/website/README.md)。GitHub Pages 保留为静态镜像，规范地址指向新官网。
 
 ## 发布
 

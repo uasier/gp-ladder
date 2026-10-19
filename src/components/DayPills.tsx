@@ -16,7 +16,7 @@ export function DayPills({
   total,
   exactDay,
   unit = "天",
-  allLabel = "全部天数",
+  allLabel = "全部阶梯",
   onSelect,
 }: Props) {
   const handleWheel = (e: WheelEvent<HTMLDivElement>) => {
@@ -26,26 +26,33 @@ export function DayPills({
   }
 
   return (
-    <div className="days" onWheel={handleWheel}>
-      <button
-        type="button"
-        className={`day-chip ${exactDay === null ? "on" : ""}`}
-        onClick={() => onSelect(null)}
-      >
-        {allLabel} <span className="badge-count">{total}</span>
-      </button>
-      {days.map((day) => (
+    <div className="days-track-container" role="navigation" aria-label="天梯阶梯层级切换">
+      <div className="days" onWheel={handleWheel}>
         <button
-          key={day}
           type="button"
-          className={`day-chip ${day >= 4 ? "top-tier" : ""} ${exactDay === day ? "on" : ""}`}
-          onClick={() => onSelect(day)}
-          title={day >= 4 ? `高位龙头梯队 (${day}${unit})` : `${day}${unit}`}
+          className={`day-chip ${exactDay === null ? "on" : ""}`}
+          onClick={() => onSelect(null)}
         >
-          {day >= 4 ? <span style={{ marginRight: 1 }}>🔥</span> : null}
-          {day} {unit} <span className="badge-count">{counts[day] || 0}</span>
+          <span className="chip-text">{allLabel}</span>
+          <span className="badge-count">{total}</span>
         </button>
-      ))}
+        {days.map((day) => {
+          const isTopTier = day >= 4
+          return (
+            <button
+              key={day}
+              type="button"
+              className={`day-chip ${isTopTier ? "top-tier" : ""} ${exactDay === day ? "on" : ""}`}
+              onClick={() => onSelect(day)}
+              title={isTopTier ? `高度空间梯队 (${day}${unit})` : `${day}${unit}`}
+            >
+              {isTopTier ? <span className="tier-icon" aria-hidden="true">🔥</span> : null}
+              <span className="chip-text">{day} {unit}</span>
+              <span className="badge-count">{counts[day] || 0}</span>
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }

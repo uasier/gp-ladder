@@ -1,9 +1,11 @@
 import { useState } from "react"
 import { isTauri } from "../api"
 import { isPhoneUi } from "../platform"
+import { TonghuashunButton } from "./TonghuashunButton"
 import type { HighlightRule, StockRow } from "../types"
 import {
   buildDetailUrl,
+  formatVolumeRatio,
   getAvgPct,
   getAvgTurnover,
   getRetailIndex,
@@ -22,7 +24,7 @@ type Props = {
   analyzeLabel?: string
 }
 
-export function StockDrawer({ item, rule, onClose, onAnalyze, analyzeLabel = "AI 短线分析" }: Props) {
+export function StockDrawer({ item, rule, onClose, onAnalyze, analyzeLabel = "AI 短线复盘" }: Props) {
   const [copied, setCopied] = useState(false)
   if (!item) {
     return (
@@ -39,7 +41,7 @@ export function StockDrawer({ item, rule, onClose, onAnalyze, analyzeLabel = "AI
   const hl = shouldHighlight(item, rule)
   const retail = getRetailIndex(item)
   const retailTrend =
-    retail === null ? "" : retail > 0 ? "(主力流出 / 散户追高)" : "(主力吸筹 / 散户离场)"
+    retail === null ? "" : retail > 0 ? "主力流出 / 散户追高" : "主力吸筹 / 散户离场"
   const code = item["股票代码"]
 
   async function copyCode() {
@@ -70,184 +72,225 @@ export function StockDrawer({ item, rule, onClose, onAnalyze, analyzeLabel = "AI
   return (
     <>
       <div className="mask open" onClick={onClose} />
-      <aside className="drawer open" aria-hidden="false">
+      <aside className="drawer open modern-drawer" aria-hidden="false">
         <div className="drawer-handle" />
-        <div className="drawer-header">
-          <div>
-            <div className="code-wrap">
-              <span className="code" style={{ fontSize: 13 }}>
-                {code}
-              </span>
+
+        {/* 抽屉头部 */}
+        <div className="drawer-header modern-drawer-header">
+          <div className="drawer-title-group">
+            <div className="drawer-code-pill">
+              <span className="font-mono">{code}</span>
             </div>
             <h2>{item["股票简称"]}</h2>
-            <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 4, flexWrap: "wrap" }}>
-              <span className="tag">{item["所属行业"] || "行业未知"}</span>
-              <span
-                className="tag"
-                style={{ color: "var(--gold)", borderColor: "var(--gold-border)", background: "var(--gold-bg)" }}
-              >
+            <div className="drawer-tag-row">
+              <span className="modern-tag industry">{item["所属行业"] || "行业未知"}</span>
+              <span className="modern-tag stage">
                 {item["连板天数"] || item["连涨天数"]} {item["连板天数"] ? "连板" : "连涨天"}
               </span>
-              {hl ? <span className="badge">⭐️ 精选标的</span> : null}
+              {hl ? <span className="gold-pill-star">⭐️ 精选标的</span> : null}
             </div>
           </div>
-          <button type="button" className="drawer-close" onClick={onClose} title="关闭 (Esc)">
+          <button type="button" className="drawer-close-btn" onClick={onClose} title="关闭 (Esc)">
             ✕
           </button>
         </div>
-        <div>
-          <div className="drawer-section-title">当日盘口表现</div>
-          <div className="kv-card">
-            <div className="kv-item">
-              <span>现价</span>
-              <b>{item["现价"] || "--"} 元</b>
+
+        <div className="drawer-body-scroll">
+          {/* 行情看板 */}
+          <div className="drawer-card-group">
+            <div className="drawer-group-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+                <polyline points="16 7 22 7 22 13" />
+              </svg>
+              <span>实时行情指标</span>
             </div>
-            <div className="kv-item">
-              <span>今日涨跌幅</span>
-              <b className={pctClass(todayPct ?? 0)}>{item["今日涨跌幅"] || "--"}</b>
-            </div>
-            <div className="kv-item">
-              <span>实体涨幅</span>
-              <b className={pctClass(bodyPct ?? 0)}>{item["实体涨幅"] || "--"}</b>
-            </div>
-            <div className="kv-item">
-              <span>今日换手率</span>
-              <b>{item["今日换手率"] || "--"}</b>
-            </div>
-            <div className="kv-item">
-              <span>成交额</span>
-              <b>{item["成交额"] || "--"}</b>
-            </div>
-            <div className="kv-item" style={{ gridColumn: "1 / -1" }}>
-              <span>今开 / 最高 / 最低</span>
-              <b>
-                {item["今开"] || "--"} / {item["今高"] || "--"} / {item["今低"] || "--"}
-              </b>
-            </div>
-          </div>
-        </div>
-        <div>
-          <div className="drawer-section-title">{item["连板天数"] ? "涨停天梯数据" : "连涨天梯数据"}</div>
-          <div className="kv-card">
-            <div className="kv-item">
-              <span>{item["连板天数"] ? "连板天数" : "连涨天数"}</span>
-              <b style={{ color: "var(--gold)" }}>
-                {item["连板天数"] || item["连涨天数"]} {item["连板天数"] ? "板" : "天"}
-              </b>
-            </div>
-            <div className="kv-item">
-              <span>连涨累计</span>
-              <b className={pctClass(normalizeNumber(item["连续涨跌幅"]))}>{item["连续涨跌幅"] || "--"}</b>
-            </div>
-            <div className="kv-item">
-              <span>平均涨幅/天</span>
-              <b>{avgPct.toFixed(2)}%</b>
-            </div>
-            <div className="kv-item">
-              <span>平均换手/天</span>
-              <b>{avgTurnover.toFixed(2)}%</b>
-            </div>
-            <div className="kv-item" style={{ gridColumn: "1 / -1" }}>
-              <span>榜单收盘价</span>
-              <b>{item["收盘价(元)"] || "--"} 元</b>
-            </div>
-            {item["首次封板"] ? (
-              <>
-                <div className="kv-item">
-                  <span>首次封板</span>
-                  <b>{item["首次封板"]}</b>
-                </div>
-                <div className="kv-item">
-                  <span>最后封板</span>
-                  <b>{item["最后封板"] || "--"}</b>
-                </div>
-                <div className="kv-item">
-                  <span>炸板次数</span>
-                  <b>{item["炸板次数"] || "0"}</b>
-                </div>
-                <div className="kv-item">
-                  <span>封板资金</span>
-                  <b>{item["封板资金"] || "--"}</b>
-                </div>
-                <div className="kv-item" style={{ gridColumn: "1 / -1" }}>
-                  <span>涨停统计</span>
-                  <b>{item["涨停统计"] || "--"}</b>
-                </div>
-              </>
-            ) : null}
-            {item["今开涨幅"] || item["昨日封板"] ? (
-              <>
-                <div className="kv-item">
-                  <span>今开涨幅</span>
-                  <b>{item["今开涨幅"] || "--"}</b>
-                </div>
-                <div className="kv-item">
-                  <span>昨日封板</span>
-                  <b>{item["昨日封板"] || "--"}</b>
-                </div>
-                <div className="kv-item" style={{ gridColumn: "1 / -1" }}>
-                  <span>昨日连板</span>
-                  <b>{item["昨日连板"] || item["连板天数"] || "--"}</b>
-                </div>
-              </>
-            ) : null}
-          </div>
-        </div>
-        <div>
-          <div className="drawer-section-title">资金情绪与估值</div>
-          <div className="kv-card">
-            <div className="kv-item">
-              <span>散户指数 (小单占比)</span>
-              <b className={pctClass(retail ?? 0)}>{item["散户指数"] || "--"}</b>
-            </div>
-            <div className="kv-item">
-              <span>散户净额</span>
-              <b>{item["散户净额"] || "--"}</b>
-            </div>
-            <div className="kv-item">
-              <span>市盈率 (PE)</span>
-              <b>{item["市盈率"] || "--"}</b>
-            </div>
-            <div className="kv-item">
-              <span>行情更新时刻</span>
-              <b>{item["行情时间"] || "--"}</b>
-            </div>
-            {retailTrend ? (
-              <div className="kv-item" style={{ gridColumn: "1 / -1" }}>
-                <span style={{ color: "var(--text-sub)" }}>{retailTrend}</span>
+            <div className="modern-kv-grid">
+              <div className="kv-box">
+                <span className="kv-k">最新现价</span>
+                <span className="kv-v price font-mono">{item["现价"] || "--"} 元</span>
               </div>
-            ) : null}
+              <div className="kv-box">
+                <span className="kv-k">今日涨跌幅</span>
+                <span className={`kv-v font-mono ${pctClass(todayPct ?? 0)}`}>{item["今日涨跌幅"] || "--"}</span>
+              </div>
+              <div className="kv-box">
+                <span className="kv-k">K线实体涨幅</span>
+                <span className={`kv-v font-mono ${pctClass(bodyPct ?? 0)}`}>{item["实体涨幅"] || "--"}</span>
+              </div>
+              <div className="kv-box">
+                <span className="kv-k">今日换手率</span>
+                <span className="kv-v font-mono">{item["今日换手率"] || "--"}</span>
+              </div>
+              <div className="kv-box">
+                <span className="kv-k">实时量比</span>
+                <span className="kv-v font-mono highlight-vol">{formatVolumeRatio(item)}</span>
+              </div>
+              <div className="kv-box">
+                <span className="kv-k">今日成交额</span>
+                <span className="kv-v font-mono">{item["成交额"] || "--"}</span>
+              </div>
+              <div className="kv-box full-col">
+                <span className="kv-k">今开 / 最高 / 最低</span>
+                <span className="kv-v font-mono">
+                  {item["今开"] || "--"} / {item["今高"] || "--"} / {item["今低"] || "--"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* 连板/连涨梯队数据 */}
+          <div className="drawer-card-group">
+            <div className="drawer-group-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+              <span>{item["连板天数"] ? "连板游资数据" : "连涨动能数据"}</span>
+            </div>
+            <div className="modern-kv-grid">
+              <div className="kv-box">
+                <span className="kv-k">{item["连板天数"] ? "连板身位" : "连涨天数"}</span>
+                <span className="kv-v gold font-mono">
+                  {item["连板天数"] || item["连涨天数"]} {item["连板天数"] ? "连板" : "天"}
+                </span>
+              </div>
+              <div className="kv-box">
+                <span className="kv-k">连续累计涨幅</span>
+                <span className={`kv-v font-mono ${pctClass(normalizeNumber(item["连续涨跌幅"]))}`}>
+                  {item["连续涨跌幅"] || "--"}
+                </span>
+              </div>
+              <div className="kv-box">
+                <span className="kv-k">日均涨幅</span>
+                <span className="kv-v font-mono">{avgPct.toFixed(2)}%</span>
+              </div>
+              <div className="kv-box">
+                <span className="kv-k">日均换手</span>
+                <span className="kv-v font-mono">{avgTurnover.toFixed(2)}%</span>
+              </div>
+              {item["首次封板"] ? (
+                <>
+                  <div className="kv-box">
+                    <span className="kv-k">首次封板时刻</span>
+                    <span className="kv-v gold font-mono">{item["首次封板"]}</span>
+                  </div>
+                  <div className="kv-box">
+                    <span className="kv-k">最后封板时刻</span>
+                    <span className="kv-v font-mono">{item["最后封板"] || "--"}</span>
+                  </div>
+                  <div className="kv-box">
+                    <span className="kv-k">盘中炸板次数</span>
+                    <span className={`kv-v font-mono ${item["炸板次数"] !== "0" ? "warn" : ""}`}>
+                      {item["炸板次数"] || "0"} 次
+                    </span>
+                  </div>
+                  <div className="kv-box">
+                    <span className="kv-k">封板资金</span>
+                    <span className="kv-v font-mono">{item["封板资金"] || "--"}</span>
+                  </div>
+                  <div className="kv-box full-col">
+                    <span className="kv-k">涨停特征统计</span>
+                    <span className="kv-v">{item["涨停统计"] || "--"}</span>
+                  </div>
+                </>
+              ) : null}
+              {item["今开涨幅"] || item["昨日封板"] ? (
+                <>
+                  <div className="kv-box">
+                    <span className="kv-k">今开盘涨幅</span>
+                    <span className="kv-v gold font-mono">{item["今开涨幅"] || "--"}</span>
+                  </div>
+                  <div className="kv-box">
+                    <span className="kv-k">昨日封单资金</span>
+                    <span className="kv-v font-mono">{item["昨日封板"] || "--"}</span>
+                  </div>
+                </>
+              ) : null}
+            </div>
+          </div>
+
+          {/* 筹码与散户博弈 */}
+          <div className="drawer-card-group">
+            <div className="drawer-group-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <line x1="19" y1="8" x2="19" y2="14" />
+                <line x1="22" y1="11" x2="16" y2="11" />
+              </svg>
+              <span>资金流向与筹码分布</span>
+            </div>
+            <div className="modern-kv-grid">
+              <div className="kv-box">
+                <span className="kv-k">散户指数 (小单)</span>
+                <span className={`kv-v font-mono ${pctClass(retail ?? 0)}`}>{item["散户指数"] || "--"}</span>
+              </div>
+              <div className="kv-box">
+                <span className="kv-k">散户净额</span>
+                <span className="kv-v font-mono">{item["散户净额"] || "--"}</span>
+              </div>
+              <div className="kv-box">
+                <span className="kv-k">市盈率 (PE)</span>
+                <span className="kv-v font-mono">{item["市盈率"] || "--"}</span>
+              </div>
+              <div className="kv-box">
+                <span className="kv-k">行情撮合时间</span>
+                <span className="kv-v font-mono">{item["行情时间"] || "--"}</span>
+              </div>
+              {retailTrend ? (
+                <div className="kv-box full-col">
+                  <span className="kv-k">筹码倾向判定</span>
+                  <span className="kv-v subtle-trend">{retailTrend}</span>
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
-        <div className="acts">
-          <button type="button" className="primary" onClick={() => void openQuote()} title="在东财网页查看该标的分时K线行情">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+
+        {/* 底部功能栏 */}
+        <div className="drawer-actions modern-drawer-actions">
+          <button
+            type="button"
+            className="btn primary glow-btn"
+            onClick={() => void openQuote()}
+            title="在东财网页查看该标的分时K线行情"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
               <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
               <polyline points="15 3 21 3 21 9" />
               <line x1="10" y1="14" x2="21" y2="3" />
             </svg>
-            打开东财行情
+            <span>打开东财分时</span>
           </button>
+
+          <TonghuashunButton code={code} name={item["股票简称"]} label="打开同花顺" className="btn" />
+
           {onAnalyze ? (
             <button
               type="button"
-              className="analyze-act-btn"
+              className="btn ai-analyze-btn"
               onClick={() => onAnalyze(item)}
-              title="使用 DeepSeek AI 对该标的进行短线多维度分析"
+              title="DeepSeek AI 专属模型短线复盘推演"
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
               </svg>
-              {analyzeLabel}
+              <span>{analyzeLabel}</span>
             </button>
           ) : null}
-          <button type="button" onClick={() => void copyCode()} title="复制股票代码到剪贴板">
+
+          <button
+            type="button"
+            className="btn icon-text-btn"
+            onClick={() => void copyCode()}
+            title="复制股票代码到剪贴板"
+          >
             {copied ? (
               <>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
-                已复制
+                <span>已复制</span>
               </>
             ) : (
               <>
@@ -255,13 +298,14 @@ export function StockDrawer({ item, rule, onClose, onAnalyze, analyzeLabel = "AI
                   <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
                   <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                 </svg>
-                复制代码
+                <span>复制代码</span>
               </>
             )}
           </button>
         </div>
-        <div className="hint">
-          {isPhoneUi() ? "点遮罩关闭详情；可点击 AI 分析或在东财查看盘口" : "按 Esc 键或点击外部遮罩退出详情"}
+
+        <div className="drawer-footer-hint">
+          {isPhoneUi() ? "向下滑动或点击遮罩关闭" : "按 Esc 键或点击遮罩关闭"}
         </div>
       </aside>
     </>

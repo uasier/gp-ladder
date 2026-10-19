@@ -4,10 +4,11 @@ use crate::deepseek;
 use crate::pipeline;
 use crate::refresh::{self, RefreshState};
 use crate::settings::{self, SettingsPatch, SettingsState};
+use crate::stock_pick;
 use crate::types::{ExportRequest, Snapshot};
 use crate::update;
 use crate::workspace;
-use axum::extract::{Query, State};
+use axum::extract::{DefaultBodyLimit, Query, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
@@ -159,6 +160,16 @@ async fn analyze_stock(
         .map(Json)
 }
 
+async fn pick_stocks(
+    State(st): State<AppState>,
+    Json(request): Json<stock_pick::StockPickRequest>,
+) -> Result<Json<stock_pick::StockPickResult>, ApiError> {
+    let cfg = st.settings.get()?;
+    block_in(move || stock_pick::pick_stocks(&cfg, request))
+        .await
+        .map(Json)
+}
+
 #[derive(Deserialize, Default)]
 struct LimitQuery {
     limit: Option<u32>,
@@ -235,6 +246,30 @@ async fn install_update() -> Result<Json<Value>, ApiError> {
     Ok(Json(json!({ "path": path })))
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct TestDeepseekBody {
+    api_key: String,
+    base_url: Option<String>,
+    model: Option<String>,
+}
+
+async fn test_deepseek(Json(body): Json<TestDeepseekBody>) -> Result<Json<Value>, ApiError> {
+    let msg = block_in(move || {
+        crate::deepseek::test_connection(
+            &body.api_key,
+            body.base_url.as_deref().unwrap_or(""),
+            model_or_empty(body.model.as_deref()),
+        )
+    })
+    .await?;
+    Ok(Json(json!({ "message": msg })))
+}
+
+fn model_or_empty(m: Option<&str>) -> &str {
+    m.unwrap_or("")
+}
+
 fn api_router() -> Router<AppState> {
     Router::new()
         .route("/health", get(health))
@@ -246,6 +281,7 @@ fn api_router() -> Router<AppState> {
         .route("/runtime", get(probe_runtime))
         .route("/export", post(export_snapshot))
         .route("/analyze", post(analyze_stock))
+        .route("/stocks/pick", post(pick_stocks).layer(DefaultBodyLimit::max(16 * 1024 * 1024)))
         .route("/logs", get(get_app_logs).post(write_app_log))
         .route("/logs/path", get(get_app_log_path))
         .route("/logs/reveal", post(reveal_app_log))
@@ -253,6 +289,7 @@ fn api_router() -> Router<AppState> {
         .route("/update/history", get(list_releases))
         .route("/update/open", post(open_release_page))
         .route("/update/install", post(install_update))
+        .route("/deepseek/test", post(test_deepseek))
 }
 
 pub async fn run() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {

@@ -38,6 +38,11 @@ export type SettingsView = {
   deepseekModel: string
   analysisPrompt: string
   scorePrompt: string
+  ztAnalysisPrompt?: string
+  ztScorePrompt?: string
+  jjztAnalysisPrompt?: string
+  jjztScorePrompt?: string
+  stockPickPrompt?: string
 }
 
 export type SettingsPatch = {
@@ -47,6 +52,38 @@ export type SettingsPatch = {
   deepseekModel?: string
   analysisPrompt?: string
   scorePrompt?: string
+  ztAnalysisPrompt?: string
+  ztScorePrompt?: string
+  jjztAnalysisPrompt?: string
+  jjztScorePrompt?: string
+  stockPickPrompt?: string
+}
+
+export type StockPickRequest = {
+  rows: StockRow[]
+  scene: BoardKind
+  quoteAt: string | null
+  updatedAt: string | null
+}
+
+export type StockPick = {
+  code: string
+  name: string
+  score: number
+  reason: string
+  risk: string
+  watch: string
+}
+
+export type StockPickResult = {
+  picks: StockPick[]
+  summary: string
+  candidateCount: number
+  scene: BoardKind
+  quoteAt: string | null
+  updatedAt: string | null
+  createdAt: string
+  model: string
 }
 
 export type AnalyzeRequest = {
@@ -127,6 +164,8 @@ export type FilterState = {
   industry: string
   pctRange: string
   turnoverRange: string
+  volumeRatioMin: number | null
+  volumeRatioMax: number | null
   pctTotalMin: number | null
   pctTotalMax: number | null
   todayPctMin: number | null
@@ -159,6 +198,8 @@ export const DEFAULT_FILTERS: FilterState = {
   industry: "all",
   pctRange: "all",
   turnoverRange: "all",
+  volumeRatioMin: null,
+  volumeRatioMax: null,
   pctTotalMin: null,
   pctTotalMax: null,
   todayPctMin: null,

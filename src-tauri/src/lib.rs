@@ -13,6 +13,7 @@ mod quotes;
 mod refresh;
 mod settings;
 mod snapshot;
+mod stock_pick;
 mod types;
 mod update;
 mod workspace;
@@ -200,6 +201,33 @@ async fn analyze_stock(
 
 #[cfg(feature = "desktop")]
 #[tauri::command]
+async fn pick_stocks(
+    settings: tauri::State<'_, SettingsState>,
+    request: stock_pick::StockPickRequest,
+) -> Result<stock_pick::StockPickResult, String> {
+    let cfg = settings.get()?;
+    block_in(move || stock_pick::pick_stocks(&cfg, request)).await
+}
+
+#[cfg(feature = "desktop")]
+#[tauri::command]
+async fn test_deepseek_connection(
+    api_key: String,
+    base_url: Option<String>,
+    model: Option<String>,
+) -> Result<String, String> {
+    block_in(move || {
+        crate::deepseek::test_connection(
+            &api_key,
+            base_url.as_deref().unwrap_or(""),
+            model.as_deref().unwrap_or(""),
+        )
+    })
+    .await
+}
+
+#[cfg(feature = "desktop")]
+#[tauri::command]
 fn get_app_logs(limit: Option<usize>) -> Vec<applog::LogEntry> {
     applog::snapshot(limit.unwrap_or(500))
 }
@@ -343,6 +371,7 @@ pub fn run() {
             save_settings,
             export_snapshot,
             analyze_stock,
+            pick_stocks,
             get_app_logs,
             get_app_log_path,
             write_app_log,
@@ -350,7 +379,8 @@ pub fn run() {
             check_update,
             list_releases,
             open_release_page,
-            install_update
+            install_update,
+            test_deepseek_connection
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

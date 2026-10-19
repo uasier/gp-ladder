@@ -112,13 +112,64 @@ pub const DEFAULT_JJZT_SCORE_PROMPT: &str = r#"你是「昨涨停、今开 2%–
 规则：
 - 今开 3%–6%、量能承接好、低位首板次日，可以 70 以上。
 - 今开靠近 8%、高位连板次日、散户大幅流入，低于 60。
-- 开盘后迅速回落、量能萎缩，低于 50。
+- 开盘后迅速回落、量能萎销，低于 50。
 - reason 不超过 28 字。
 
 只输出 JSON：
 {"score": 0, "label": "不宜追高|谨慎参与|可关注|短线活跃", "reason": "一句理由"}
 
 要点：
+{analysis}"#;
+
+pub const DEFAULT_ZT_ANALYSIS_PROMPT: &str = r#"你是涨停板短线研究员，只看次日溢价与连板接力（未来 1–3 个交易日）。请针对【股票名称/代码：______】给出涨停板复盘与接力博弈判断。优先使用文末【行情快照】里的连板天数、封板资金、首次封板时间、最后封板时间、炸板次数、今日换手率、散户指数、现价；不够的再补公开题材信息。
+
+写作原则：
+- 聚焦超短打板与连板接力博弈：看连板梯队地位、封板硬度、炸板回封成色、次日开盘预期。不写长期投资故事。
+- 先结论、后证据。每条最多两句话。关键价位、时间点和百分比加 **加粗**。
+- 查不到写「未查到公开信息」，禁止编造。
+
+必须按下面 Markdown 结构输出，不要增减标题：
+
+## 短线结论
+一句话：该板属于核心强势板、跟风板还是勉强烂板，次日更可能高溢价连板、冲高获利了结还是低开防砸。
+
+## 操作要点
+- 三条最要紧的接力要点，每条不超过 22 字
+
+## 一、板型与封单质量
+1. 连板身位：是首板启动、中位接力还是空间高标，在所属题材中是否领涨龙头
+2. 封板硬度：首次封板时间早晚（早盘秒板还是尾盘偷袭），封板资金额与流通市值比例
+3. 炸板博弈：有无炸板、炸板次数，回封是否果断放量
+
+## 二、板块共振与情绪周期
+4. 板块效应：同题材涨停梯队数量，是否有首板助攻和小弟跟随
+5. 散户情绪：散户指数是主力净流出散户接盘，还是主力资金强势主导
+
+## 三、次日预案与博弈
+6. 竞价开盘预期：次日健康开盘区间（一字、高开还是平开）及量能要求
+7. 分歧接力点：若盘中开板回踩，何种承接可以考虑接力
+
+## 操作计划
+- 买点：
+- 止损：
+- 目标：
+- 不宜做：
+
+## 短线风险提示
+- 最需要警惕的 2–3 个点（例如特停监管、中位股核按钮、炸板大面等），短句"#;
+
+pub const DEFAULT_ZT_SCORE_PROMPT: &str = r#"你是「涨停连板接力」评分模型。请只根据下面涨停板分析要点，对【{name} / {code}】打 0–100 分。分数代表「次日连板接力与溢价的可操作性」，不是长期投资价值。
+
+规则：
+- 早盘快速封死、大额封单、题材总龙头、零炸板，可给 75–95 分。
+- 多次炸板、尾盘勉强封死、中位跟风杂毛、散户大幅接盘，应低于 60 分。
+- 有停牌核查风险、立案雷点、跌停砸盘先例，必须低于 40 分。
+- reason 只写最关键的一句，不超过 28 字。
+
+只输出 JSON：
+{"score": 0, "label": "不宜接力|谨慎参与|可关注|强势连板", "reason": "一句理由"}
+
+涨停要点：
 {analysis}"#;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -302,18 +353,46 @@ pub fn analyze_stock(settings: &AppSettings, req: AnalyzeRequest) -> Result<Anal
         settings.deepseek_base_url.trim().trim_end_matches('/').to_string()
     };
 
-    let auction = req.scene.trim().eq_ignore_ascii_case("jjzt");
-    let analysis_template = if auction {
-        DEFAULT_JJZT_ANALYSIS_PROMPT
-    } else if settings.analysis_prompt.trim().is_empty() {
-        DEFAULT_ANALYSIS_PROMPT
-    } else {
-        settings.analysis_prompt.as_str()
-    };
-    let score_template = if auction {
-        DEFAULT_JJZT_SCORE_PROMPT
-    } else {
-        settings.score_prompt.as_str()
+    let (analysis_template, score_template) = match req.scene.trim().to_ascii_lowercase().as_str() {
+        "jjzt" => {
+            let a = settings
+                .jjzt_analysis_prompt
+                .as_deref()
+                .filter(|s| !s.trim().is_empty())
+                .unwrap_or(DEFAULT_JJZT_ANALYSIS_PROMPT);
+            let s = settings
+                .jjzt_score_prompt
+                .as_deref()
+                .filter(|s| !s.trim().is_empty())
+                .unwrap_or(DEFAULT_JJZT_SCORE_PROMPT);
+            (a, s)
+        }
+        "zt" => {
+            let a = settings
+                .zt_analysis_prompt
+                .as_deref()
+                .filter(|s| !s.trim().is_empty())
+                .unwrap_or(DEFAULT_ZT_ANALYSIS_PROMPT);
+            let s = settings
+                .zt_score_prompt
+                .as_deref()
+                .filter(|s| !s.trim().is_empty())
+                .unwrap_or(DEFAULT_ZT_SCORE_PROMPT);
+            (a, s)
+        }
+        _ => {
+            let a = if settings.analysis_prompt.trim().is_empty() {
+                DEFAULT_ANALYSIS_PROMPT
+            } else {
+                settings.analysis_prompt.as_str()
+            };
+            let s = if settings.score_prompt.trim().is_empty() {
+                DEFAULT_SCORE_PROMPT
+            } else {
+                settings.score_prompt.as_str()
+            };
+            (a, s)
+        }
     };
     let analysis_user = append_facts(&fill_stock_prompt(analysis_template, &name, &code), &req.facts);
     crate::applog::info(
@@ -350,6 +429,24 @@ fn chat_completion(
     user_content: &str,
     timeout: Duration,
 ) -> Result<String, String> {
+    chat_completion_with_system(
+        base,
+        api_key,
+        model,
+        "你是短线交易助手。只看未来1–5个交易日，用短句，先结论后证据。没有公开来源就写“未查到公开信息”。禁止编造，禁止长段落和长期基本面故事。",
+        user_content,
+        timeout,
+    )
+}
+
+pub(crate) fn chat_completion_with_system(
+    base: &str,
+    api_key: &str,
+    model: &str,
+    system_content: &str,
+    user_content: &str,
+    timeout: Duration,
+) -> Result<String, String> {
     let url = format!("{base}/chat/completions");
     let client = reqwest::blocking::Client::builder()
         .timeout(timeout)
@@ -360,7 +457,7 @@ fn chat_completion(
         "messages": [
             {
                 "role": "system",
-                "content": "你是短线交易助手。只看未来1–5个交易日，用短句，先结论后证据。没有公开来源就写“未查到公开信息”。禁止编造，禁止长段落和长期基本面故事。"
+                "content": system_content
             },
             {"role": "user", "content": user_content}
         ],
@@ -432,6 +529,50 @@ fn extract_message_content(payload: &Value) -> Option<String> {
         }
         _ => None,
     }
+}
+
+pub fn test_connection(api_key: &str, base_url: &str, model: &str) -> Result<String, String> {
+    let key = api_key.trim();
+    if key.is_empty() {
+        return Err("API Key 不能为空，请先填写 Key".into());
+    }
+    let base = if base_url.trim().is_empty() {
+        DEFAULT_BASE_URL
+    } else {
+        base_url.trim().trim_end_matches('/')
+    };
+    let m = if model.trim().is_empty() {
+        DEFAULT_MODEL
+    } else {
+        model.trim()
+    };
+    let start = std::time::Instant::now();
+    let url = format!("{base}/chat/completions");
+    let client = reqwest::blocking::Client::builder()
+        .timeout(Duration::from_secs(12))
+        .build()
+        .map_err(|e| format!("创建 HTTP 客户端失败: {e}"))?;
+    let body = json!({
+        "model": m,
+        "messages": [
+            {"role": "user", "content": "ping"}
+        ],
+        "max_tokens": 5
+    });
+    let res = client
+        .post(&url)
+        .bearer_auth(key)
+        .header("content-type", "application/json")
+        .json(&body)
+        .send()
+        .map_err(|e| format!("请求失败: {e}"))?;
+    let status = res.status();
+    let text = res.text().unwrap_or_default();
+    if !status.is_success() {
+        return Err(format_api_error(status.as_u16(), &text));
+    }
+    let elapsed = start.elapsed().as_millis();
+    Ok(format!("连通测试成功！模型 {m} 响应正常，延迟约 {elapsed}ms"))
 }
 
 #[cfg(test)]

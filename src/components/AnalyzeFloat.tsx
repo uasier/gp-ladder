@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import type { AnalyzeResult } from "../types"
+import type { AnalyzeResult, BoardKind } from "../types"
 import { AnalysisArticle } from "./AnalysisArticle"
 
 type Props = {
@@ -8,15 +8,24 @@ type Props = {
   error: string | null
   result: AnalyzeResult | null
   title: string
+  board?: BoardKind
   onClose: () => void
   onRetry: () => void
 }
 
-export function AnalyzeFloat({ open, loading, error, result, title, onClose, onRetry }: Props) {
+const SCENE_NAMES: Record<BoardKind, { name: string; tag: string }> = {
+  lxsz: { name: "连涨动能模型", tag: "连涨短线" },
+  zt: { name: "涨停接力模型", tag: "连板硬度" },
+  jjzt: { name: "竞价弱转强模型", tag: "昨强今红" },
+}
+
+export function AnalyzeFloat({ open, loading, error, result, title, board = "lxsz", onClose, onRetry }: Props) {
   const panel = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState({ x: 48, y: 72 })
   const drag = useRef<{ dx: number; dy: number } | null>(null)
   const [copied, setCopied] = useState(false)
+
+  const sceneInfo = SCENE_NAMES[board] || SCENE_NAMES.lxsz
 
   useEffect(() => {
     if (!open) return
@@ -81,7 +90,12 @@ export function AnalyzeFloat({ open, loading, error, result, title, onClose, onR
         }}
       >
         <div>
-          <div className="analyze-float-kicker">DeepSeek 短线智能分析</div>
+          <div className="analyze-float-kicker" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span>DeepSeek · {sceneInfo.name}</span>
+            <span className="badge" style={{ fontSize: 9.5, padding: "0 5px", textTransform: "none" }}>
+              {sceneInfo.tag}
+            </span>
+          </div>
           <strong>{title}</strong>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -124,25 +138,29 @@ export function AnalyzeFloat({ open, loading, error, result, title, onClose, onR
         <div className="score-meta">
           <div className="score-label">
             {loading
-              ? "正在深度推演与评分…"
+              ? "深度研判中…"
               : result?.scoreLabel
                 ? result.scoreLabel
                 : error
                   ? "未完成评分"
                   : "待评分"}
           </div>
-          <div className="muted">
-            {loading
-              ? "结合盘口动能、换手率与主力博弈模型生成短线策略"
-              : result?.scoreReason || error || result?.model || ""}
-          </div>
+          {!loading ? (
+            <div className="muted" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span>{result?.scoreReason || "短线博弈研判"}</span>
+              {result?.model ? (
+                <span className="badge" style={{ fontSize: 10, padding: "0 6px" }}>
+                  {result.model}
+                </span>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </div>
       <div className="analyze-float-body">
         {loading ? (
           <div className="an-loading">
             <div className="an-loading-bar" />
-            <p>正在按短线视角提炼盘面核心要素与风险点，请稍候…</p>
           </div>
         ) : error ? (
           <div className="analyze-error">

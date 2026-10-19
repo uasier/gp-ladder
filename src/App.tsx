@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   analyzeStock,
+  pickStocks,
   cancelRefresh,
   checkUpdate,
   exportSnapshot,
@@ -19,6 +20,7 @@ import {
 import { AnalyzeFloat } from "./components/AnalyzeFloat"
 import { DayPills } from "./components/DayPills"
 import { FilterBar } from "./components/FilterBar"
+import { FloatingToolbox } from "./components/FloatingToolbox"
 import { IndustryPills } from "./components/IndustryPills"
 import { KpiGrid } from "./components/KpiGrid"
 import { Ladder } from "./components/Ladder"
@@ -29,10 +31,12 @@ import { RefreshBanner } from "./components/RefreshBanner"
 import { SettingsModal } from "./components/SettingsModal"
 import { StockContextMenu } from "./components/StockContextMenu"
 import { StockDrawer } from "./components/StockDrawer"
+import { StockPickModal } from "./components/StockPickModal"
 import { Toolbar } from "./components/Toolbar"
 import { UpdateBanner } from "./components/UpdateBanner"
 import { downloadText, rowsToCsv, rowsToJson, timestampName } from "./files"
 import { isMobileApp } from "./platform"
+import type { PromptEditorScene } from "./prompt"
 import { applyDocumentSeo } from "./seo"
 import {
   countByDay,
@@ -54,6 +58,8 @@ import {
   type SettingsView,
   type Snapshot,
   type StockRow,
+  type StockPickRequest,
+  type StockPickResult,
   type UpdateCheck,
 } from "./types"
 
@@ -72,6 +78,8 @@ export default function App() {
   const [theme, setTheme] = useState<"dark" | "light">(preferredTheme)
   const [board, setBoard] = useState<BoardKind>("lxsz")
   const [snapshot, setSnapshot] = useState<Snapshot>(EMPTY_SNAPSHOT)
+  const [snapshotBoard, setSnapshotBoard] = useState<BoardKind>("lxsz")
+  const snapshotLoadId = useRef(0)
   const [lxszFilters, setLxszFilters] = useState<FilterState>(DEFAULT_FILTERS)
   const [ztFilters, setZtFilters] = useState<FilterState>(ZT_FILTERS)
   const [jjztFilters, setJjztFilters] = useState<FilterState>(ZT_FILTERS)
@@ -79,9 +87,52 @@ export default function App() {
   const setFilters =
     board === "zt" ? setZtFilters : board === "jjzt" ? setJjztFilters : setLxszFilters
   const [rule, setRule] = useState<HighlightRule>(DEFAULT_HIGHLIGHT)
+  const [showKpi, setShowKpi] = useState<boolean>(() => {
+    const saved = localStorage.getItem("gp_show_kpi")
+    return saved !== null ? saved === "true" : false
+  })
+  const [showAllFilters, setShowAllFilters] = useState<boolean>(() => {
+    const saved = localStorage.getItem("gp_show_all_filters")
+    return saved !== null ? saved === "true" : false
+  })
+  const [moreFiltersOpen, setMoreFiltersOpen] = useState(false)
+
+  const handleToggleKpi = useCallback(() => {
+    setShowKpi((prev) => {
+      const next = !prev
+      localStorage.setItem("gp_show_kpi", String(next))
+      return next
+    })
+  }, [])
+
+  const handleToggleAllFilters = useCallback(() => {
+    setShowAllFilters((prev) => {
+      const next = !prev
+      localStorage.setItem("gp_show_all_filters", String(next))
+      return next
+    })
+  }, [])
+
+  const activeMoreCount = useMemo(
+    () =>
+      [
+        filters.pctRange !== "all",
+        filters.turnoverRange !== "all",
+        filters.volumeRatioMin != null || filters.volumeRatioMax != null,
+        filters.pctTotalMin != null || filters.pctTotalMax != null,
+        filters.todayPctMin != null || filters.todayPctMax != null,
+        filters.priceRange !== "all",
+        filters.priceMin != null || filters.priceMax != null,
+        filters.turnTotalMin != null || filters.turnTotalMax != null,
+        filters.retailRange !== "all",
+        filters.retailMin != null || filters.retailMax != null,
+      ].filter(Boolean).length,
+    [filters],
+  )
   const [settings, setSettings] = useState<SettingsView | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsTab, setSettingsTab] = useState<"crawl" | "deepseek" | "about">("crawl")
+  const [settingsPromptScene, setSettingsPromptScene] = useState<PromptEditorScene>("lxsz")
   const [settingsSaving, setSettingsSaving] = useState(false)
   const [update, setUpdate] = useState<UpdateCheck | null>(null)
   const [updateNotice, setUpdateNotice] = useState(false)
@@ -103,6 +154,12 @@ export default function App() {
   const [analyzeResult, setAnalyzeResult] = useState<AnalyzeResult | null>(null)
   const [analyzeTitle, setAnalyzeTitle] = useState("")
   const analyzeTarget = useRef<StockRow | null>(null)
+  const [pickOpen, setPickOpen] = useState(false)
+  const [pickLoading, setPickLoading] = useState(false)
+  const [pickError, setPickError] = useState<string | null>(null)
+  const [pickResult, setPickResult] = useState<StockPickResult | null>(null)
+  const [pickSource, setPickSource] = useState<StockPickRequest | null>(null)
+  const pickBusy = useRef(false)
   const keywordRef = useRef<HTMLInputElement>(null)
   const pageScrollRef = useRef<HTMLDivElement>(null)
   const [showBackTop, setShowBackTop] = useState(false)
@@ -153,7 +210,10 @@ export default function App() {
   }, [])
 
   const loadSnapshot = useCallback(async (kind: BoardKind) => {
+    const requestId = ++snapshotLoadId.current
     const data = await getSnapshot(kind)
+    if (requestId !== snapshotLoadId.current || boardRef.current !== kind) return data
+    setSnapshotBoard(kind)
     setSnapshot({
       rows: data.rows ?? [],
       updatedAt: data.updatedAt ?? null,
@@ -264,6 +324,7 @@ export default function App() {
         setMenu(null)
         setSettingsOpen(false)
         setAnalyzeOpen(false)
+        setPickOpen(false)
         setSelectedCode(null)
         return
       }
@@ -427,6 +488,57 @@ export default function App() {
     }
   }
 
+  function openPickSettings() {
+    setPickOpen(false)
+    setSettingsTab("deepseek")
+    setSettingsPromptScene("pick")
+    setSettingsOpen(true)
+  }
+
+  async function handleStockPick(retrySource?: StockPickRequest) {
+    if (pickBusy.current) {
+      setPickOpen(true)
+      return
+    }
+    if (!retrySource && snapshotBoard !== board) {
+      showBanner("请等待当前榜单加载完成", "error")
+      return
+    }
+    const source = retrySource ?? {
+      rows: filtered.map(row => ({ ...row })),
+      scene: board,
+      quoteAt: snapshot.quoteAt,
+      updatedAt: snapshot.updatedAt,
+    }
+    if (!source.rows.length) {
+      showBanner("当前筛选结果为空，请先调整筛选条件", "error")
+      return
+    }
+    if (!settings?.hasDeepseekKey && !settings?.deepseekApiKey) {
+      openPickSettings()
+      showBanner("请先在设置中填写 DeepSeek API Key", "error")
+      return
+    }
+    pickBusy.current = true
+    setMenu(null)
+    setPickSource(source)
+    setPickOpen(true)
+    setPickLoading(true)
+    setPickError(null)
+    setPickResult(null)
+    try {
+      const result = await pickStocks(source)
+      setPickResult(result)
+      void writeAppLog("info", "ui", `AI 选股完成 ${result.candidateCount} 只候选 → ${result.picks.length} 只`).catch(() => undefined)
+    } catch (error) {
+      setPickError(String(error))
+      void writeAppLog("error", "ui", `AI 选股失败: ${String(error)}`).catch(() => undefined)
+    } finally {
+      pickBusy.current = false
+      setPickLoading(false)
+    }
+  }
+
   async function handleAnalyze(item: StockRow) {
     const code = (item["股票代码"] || "").trim()
     const name = (item["股票简称"] || "").trim()
@@ -434,6 +546,7 @@ export default function App() {
     setMenu(null)
     if (!settings?.hasDeepseekKey && !settings?.deepseekApiKey) {
       setSettingsTab("deepseek")
+      setSettingsPromptScene(board)
       setSettingsOpen(true)
       showBanner("请先在设置中填写 DeepSeek API Key", "error")
       return
@@ -473,6 +586,7 @@ export default function App() {
             board={board}
             onBoardChange={(next) => {
               if (next === board) return
+              boardRef.current = next
               setBoard(next)
               setSelectedCode(null)
               void loadSnapshot(next).catch((e) => showBanner(String(e), "error"))
@@ -502,7 +616,7 @@ export default function App() {
             />
           ) : null}
           <RefreshBanner text={banner.text} tone={banner.tone} />
-          <KpiGrid snapshot={snapshot} board={board} />
+          {showKpi ? <KpiGrid snapshot={snapshot} board={board} /> : null}
           <FilterBar
             filters={filters}
             industries={industryOptions}
@@ -512,25 +626,35 @@ export default function App() {
             onChange={(patch) => setFilters((cur) => ({ ...cur, ...patch }))}
             onReset={() => setFilters(board === "lxsz" ? DEFAULT_FILTERS : ZT_FILTERS)}
             keywordRef={keywordRef}
+            onOpenMoreFilters={() => setMoreFiltersOpen(true)}
+            activeMoreCount={activeMoreCount}
+            showAllFilters={showAllFilters}
+            onToggleAllFilters={handleToggleAllFilters}
           />
-          <QuickChips filters={filters} onChange={(patch) => setFilters((cur) => ({ ...cur, ...patch }))} />
-          <div className="days-section">
-            <DayPills
-              days={days}
-              counts={dayCounts}
-              total={dayFacetRows.length}
-              exactDay={filters.exactDay}
-              unit={board === "lxsz" ? "天" : "板"}
-              allLabel={board === "lxsz" ? "全部天数" : "全部连板"}
-              onSelect={(day) => setFilters((cur) => ({ ...cur, exactDay: day }))}
-            />
-            <IndustryPills
-              items={industries}
-              current={filters.industry}
-              onSelect={(name) => setFilters((cur) => ({ ...cur, industry: name }))}
-            />
-          </div>
+          {showAllFilters ? (
+            <>
+              <QuickChips filters={filters} onChange={(patch) => setFilters((cur) => ({ ...cur, ...patch }))} />
+              <div className="days-section">
+                <DayPills
+                  days={days}
+                  counts={dayCounts}
+                  total={dayFacetRows.length}
+                  exactDay={filters.exactDay}
+                  unit={board === "lxsz" ? "天" : "板"}
+                  allLabel={board === "lxsz" ? "全部阶梯" : "全部连板"}
+                  onSelect={(day) => setFilters((cur) => ({ ...cur, exactDay: day }))}
+                />
+                <IndustryPills
+                  items={industries}
+                  current={filters.industry}
+                  onSelect={(name) => setFilters((cur) => ({ ...cur, industry: name }))}
+                />
+              </div>
+            </>
+          ) : null}
           <MoreFilters
+            open={moreFiltersOpen}
+            onClose={() => setMoreFiltersOpen(false)}
             filters={filters}
             rule={rule}
             onChange={(patch) => setFilters((cur) => ({ ...cur, ...patch }))}
@@ -551,19 +675,40 @@ export default function App() {
               board={board}
             />
           </main>
-          <button
-            type="button"
-            className={`back-to-top ${showBackTop ? "visible" : ""}`}
-            onClick={() => pageScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" })}
-            title="回到顶部"
-            aria-label="回到顶部"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <polyline points="18 15 12 9 6 15" />
-            </svg>
-          </button>
         </div>
       </div>
+      <FloatingToolbox
+        showAllFilters={showAllFilters}
+        onToggleAllFilters={handleToggleAllFilters}
+        showKpi={showKpi}
+        onToggleKpi={handleToggleKpi}
+        showLogBar={logOpen}
+        onToggleLogBar={() => setLogOpen((v) => !v)}
+        filters={filters}
+        onChangeFilters={(patch) => setFilters((cur) => ({ ...cur, ...patch }))}
+        industries={industryOptions}
+        onResetFilters={() => setFilters(board === "lxsz" ? DEFAULT_FILTERS : ZT_FILTERS)}
+        hasActiveFilters={hasActiveFilters(filters)}
+        onOpenMoreFilters={() => setMoreFiltersOpen(true)}
+        activeMoreCount={activeMoreCount}
+        onExport={(fmt) => void handleExport(fmt)}
+        pickCandidateCount={snapshotBoard === board ? filtered.length : 0}
+        pickLoading={pickLoading}
+        onPickStocks={() => void handleStockPick()}
+        hasPickHistory={Boolean(pickResult || pickError)}
+        onViewPick={() => setPickOpen(true)}
+        onOpenSettings={() => {
+          setSettingsTab("crawl")
+          setSettingsOpen(true)
+        }}
+        update={update}
+        onOpenAbout={openAbout}
+        settings={settings}
+        theme={theme}
+        onToggleTheme={() => setTheme((cur) => (cur === "dark" ? "light" : "dark"))}
+        onScrollTop={() => pageScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" })}
+        showBackTop={showBackTop}
+      />
       <StockDrawer
         item={selected}
         rule={rule}
@@ -592,11 +737,22 @@ export default function App() {
         error={analyzeError}
         result={analyzeResult}
         title={analyzeTitle}
+        board={board}
         onClose={() => setAnalyzeOpen(false)}
         onRetry={() => {
           const item = analyzeTarget.current
           if (item) void handleAnalyze(item)
         }}
+      />
+      <StockPickModal
+        open={pickOpen}
+        loading={pickLoading}
+        error={pickError}
+        source={pickSource}
+        result={pickResult}
+        onClose={() => setPickOpen(false)}
+        onRetry={() => { if (pickSource) void handleStockPick(pickSource) }}
+        onSettings={openPickSettings}
       />
       <LogPanel open={logOpen} onToggle={() => setLogOpen((v) => !v)} />
       <SettingsModal
@@ -604,6 +760,7 @@ export default function App() {
         settings={settings}
         saving={settingsSaving}
         initialTab={settingsTab}
+        initialPromptScene={settingsPromptScene}
         update={update}
         updateChecking={updateChecking}
         updateInstalling={updateInstalling}

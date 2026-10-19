@@ -2,6 +2,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Android 11+ 才能解析并唤起同花顺个股页 -->
+    <queries>
+        <package android:name="com.hexin.plat.android" />
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="amihexin" />
+        </intent>
+    </queries>
+
     <!-- AndroidTV support -->
     <uses-feature android:name="android.software.leanback" android:required="false" />
 

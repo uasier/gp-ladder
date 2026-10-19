@@ -134,7 +134,8 @@ describe("product landing", () => {
 
   it("is a static page with the three boards and FAQ", () => {
     expect(html).toContain(`<title>${TITLE}</title>`)
-    expect(html).toContain(`<h1>连涨天梯</h1>`)
+    expect(html).toContain('<h1 id="hero-title">')
+    expect(html).toContain("连涨天梯")
     expect(html).toContain("三个榜单")
     expect(html).toContain("更新历史")
     expect(html).toContain("api.github.com/repos/uasier/gp-ladder/releases")

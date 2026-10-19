@@ -1211,14 +1211,14 @@
         </div>
         <div class="brand-title-wrap">
           <h1>连涨天梯</h1>
-          <div class="brand-desc">A股同花顺强势连涨动能追踪仪表盘</div>
+          <div class="brand-desc">行情快照</div>
         </div>
       </div>
       <div class="nav-actions">
         <div class="refresh-panel">
           <div class="refresh-meta">
-            <span class="refresh-label">数据刷新时间</span>
-            <time id="refreshedAt">__UPDATED_AT__</time>
+            <span class="refresh-label">上次刷新</span>
+            <time id="refreshedAt" data-refreshed-at="__UPDATED_AT__">__UPDATED_AT__</time>
           </div>
           <button type="button" class="refresh-btn" id="refreshBtn" title="重新抓取同花顺榜单和东方财富实时行情">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 5v4h4"></path><path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4"></path></svg>
@@ -1240,35 +1240,31 @@
     <section class="kpi-grid">
       <div class="kpi-card">
         <div class="kpi-label">
-          <span>连涨标的总数</span>
+          <span>连涨标的</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
         </div>
         <div class="kpi-val" id="kpiTotal">__TOTAL__ <small>只</small></div>
-        <div class="kpi-sub">同花顺连涨榜全样本</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">
-          <span>最高连涨天梯</span>
+          <span>最高连涨</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
         </div>
         <div class="kpi-val gold" id="kpiMaxDays">__MAX_DAYS__ <small>天</small></div>
-        <div class="kpi-sub">当前领涨龙头高度</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">
-          <span>最新行情时间</span>
+          <span>行情时间</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
         </div>
         <div class="kpi-val" id="kpiQuoteAt" style="font-size:15px; font-weight:600;">__QUOTE_AT__</div>
-        <div class="kpi-sub">东方财富盘口数据</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">
-          <span>榜单抓取时间</span>
+          <span title="仅手动刷新时更新">刷新时间</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
         </div>
-        <div class="kpi-val" id="kpiGeneratedAt" style="font-size:15px; font-weight:600;">__GENERATED_AT__</div>
-        <div class="kpi-sub">仅手动刷新时更新</div>
+        <time class="kpi-val" id="kpiGeneratedAt" data-refreshed-at="__GENERATED_AT__" style="font-size:15px; font-weight:600;">__GENERATED_AT__</time>
       </div>
     </section>
 
@@ -1278,7 +1274,7 @@
         <span class="search-icon">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         </span>
-        <input id="keywordInput" type="search" placeholder="搜索名称 / 股票代码..." />
+        <input id="keywordInput" type="search" placeholder="名称 / 代码" />
         <span class="search-kbd">/ 聚焦</span>
       </div>
 
@@ -1350,9 +1346,8 @@
       <summary>
         <div class="summary-left">
           <svg class="summary-arrow" viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
-          <span>更多筛选与精选条件</span>
+          <span>高级筛选</span>
         </div>
-        <span style="font-size:11px; color:var(--muted); font-weight:normal;">自定义涨跌幅、换手率与主力散户模型</span>
       </summary>
       <section class="filters">
         <div class="filter-item">
@@ -1374,6 +1369,16 @@
             <option value="10-20">10% - 20%</option>
             <option value="20+">20%+</option>
           </select>
+        </div>
+        <div class="filter-item">
+          <label>量比区间（倍）</label>
+          <div class="filter-range" role="group" aria-label="量比区间">
+            <input id="volumeRatioMin" type="number" step="0.01" min="0" placeholder="最小量比" aria-label="最小量比" />
+            <span>～</span>
+            <input id="volumeRatioMax" type="number" step="0.01" min="0" placeholder="最大量比" aria-label="最大量比" />
+          </div>
+          <small class="muted">含边界 · 留空不限 · 筛选时排除缺失值</small>
+          <small class="up" id="volumeRatioError" role="status" hidden>最小量比不能大于最大量比</small>
         </div>
         <div class="filter-item">
           <label>累计涨跌幅区间（%）</label>
@@ -1507,6 +1512,37 @@
       const active = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
       setTheme(active);
     });
+    function parseTimestamp(value) {
+      const text = value?.trim();
+      if (!text) return null;
+      const timestamp = Date.parse(text.replace(/^(\d{4}-\d{2}-\d{2})\s+/, '$1T'));
+      return Number.isFinite(timestamp) ? timestamp : null;
+    }
+    function formatTimeAgo(value, now = Date.now()) {
+      const timestamp = parseTimestamp(value);
+      if (timestamp === null) return value?.trim() || '尚未刷新';
+      const seconds = Math.max(0, Math.floor((now - timestamp) / 1000));
+      if (seconds < 60) return '刚刚';
+      if (seconds < 3600) return `${Math.floor(seconds / 60)} 分钟前`;
+      if (seconds < 86400) return `${Math.floor(seconds / 3600)} 小时前`;
+      return `${Math.floor(seconds / 86400)} 天前`;
+    }
+    function updateRelativeTimes() {
+      const now = Date.now();
+      document.querySelectorAll('[data-refreshed-at]').forEach(el => {
+        const value = el.dataset.refreshedAt || '';
+        const timestamp = parseTimestamp(value);
+        el.textContent = formatTimeAgo(value, now);
+        el.title = value;
+        if (timestamp === null) el.removeAttribute('datetime');
+        else el.dateTime = new Date(timestamp).toISOString();
+      });
+    }
+    updateRelativeTimes();
+    window.setInterval(updateRelativeTimes, 30000);
+    document.addEventListener('visibilitychange', updateRelativeTimes);
+    window.addEventListener('focus', updateRelativeTimes);
+
     let refreshing = false;
     let refreshBannerTimer = 0;
     async function readJson(response) {
@@ -1601,6 +1637,8 @@
     const industrySelect = document.getElementById('industrySelect');
     const pctRangeSelect = document.getElementById('pctRange');
     const turnoverRangeSelect = document.getElementById('turnoverRange');
+    const volumeRatioMinInput = document.getElementById('volumeRatioMin');
+    const volumeRatioMaxInput = document.getElementById('volumeRatioMax');
     const pctTotalMinInput = document.getElementById('pctTotalMin');
     const pctTotalMaxInput = document.getElementById('pctTotalMax');
     const todayPctMinInput = document.getElementById('todayPctMin');
@@ -1753,6 +1791,8 @@
         Number(daysRange.value) > 0 ||
         pctRangeSelect.value !== 'all' ||
         turnoverRangeSelect.value !== 'all' ||
+        volumeRatioMinInput.value !== '' ||
+        volumeRatioMaxInput.value !== '' ||
         (priceRangeSelect && priceRangeSelect.value !== 'all') ||
         (priceMinInput && priceMinInput.value !== '') ||
         (priceMaxInput && priceMaxInput.value !== '');
@@ -1766,6 +1806,8 @@
       industrySelect.value = 'all';
       pctRangeSelect.value = 'all';
       turnoverRangeSelect.value = 'all';
+      volumeRatioMinInput.value = '';
+      volumeRatioMaxInput.value = '';
       retailRangeSelect.value = 'all';
       pctTotalMinInput.value = '';
       pctTotalMaxInput.value = '';
@@ -1793,7 +1835,7 @@
       [keywordInput, industrySelect, pctRangeSelect, turnoverRangeSelect, retailRangeSelect, sortSelect, priceRangeSelect].forEach(el => {
         if (el) el.addEventListener(el.tagName === 'INPUT' ? 'input' : 'change', onChange);
       });
-      [pctTotalMinInput, pctTotalMaxInput, todayPctMinInput, todayPctMaxInput, turnTotalMinInput, turnTotalMaxInput, retailMinInput, retailMaxInput, priceMinInput, priceMaxInput].forEach(el => {
+      [pctTotalMinInput, pctTotalMaxInput, todayPctMinInput, todayPctMaxInput, turnTotalMinInput, turnTotalMaxInput, retailMinInput, retailMaxInput, priceMinInput, priceMaxInput, volumeRatioMinInput, volumeRatioMaxInput].forEach(el => {
         if (el) el.addEventListener('input', onChange);
       });
       excludeStCheckbox.addEventListener('change', onChange);
@@ -1914,6 +1956,16 @@
       if (!text) return null;
       return normalizeNumber(text);
     }
+    function getVolumeRatio(item) {
+      const text = String(item['量比'] ?? '').trim();
+      if (!text) return null;
+      const value = Number(text);
+      return Number.isFinite(value) && value >= 0 ? value : null;
+    }
+    function formatVolumeRatio(item) {
+      const value = getVolumeRatio(item);
+      return value === null ? '--' : `${value.toFixed(2)} 倍`;
+    }
     function getPrice(item) {
       const live = String(item['现价'] ?? '').trim();
       if (live) return normalizeNumber(live);
@@ -1950,6 +2002,11 @@
       const industry = industrySelect.value;
       const pctRange = pctRangeSelect.value;
       const turnoverRange = turnoverRangeSelect.value;
+      const volumeRatioMin = toNullableNumber(volumeRatioMinInput.value);
+      const volumeRatioMax = toNullableNumber(volumeRatioMaxInput.value);
+      document.getElementById('volumeRatioError').hidden = !(
+        volumeRatioMin !== null && volumeRatioMax !== null && volumeRatioMin > volumeRatioMax
+      );
       const pctTotalMin = toNullableNumber(pctTotalMinInput.value);
       const pctTotalMax = toNullableNumber(pctTotalMaxInput.value);
       const todayPctMin = toNullableNumber(todayPctMinInput && todayPctMinInput.value);
@@ -1986,6 +2043,12 @@
           if (todayPct === null) return false;
           if (todayPctMin !== null && todayPct < todayPctMin) return false;
           if (todayPctMax !== null && todayPct > todayPctMax) return false;
+        }
+        if (volumeRatioMin !== null || volumeRatioMax !== null) {
+          const volumeRatio = getVolumeRatio(item);
+          if (volumeRatio === null) return false;
+          if (volumeRatioMin !== null && volumeRatio < volumeRatioMin) return false;
+          if (volumeRatioMax !== null && volumeRatio > volumeRatioMax) return false;
         }
         const price = getPrice(item);
         if (pricePreset && pricePreset !== 'all') {
@@ -2084,6 +2147,7 @@
           </div>
           <div class="tags">
             <span class="tag">${item['所属行业'] || '未知'}</span>
+            <span class="tag">量比 ${formatVolumeRatio(item)}</span>
             <span class="tag ${retailClass}">散户 ${item['散户指数'] || '--'} ${retailIcon}</span>
           </div>
         </button>`;
@@ -2119,7 +2183,7 @@
         container.innerHTML = `
           <div class="empty">
             <div class="empty-icon">📡</div>
-            <p>尚未刷新实时数据，当前没有缓存榜单</p>
+            <p>暂无数据，请先刷新</p>
             <button type="button" id="emptyRefreshBtn">刷新实时数据</button>
           </div>`;
         const emptyBtn = document.getElementById('emptyRefreshBtn');
@@ -2130,8 +2194,8 @@
         container.innerHTML = `
           <div class="empty">
             <div class="empty-icon">🔍</div>
-            <p>暂无符合当前筛选条件的连涨标的</p>
-            <button type="button" onclick="resetAllFilters()">重置所有筛选条件</button>
+            <p>暂无符合条件的股票</p>
+            <button type="button" onclick="resetAllFilters()">重置筛选</button>
           </div>`;
         return;
       }
@@ -2157,6 +2221,7 @@
             <td class="num ${pctClass(todayPct ?? 0)}" style="font-weight:600;">${item['今日涨跌幅'] || '--'}</td>
             <td class="num ${retailColor}">${item['散户指数'] || '--'}</td>
             <td class="num">${item['今日换手率'] || '--'}</td>
+            <td class="num">${formatVolumeRatio(item)}</td>
             <td><span class="tag" style="margin:0;">${item['所属行业'] || ''}</span></td>
           </tr>`;
         }).join('');
@@ -2172,6 +2237,7 @@
                   <th class="num">今日涨跌</th>
                   <th class="num">散户指数</th>
                   <th class="num">今日换手</th>
+                  <th class="num">量比（倍）</th>
                   <th>所属行业</th>
                 </tr>
               </thead>
@@ -2186,7 +2252,7 @@
         <section class="group">
           <div class="group-h">
             <span class="group-badge">${day}</span>
-            <div class="t">连涨天梯 <b>${day}</b> 连涨阶梯 · 包含 <b>${grouped[day].length}</b> 只标的</div>
+            <div class="t">天连涨 · <b>${grouped[day].length}</b> 只</div>
           </div>
           <div class="cards">${grouped[day].map(cardHtml).join('')}</div>
         </section>`).join('');
@@ -2220,11 +2286,12 @@
         </div>
 
         <div>
-          <div class="drawer-section-title">📊 当日盘口表现</div>
+          <div class="drawer-section-title">今日行情</div>
           <div class="kv-card">
             <div class="kv-item"><span>现价</span><b>${item['现价'] || '--'} 元</b></div>
             <div class="kv-item"><span>今日涨跌幅</span><b class="${pctClass(todayPct ?? 0)}">${item['今日涨跌幅'] || '--'}</b></div>
             <div class="kv-item"><span>今日换手率</span><b>${item['今日换手率'] || '--'}</b></div>
+            <div class="kv-item"><span>量比</span><b>${formatVolumeRatio(item)}</b></div>
             <div class="kv-item"><span>成交额</span><b>${item['成交额'] || '--'}</b></div>
             <div class="kv-item" style="grid-column: 1 / -1;">
               <span>今开 / 最高 / 最低</span>
@@ -2234,7 +2301,7 @@
         </div>
 
         <div>
-          <div class="drawer-section-title">🪜 连涨天梯数据</div>
+          <div class="drawer-section-title">连涨数据</div>
           <div class="kv-card">
             <div class="kv-item"><span>连涨天数</span><b style="color:var(--gold);">${item['连涨天数']} 天</b></div>
             <div class="kv-item"><span>连涨累计</span><b class="${pctClass(normalizeNumber(item['连续涨跌幅']))}">${item['连续涨跌幅'] || '--'}</b></div>
@@ -2268,7 +2335,7 @@
           </a>
           <button type="button" id="copyCodeBtn">复制代码</button>
         </div>
-        <div class="hint">按 Esc 键或点击外部遮罩退出详情</div>`;
+        <div class="hint">Esc 或点空白处关闭</div>`;
 
       drawer.classList.add('open');
       mask.classList.add('open');
@@ -2315,7 +2382,7 @@
       const timeText = payload.updated_at || '尚未刷新';
       const refreshedAt = document.getElementById('refreshedAt');
       if (refreshedAt) {
-        refreshedAt.textContent = timeText;
+        refreshedAt.dataset.refreshedAt = timeText;
         refreshedAt.classList.remove('just-updated');
         void refreshedAt.offsetWidth;
         refreshedAt.classList.add('just-updated');
@@ -2327,7 +2394,8 @@
       const kpiQuoteAt = document.getElementById('kpiQuoteAt');
       if (kpiQuoteAt) kpiQuoteAt.textContent = payload.quote_at || '--';
       const kpiGeneratedAt = document.getElementById('kpiGeneratedAt');
-      if (kpiGeneratedAt) kpiGeneratedAt.textContent = timeText;
+      if (kpiGeneratedAt) kpiGeneratedAt.dataset.refreshedAt = timeText;
+      updateRelativeTimes();
       if (daysRange) {
         daysRange.max = String(payload.max_days || 0);
         if (Number(daysRange.value) > Number(daysRange.max)) {

@@ -1,4 +1,5 @@
 use crate::deepseek::{DEFAULT_ANALYSIS_PROMPT, DEFAULT_BASE_URL, DEFAULT_MODEL, DEFAULT_SCORE_PROMPT};
+use crate::stock_pick::DEFAULT_STOCK_PICK_PROMPT;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -25,6 +26,16 @@ pub struct AppSettings {
     pub analysis_prompt: String,
     #[serde(default = "default_score_prompt")]
     pub score_prompt: String,
+    #[serde(default)]
+    pub zt_analysis_prompt: Option<String>,
+    #[serde(default)]
+    pub zt_score_prompt: Option<String>,
+    #[serde(default)]
+    pub jjzt_analysis_prompt: Option<String>,
+    #[serde(default)]
+    pub jjzt_score_prompt: Option<String>,
+    #[serde(default = "default_stock_pick_prompt")]
+    pub stock_pick_prompt: String,
 }
 
 fn default_base_url() -> String {
@@ -39,6 +50,9 @@ fn default_analysis_prompt() -> String {
 fn default_score_prompt() -> String {
     DEFAULT_SCORE_PROMPT.into()
 }
+fn default_stock_pick_prompt() -> String {
+    DEFAULT_STOCK_PICK_PROMPT.into()
+}
 
 impl Default for AppSettings {
     fn default() -> Self {
@@ -50,6 +64,11 @@ impl Default for AppSettings {
             deepseek_model: default_model(),
             analysis_prompt: default_analysis_prompt(),
             score_prompt: default_score_prompt(),
+            zt_analysis_prompt: None,
+            zt_score_prompt: None,
+            jjzt_analysis_prompt: None,
+            jjzt_score_prompt: None,
+            stock_pick_prompt: default_stock_pick_prompt(),
         }
     }
 }
@@ -68,9 +87,14 @@ pub struct SettingsView {
     pub deepseek_model: String,
     pub analysis_prompt: String,
     pub score_prompt: String,
+    pub zt_analysis_prompt: Option<String>,
+    pub zt_score_prompt: Option<String>,
+    pub jjzt_analysis_prompt: Option<String>,
+    pub jjzt_score_prompt: Option<String>,
+    pub stock_pick_prompt: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct SettingsPatch {
     pub max_pages: Option<u32>,
@@ -79,6 +103,11 @@ pub struct SettingsPatch {
     pub deepseek_model: Option<String>,
     pub analysis_prompt: Option<String>,
     pub score_prompt: Option<String>,
+    pub zt_analysis_prompt: Option<String>,
+    pub zt_score_prompt: Option<String>,
+    pub jjzt_analysis_prompt: Option<String>,
+    pub jjzt_score_prompt: Option<String>,
+    pub stock_pick_prompt: Option<String>,
 }
 
 pub struct SettingsState {
@@ -265,6 +294,15 @@ pub fn view(settings: &AppSettings) -> SettingsView {
         } else {
             settings.score_prompt.clone()
         },
+        zt_analysis_prompt: settings.zt_analysis_prompt.clone(),
+        zt_score_prompt: settings.zt_score_prompt.clone(),
+        jjzt_analysis_prompt: settings.jjzt_analysis_prompt.clone(),
+        jjzt_score_prompt: settings.jjzt_score_prompt.clone(),
+        stock_pick_prompt: if settings.stock_pick_prompt.trim().is_empty() {
+            default_stock_pick_prompt()
+        } else {
+            settings.stock_pick_prompt.clone()
+        },
     }
 }
 
@@ -298,6 +336,25 @@ pub fn apply_patch(current: &AppSettings, patch: SettingsPatch) -> AppSettings {
             prompt
         };
     }
+    if let Some(prompt) = patch.zt_analysis_prompt {
+        next.zt_analysis_prompt = if prompt.trim().is_empty() { None } else { Some(prompt) };
+    }
+    if let Some(prompt) = patch.zt_score_prompt {
+        next.zt_score_prompt = if prompt.trim().is_empty() { None } else { Some(prompt) };
+    }
+    if let Some(prompt) = patch.jjzt_analysis_prompt {
+        next.jjzt_analysis_prompt = if prompt.trim().is_empty() { None } else { Some(prompt) };
+    }
+    if let Some(prompt) = patch.stock_pick_prompt {
+        next.stock_pick_prompt = if prompt.trim().is_empty() {
+            default_stock_pick_prompt()
+        } else {
+            prompt
+        };
+    }
+    if let Some(prompt) = patch.jjzt_score_prompt {
+        next.jjzt_score_prompt = if prompt.trim().is_empty() { None } else { Some(prompt) };
+    }
     next
 }
 
@@ -317,10 +374,7 @@ mod tests {
             SettingsPatch {
                 max_pages: Some(2),
                 deepseek_api_key: Some(" sk-test ".into()),
-                deepseek_base_url: None,
-                deepseek_model: None,
-                analysis_prompt: None,
-                score_prompt: None,
+                ..Default::default()
             },
         );
         assert_eq!(next.max_pages, 2);
@@ -335,15 +389,45 @@ mod tests {
         let next = apply_patch(
             &cur,
             SettingsPatch {
-                max_pages: None,
-                deepseek_api_key: None,
-                deepseek_base_url: None,
-                deepseek_model: None,
                 analysis_prompt: Some("  ".into()),
-                score_prompt: None,
+                ..Default::default()
             },
         );
         assert!(next.analysis_prompt.contains("短线交易研究员"));
+    }
+
+    #[test]
+    fn patch_scene_prompts() {
+        let cur = AppSettings::default();
+        let next = apply_patch(
+            &cur,
+            SettingsPatch {
+                zt_analysis_prompt: Some("custom zt".into()),
+                jjzt_score_prompt: Some("custom jjzt score".into()),
+                ..Default::default()
+            },
+        );
+        assert_eq!(next.zt_analysis_prompt.as_deref(), Some("custom zt"));
+        assert_eq!(next.jjzt_score_prompt.as_deref(), Some("custom jjzt score"));
+    }
+
+    #[test]
+    fn legacy_settings_gain_pick_prompt_without_replacing_custom_analysis() {
+        let settings: AppSettings = serde_json::from_str(r#"{"analysisPrompt":"自定义分析"}"#).unwrap();
+        assert_eq!(settings.stock_pick_prompt, DEFAULT_STOCK_PICK_PROMPT);
+        assert_eq!(settings.analysis_prompt, "自定义分析");
+    }
+
+    #[test]
+    fn pick_prompt_is_independent_and_can_be_restored() {
+        let original = AppSettings { analysis_prompt: "原有个股提示词".into(), ..Default::default() };
+        let patch: SettingsPatch = serde_json::from_str(r#"{"stockPickPrompt":"优先低位放量 {stocks}"}"#).unwrap();
+        let changed = apply_patch(&original, patch);
+        assert_eq!(view(&changed).stock_pick_prompt, "优先低位放量 {stocks}");
+        assert_eq!(changed.analysis_prompt, original.analysis_prompt);
+        let restored = apply_patch(&changed, SettingsPatch { stock_pick_prompt: Some("  ".into()), ..Default::default() });
+        assert_eq!(restored.stock_pick_prompt, DEFAULT_STOCK_PICK_PROMPT);
+        assert_eq!(restored.analysis_prompt, original.analysis_prompt);
     }
 
     #[test]
@@ -359,9 +443,11 @@ mod tests {
         let path = dir.join("settings.json");
         let mut settings = AppSettings::default();
         settings.max_pages = 3;
+        settings.stock_pick_prompt = "持久化选股偏好 {stocks}".into();
         save_to_file(&path, &settings).unwrap();
         let loaded = load_from_file(&path);
         assert_eq!(loaded.max_pages, 3);
+        assert_eq!(loaded.stock_pick_prompt, settings.stock_pick_prompt);
         let _ = fs::remove_dir_all(&dir);
     }
 }
