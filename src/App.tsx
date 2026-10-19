@@ -104,6 +104,8 @@ export default function App() {
   const [analyzeTitle, setAnalyzeTitle] = useState("")
   const analyzeTarget = useRef<StockRow | null>(null)
   const keywordRef = useRef<HTMLInputElement>(null)
+  const pageScrollRef = useRef<HTMLDivElement>(null)
+  const [showBackTop, setShowBackTop] = useState(false)
   const activeSession = useRef(0)
   const bannerTimer = useRef<number | null>(null)
   const boardRef = useRef(board)
@@ -258,7 +260,13 @@ export default function App() {
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement | null)?.tagName
       const typing = tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA"
-      if (e.key === "Escape") setSelectedCode(null)
+      if (e.key === "Escape") {
+        setMenu(null)
+        setSettingsOpen(false)
+        setAnalyzeOpen(false)
+        setSelectedCode(null)
+        return
+      }
       if (typing) return
       if (e.key === "/") {
         e.preventDefault()
@@ -267,10 +275,18 @@ export default function App() {
       }
       if (e.key === "1") setFilters((cur) => ({ ...cur, viewMode: "cards" }))
       if (e.key === "2") setFilters((cur) => ({ ...cur, viewMode: "list" }))
+      if ((e.key === "r" || e.key === "R") && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault()
+        void handleRefresh()
+      }
+      if ((e.key === "t" || e.key === "T") && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault()
+        setTheme((cur) => (cur === "dark" ? "light" : "dark"))
+      }
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [])
+  }, [board, refreshing, setFilters])
 
   async function pollUntilSettled() {
     const started = await getRefreshSnapshot()
@@ -446,7 +462,11 @@ export default function App() {
 
   return (
     <div className="shell">
-      <div className="page-scroll">
+      <div
+        className="page-scroll"
+        ref={pageScrollRef}
+        onScroll={(e) => setShowBackTop(e.currentTarget.scrollTop > 280)}
+      >
         <div className="app">
           <Toolbar
             settings={settings}
@@ -531,9 +551,26 @@ export default function App() {
               board={board}
             />
           </main>
+          <button
+            type="button"
+            className={`back-to-top ${showBackTop ? "visible" : ""}`}
+            onClick={() => pageScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" })}
+            title="回到顶部"
+            aria-label="回到顶部"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <polyline points="18 15 12 9 6 15" />
+            </svg>
+          </button>
         </div>
       </div>
-      <StockDrawer item={selected} rule={rule} onClose={() => setSelectedCode(null)} />
+      <StockDrawer
+        item={selected}
+        rule={rule}
+        onClose={() => setSelectedCode(null)}
+        onAnalyze={(stock) => void handleAnalyze(stock)}
+        analyzeLabel={board === "jjzt" ? "昨涨今红分析" : "AI 短线分析"}
+      />
       {menu ? (
         <StockContextMenu
           x={menu.x}

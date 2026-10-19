@@ -1,3 +1,5 @@
+import type { WheelEvent } from "react"
+
 type Props = {
   items: { name: string; count: number }[]
   current: string
@@ -5,8 +7,14 @@ type Props = {
 }
 
 export function IndustryPills({ items, current, onSelect }: Props) {
+  const handleWheel = (e: WheelEvent<HTMLDivElement>) => {
+    if (e.deltaY !== 0 && !e.deltaX) {
+      e.currentTarget.scrollLeft += e.deltaY
+    }
+  }
+
   return (
-    <div className="industry-bar">
+    <div className="industry-bar" onWheel={handleWheel}>
       <button
         type="button"
         className={`ind-chip ${current === "all" ? "on" : ""}`}

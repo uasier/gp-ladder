@@ -47,6 +47,7 @@ export function SettingsModal({
   const [tab, setTab] = useState<Tab>("crawl")
   const [maxPages, setMaxPages] = useState(0)
   const [apiKey, setApiKey] = useState("")
+  const [showKey, setShowKey] = useState(false)
   const [baseUrl, setBaseUrl] = useState("https://api.deepseek.com")
   const [model, setModel] = useState("deepseek-chat")
   const [analysisPrompt, setAnalysisPrompt] = useState(DEFAULT_ANALYSIS_PROMPT)
@@ -101,35 +102,57 @@ export function SettingsModal({
         onClick={(e) => e.stopPropagation()}
       >
         <header>
-          <h2>设置</h2>
+          <h2>软件与算法设置</h2>
           <button type="button" className="btn" onClick={onClose}>
             关闭
           </button>
         </header>
         <div className="settings-tabs">
-          <button type="button" className={tab === "crawl" ? "active" : ""} onClick={() => setTab("crawl")}>
-            抓取
+          <button
+            type="button"
+            className={tab === "crawl" ? "active" : ""}
+            onClick={() => setTab("crawl")}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+              <path d="M3 3v5h5" />
+              <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+              <path d="M16 16h5v5" />
+            </svg>
+            抓取配置
           </button>
           <button
             type="button"
             className={tab === "deepseek" ? "active" : ""}
             onClick={() => setTab("deepseek")}
           >
-            DeepSeek
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+            </svg>
+            DeepSeek AI
             {settings?.hasDeepseekKey ? " · 已配置" : ""}
           </button>
-          <button type="button" className={tab === "about" ? "active" : ""} onClick={() => setTab("about")}>
-            关于
-            {update?.available ? " · 有更新" : ""}
+          <button
+            type="button"
+            className={tab === "about" ? "active" : ""}
+            onClick={() => setTab("about")}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="16" x2="12" y2="12" />
+              <line x1="12" y1="8" x2="12.01" y2="8" />
+            </svg>
+            关于与更新
+            {update?.available ? " · 有新版本" : ""}
           </button>
         </div>
         {tab === "crawl" ? (
           <div className="settings-pane">
             <p className="muted tip">
-              抓取在软件内部完成：直接请求同花顺连涨榜和东方财富行情。快照保存在本机应用数据目录。
+              抓取直接在软件内部执行：高效并发请求同花顺连涨榜和东方财富实时盘口。快照保存在本机缓存中。
             </p>
             <label className="field">
-              <span>最多抓取页数（0 表示抓完全部）</span>
+              <span>最多抓取页数（0 表示全量翻页抓取全部标的）</span>
               <input
                 type="number"
                 min={0}
@@ -138,28 +161,38 @@ export function SettingsModal({
               />
             </label>
             <p className="resolved-hint muted">
-              {settings?.cachePath ? `快照：${settings.cachePath}` : ""}
+              {settings?.cachePath ? `快照缓存目录：${settings.cachePath}` : ""}
             </p>
           </div>
         ) : tab === "deepseek" ? (
           <div className="settings-pane">
             <p className="muted tip">
-              右键或长按股票可按短线视角（未来 1–5 个交易日）调用 DeepSeek 看盘，并给出短线评分。Key 只保存在本机设置文件。
-              分析提示词里的 <code>______</code> / <code>{"{name}"}</code> / <code>{"{code}"}</code> 会替换成标的；
-              评分提示词里的 <code>{"{analysis}"}</code> 会替换成分析正文。
+              右键或长按标的可按短线视角（未来 1–5 个交易日）调用 DeepSeek AI 分析行情动能与风险，并给出短线评分。API Key 仅保存在本机。
+              提示词里的 <code>______</code> / <code>{"{name}"}</code> / <code>{"{code}"}</code> 会自动替换成股票信息；
+              评分提示词里的 <code>{"{analysis}"}</code> 会自动替换为分析正文。
             </p>
             <label className="field">
-              <span>API Key</span>
-              <input
-                type="password"
-                autoComplete="off"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="sk-..."
-              />
+              <span>DeepSeek API Key</span>
+              <div className="field-inline">
+                <input
+                  type={showKey ? "text" : "password"}
+                  autoComplete="off"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="sk-..."
+                />
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => setShowKey(!showKey)}
+                  title={showKey ? "隐藏 Key" : "显示明文 Key"}
+                >
+                  {showKey ? "隐藏" : "显示"}
+                </button>
+              </div>
             </label>
             <label className="field">
-              <span>接口地址</span>
+              <span>接口地址 (Base URL)</span>
               <input
                 value={baseUrl}
                 onChange={(e) => setBaseUrl(e.target.value)}
@@ -167,7 +200,7 @@ export function SettingsModal({
               />
             </label>
             <label className="field">
-              <span>模型</span>
+              <span>模型名称 (Model)</span>
               <input
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
@@ -175,32 +208,34 @@ export function SettingsModal({
               />
             </label>
             <label className="field">
-              <span>分析提示词</span>
+              <span>短线分析提示词</span>
               <textarea
                 className="prompt-box"
-                rows={10}
+                rows={9}
                 value={analysisPrompt}
                 onChange={(e) => setAnalysisPrompt(e.target.value)}
               />
               <button
                 type="button"
                 className="btn"
+                style={{ alignSelf: "flex-start", marginTop: 4 }}
                 onClick={() => setAnalysisPrompt(DEFAULT_ANALYSIS_PROMPT)}
               >
                 恢复默认分析提示词
               </button>
             </label>
             <label className="field">
-              <span>AI 评分提示词</span>
+              <span>短线评分提示词</span>
               <textarea
                 className="prompt-box"
-                rows={8}
+                rows={7}
                 value={scorePrompt}
                 onChange={(e) => setScorePrompt(e.target.value)}
               />
               <button
                 type="button"
                 className="btn"
+                style={{ alignSelf: "flex-start", marginTop: 4 }}
                 onClick={() => setScorePrompt(DEFAULT_SCORE_PROMPT)}
               >
                 恢复默认评分提示词
@@ -210,9 +245,7 @@ export function SettingsModal({
         ) : (
           <div className="settings-pane">
             <p className="muted tip">
-              安装包由 GitHub Releases 发布。应用启动后会检查最新 tag；也可在此手动检查并下载当前系统对应的安装包（桌面为
-              dmg/exe，Android 为 APK）。macOS 若提示「文件已损坏」，不是安装包坏了，按 README
-              里的终端命令处理。
+              安装包由 GitHub Releases 发布。软件会在启动后检查最新 tag；也可在此手动检查并下载当前系统对应的安装包（桌面为 dmg/exe，Android 为 APK）。macOS 若提示「文件已损坏」，不是安装包坏了，按 README 里的终端命令处理。
             </p>
             <div className="about-grid">
               <div>
@@ -224,21 +257,21 @@ export function SettingsModal({
                 <strong>{update ? `v${latest}` : "尚未检查"}</strong>
               </div>
               <div>
-                <span className="muted">状态</span>
+                <span className="muted">检测状态</span>
                 <strong>
                   {updateChecking
                     ? "正在检查…"
                     : update?.available
-                      ? "有新版本"
+                      ? "发现新版本"
                       : update
-                        ? "已是最新"
+                        ? "已是最新版本"
                         : "—"}
                 </strong>
               </div>
             </div>
             {updateError ? <p className="resolved-hint warn">{updateError}</p> : null}
             {update?.assetName ? (
-              <p className="resolved-hint muted">安装包：{update.assetName}</p>
+              <p className="resolved-hint muted">安装包文件名：{update.assetName}</p>
             ) : null}
             <div className="about-actions">
               <button type="button" className="btn" disabled={updateChecking} onClick={onCheckUpdate}>
@@ -320,7 +353,7 @@ export function SettingsModal({
                 })
               }
             >
-              {saving ? "保存中…" : "保存"}
+              {saving ? "保存中…" : "保存设置"}
             </button>
           </footer>
         )}

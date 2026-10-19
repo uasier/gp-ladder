@@ -18,9 +18,11 @@ type Props = {
   item: StockRow | null
   rule: HighlightRule
   onClose: () => void
+  onAnalyze?: (item: StockRow) => void
+  analyzeLabel?: string
 }
 
-export function StockDrawer({ item, rule, onClose }: Props) {
+export function StockDrawer({ item, rule, onClose, onAnalyze, analyzeLabel = "AI 短线分析" }: Props) {
   const [copied, setCopied] = useState(false)
   if (!item) {
     return (
@@ -37,7 +39,7 @@ export function StockDrawer({ item, rule, onClose }: Props) {
   const hl = shouldHighlight(item, rule)
   const retail = getRetailIndex(item)
   const retailTrend =
-    retail === null ? "" : retail > 0 ? "(主力流出/散户追高)" : "(主力吸筹/散户离场)"
+    retail === null ? "" : retail > 0 ? "(主力流出 / 散户追高)" : "(主力吸筹 / 散户离场)"
   const code = item["股票代码"]
 
   async function copyCode() {
@@ -69,6 +71,7 @@ export function StockDrawer({ item, rule, onClose }: Props) {
     <>
       <div className="mask open" onClick={onClose} />
       <aside className="drawer open" aria-hidden="false">
+        <div className="drawer-handle" />
         <div className="drawer-header">
           <div>
             <div className="code-wrap">
@@ -77,7 +80,7 @@ export function StockDrawer({ item, rule, onClose }: Props) {
               </span>
             </div>
             <h2>{item["股票简称"]}</h2>
-            <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 4 }}>
+            <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 4, flexWrap: "wrap" }}>
               <span className="tag">{item["所属行业"] || "行业未知"}</span>
               <span
                 className="tag"
@@ -166,7 +169,7 @@ export function StockDrawer({ item, rule, onClose }: Props) {
                   <span>封板资金</span>
                   <b>{item["封板资金"] || "--"}</b>
                 </div>
-                <div className="kv-item">
+                <div className="kv-item" style={{ gridColumn: "1 / -1" }}>
                   <span>涨停统计</span>
                   <b>{item["涨停统计"] || "--"}</b>
                 </div>
@@ -182,7 +185,7 @@ export function StockDrawer({ item, rule, onClose }: Props) {
                   <span>昨日封板</span>
                   <b>{item["昨日封板"] || "--"}</b>
                 </div>
-                <div className="kv-item">
+                <div className="kv-item" style={{ gridColumn: "1 / -1" }}>
                   <span>昨日连板</span>
                   <b>{item["昨日连板"] || item["连板天数"] || "--"}</b>
                 </div>
@@ -217,15 +220,48 @@ export function StockDrawer({ item, rule, onClose }: Props) {
           </div>
         </div>
         <div className="acts">
-          <button type="button" className="primary" onClick={() => void openQuote()}>
+          <button type="button" className="primary" onClick={() => void openQuote()} title="在东财网页查看该标的分时K线行情">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+              <polyline points="15 3 21 3 21 9" />
+              <line x1="10" y1="14" x2="21" y2="3" />
+            </svg>
             打开东财行情
           </button>
-          <button type="button" onClick={() => void copyCode()}>
-            {copied ? "✓ 已复制" : "复制代码"}
+          {onAnalyze ? (
+            <button
+              type="button"
+              className="analyze-act-btn"
+              onClick={() => onAnalyze(item)}
+              title="使用 DeepSeek AI 对该标的进行短线多维度分析"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+              </svg>
+              {analyzeLabel}
+            </button>
+          ) : null}
+          <button type="button" onClick={() => void copyCode()} title="复制股票代码到剪贴板">
+            {copied ? (
+              <>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                已复制
+              </>
+            ) : (
+              <>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                </svg>
+                复制代码
+              </>
+            )}
           </button>
         </div>
         <div className="hint">
-          {isPhoneUi() ? "点遮罩关闭详情；长按卡片可做短线分析" : "按 Esc 键或点击外部遮罩退出详情"}
+          {isPhoneUi() ? "点遮罩关闭详情；可点击 AI 分析或在东财查看盘口" : "按 Esc 键或点击外部遮罩退出详情"}
         </div>
       </aside>
     </>

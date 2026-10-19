@@ -38,7 +38,22 @@ export function FilterBar({
           value={filters.keyword}
           onChange={(e) => onChange({ keyword: e.target.value })}
         />
-        <span className="search-kbd">/ 聚焦</span>
+        {filters.keyword ? (
+          <button
+            type="button"
+            className="search-clear-btn"
+            onClick={() => {
+              onChange({ keyword: "" })
+              keywordRef.current?.focus()
+            }}
+            title="清空搜索"
+            aria-label="清空搜索"
+          >
+            ✕
+          </button>
+        ) : (
+          <span className="search-kbd">/ 聚焦</span>
+        )}
       </div>
       <select value={filters.industry} onChange={(e) => onChange({ industry: e.target.value })}>
         <option value="all">全部行业</option>
@@ -52,7 +67,7 @@ export function FilterBar({
         value={filters.sort}
         onChange={(e) => onChange({ sort: e.target.value as SortKey })}
       >
-        <option value="days">连涨天数（高→低）</option>
+        <option value="days">连涨天数 / 连板（高→低）</option>
         <option value="pct">累计涨跌幅（高→低）</option>
         <option value="todayPct">今日涨跌幅（高→低）</option>
         <option value="avgPct">平均涨幅/天（高→低）</option>
@@ -61,25 +76,45 @@ export function FilterBar({
         <option value="price">现价（高→低）</option>
         <option value="close">收盘价（高→低）</option>
       </select>
-      <div className="seg">
+      <div className="seg" role="group" aria-label="视图模式">
         <button
           type="button"
           className={filters.viewMode === "cards" ? "on" : ""}
           onClick={() => onChange({ viewMode: "cards" as ViewMode })}
+          title="卡片视图 (按 1)"
         >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+            <rect x="3" y="3" width="7" height="7" rx="1.5" />
+            <rect x="14" y="3" width="7" height="7" rx="1.5" />
+            <rect x="14" y="14" width="7" height="7" rx="1.5" />
+            <rect x="3" y="14" width="7" height="7" rx="1.5" />
+          </svg>
           卡片
         </button>
         <button
           type="button"
           className={filters.viewMode === "list" ? "on" : ""}
           onClick={() => onChange({ viewMode: "list" as ViewMode })}
+          title="列表视图 (按 2)"
         >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+            <line x1="8" y1="6" x2="21" y2="6" />
+            <line x1="8" y1="12" x2="21" y2="12" />
+            <line x1="8" y1="18" x2="21" y2="18" />
+            <circle cx="4" cy="6" r="1.5" fill="currentColor" />
+            <circle cx="4" cy="12" r="1.5" fill="currentColor" />
+            <circle cx="4" cy="18" r="1.5" fill="currentColor" />
+          </svg>
           列表
         </button>
       </div>
       {showReset ? (
-        <button type="button" className="btn-reset-filter show" onClick={onReset}>
-          重置
+        <button type="button" className="btn-reset-filter show" onClick={onReset} title="重置当前所有筛选条件">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+            <path d="M3 3v5h5" />
+          </svg>
+          重置筛选
         </button>
       ) : null}
       <div className="count">

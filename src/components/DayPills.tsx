@@ -1,3 +1,5 @@
+import type { WheelEvent } from "react"
+
 type Props = {
   days: number[]
   counts: Record<number, number>
@@ -17,8 +19,14 @@ export function DayPills({
   allLabel = "全部天数",
   onSelect,
 }: Props) {
+  const handleWheel = (e: WheelEvent<HTMLDivElement>) => {
+    if (e.deltaY !== 0 && !e.deltaX) {
+      e.currentTarget.scrollLeft += e.deltaY
+    }
+  }
+
   return (
-    <div className="days">
+    <div className="days" onWheel={handleWheel}>
       <button
         type="button"
         className={`day-chip ${exactDay === null ? "on" : ""}`}
@@ -32,7 +40,9 @@ export function DayPills({
           type="button"
           className={`day-chip ${day >= 4 ? "top-tier" : ""} ${exactDay === day ? "on" : ""}`}
           onClick={() => onSelect(day)}
+          title={day >= 4 ? `高位龙头梯队 (${day}${unit})` : `${day}${unit}`}
         >
+          {day >= 4 ? <span style={{ marginRight: 1 }}>🔥</span> : null}
           {day} {unit} <span className="badge-count">{counts[day] || 0}</span>
         </button>
       ))}

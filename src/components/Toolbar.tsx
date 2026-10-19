@@ -34,46 +34,53 @@ export function Toolbar({
   return (
     <header className="top-nav">
       <div className="brand-section">
-        <div className="brand-badge">
-          <svg viewBox="0 0 24 24">
-            <path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z" />
+        <div className="brand-badge" title="连涨天梯 工作台">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+            <polyline points="16 7 22 7 22 13" />
           </svg>
         </div>
         <div className="brand-title-wrap">
-          <h1>
-            {board === "zt" ? "涨停天梯" : board === "jjzt" ? "昨日涨停" : "连涨天梯"}
-          </h1>
+          <div className="brand-header-row">
+            <h1>{board === "zt" ? "涨停天梯" : board === "jjzt" ? "昨日涨停" : "连涨天梯"}</h1>
+            {settings?.version ? <span className="version-pill">v{settings.version}</span> : null}
+          </div>
           <div className="brand-desc">
             {board === "zt"
               ? "A股涨停连板梯队 · 东方财富涨停池"
               : board === "jjzt"
                 ? "昨天涨停 · 今日竞价后红盘 2%–8%"
                 : "A股同花顺强势连涨动能追踪仪表盘"}
-            {settings?.version ? ` · v${settings.version}` : ""}
           </div>
-          <div className="board-tabs">
-            <button
-              type="button"
-              className={board === "lxsz" ? "on" : ""}
-              onClick={() => onBoardChange("lxsz")}
-            >
-              连涨
-            </button>
-            <button
-              type="button"
-              className={board === "zt" ? "on" : ""}
-              onClick={() => onBoardChange("zt")}
-            >
-              涨停
-            </button>
-            <button
-              type="button"
-              className={board === "jjzt" ? "on" : ""}
-              onClick={() => onBoardChange("jjzt")}
-            >
-              昨涨
-            </button>
-          </div>
+        </div>
+        <div className="board-tabs" role="tablist" aria-label="行情榜单切换">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={board === "lxsz"}
+            className={board === "lxsz" ? "on" : ""}
+            onClick={() => onBoardChange("lxsz")}
+          >
+            连涨
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={board === "zt"}
+            className={board === "zt" ? "on" : ""}
+            onClick={() => onBoardChange("zt")}
+          >
+            涨停
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={board === "jjzt"}
+            className={board === "jjzt" ? "on" : ""}
+            onClick={() => onBoardChange("jjzt")}
+          >
+            昨涨
+          </button>
         </div>
       </div>
       <div className="nav-actions">
@@ -87,11 +94,14 @@ export function Toolbar({
               : "抓取内置；右键或长按分析前请在设置中填写 DeepSeek API Key"
           }
         >
-          <span>内置引擎</span>
-          <span className="muted">
-            {settings?.hasDeepseekKey ? "DeepSeek 已配置" : "DeepSeek 未配置"}
-            {settings?.maxPages ? ` · 最多 ${settings.maxPages} 页` : " · 全量翻页"}
-          </span>
+          <span className="status-dot" aria-hidden="true" />
+          <div className="chip-content">
+            <span className="chip-title">内置引擎</span>
+            <span className="chip-sub">
+              {settings?.hasDeepseekKey ? "DeepSeek 已配置" : "DeepSeek 未配置"}
+              {settings?.maxPages ? ` · 最多 ${settings.maxPages} 页` : " · 全量翻页"}
+            </span>
+          </div>
         </button>
         <div className="refresh-panel">
           <div className="refresh-meta">
@@ -99,29 +109,38 @@ export function Toolbar({
             <time>{updatedAt || "尚未刷新"}</time>
           </div>
           {refreshing ? (
-            <button type="button" className="refresh-btn is-loading" onClick={onCancel}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M18 6 6 18M6 6l12 12" />
+            <button type="button" className="refresh-btn is-loading" onClick={onCancel} title="停止抓取">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
               </svg>
-              <span className="refresh-btn-label">停止</span>
+              <span>停止</span>
             </button>
           ) : (
             <button
               type="button"
               className="refresh-btn"
               onClick={onRefresh}
-              title="在软件内重新抓取同花顺榜单和东方财富实时行情"
+              title="重新抓取榜单和东方财富实时行情"
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 5v4h4" />
-                <path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4" />
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+                <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                <path d="M3 3v5h5" />
+                <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+                <path d="M16 16h5v5" />
               </svg>
-              <span className="refresh-btn-label">刷新实时数据</span>
+              <span>刷新实时数据</span>
             </button>
           )}
         </div>
-        <label className="export-wrap">
-          <span className="sr-only">导出</span>
+        <div className="export-select-wrap">
+          <span className="export-icon-prefix">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+          </span>
           <select
             className="export-select"
             value=""
@@ -130,31 +149,45 @@ export function Toolbar({
               e.target.value = ""
               if (v) onExport(v)
             }}
+            title="导出当前榜单数据"
           >
             <option value="" disabled>
-              导出
+              导出数据
             </option>
-            <option value="html">HTML 天梯页</option>
-            <option value="csv">CSV</option>
-            <option value="json">JSON</option>
+            <option value="html">HTML 天梯单页</option>
+            <option value="csv">CSV 表格</option>
+            <option value="json">JSON 数据</option>
           </select>
-        </label>
+          <svg className="export-select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </div>
         {update?.available ? (
           <button type="button" className="btn update-chip" onClick={onOpenAbout} title="发现新版本">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
             有更新 v{update.latestVersion}
           </button>
         ) : null}
-        <button type="button" className="btn" onClick={onOpenSettings}>
+        <button type="button" className="btn" onClick={onOpenSettings} title="打开设置面板">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
           设置
         </button>
         <button
           type="button"
           className="theme-toggle-btn"
           onClick={onToggleTheme}
-          title="切换深色/浅色主题"
+          title={theme === "dark" ? "切换为浅色模式" : "切换为深色模式"}
+          aria-label="切换深浅主题"
         >
           {theme === "dark" ? (
-            <svg viewBox="0 0 24 24">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <circle cx="12" cy="12" r="5" />
               <line x1="12" y1="1" x2="12" y2="3" />
               <line x1="12" y1="21" x2="12" y2="23" />
@@ -166,7 +199,7 @@ export function Toolbar({
               <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
             </svg>
           ) : (
-            <svg viewBox="0 0 24 24">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
             </svg>
           )}
@@ -175,5 +208,3 @@ export function Toolbar({
     </header>
   )
 }
-
-

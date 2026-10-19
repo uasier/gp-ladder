@@ -16,7 +16,7 @@ const PRICE_CHIPS = [
 export function QuickChips({ filters, onChange }: Props) {
   return (
     <div className="quick">
-      <span className="quick-title">快捷筛选：</span>
+      <span className="quick-title">快捷精选：</span>
       <button
         type="button"
         className={`chip ${filters.excludeSt ? "on" : ""}`}
@@ -48,11 +48,21 @@ export function QuickChips({ filters, onChange }: Props) {
       <button
         type="button"
         className={`chip ${filters.nearDayHigh ? "on" : ""}`}
-        title="现价与今高相差不超过 0.5%"
+        title="现价与今日最高相差不超过 0.5%"
         onClick={() => onChange({ nearDayHigh: !filters.nearDayHigh })}
       >
-        现价近最高
+        现价近最高 ⚡️
       </button>
+      <span
+        style={{
+          width: 1,
+          height: 14,
+          background: "var(--border-strong)",
+          margin: "0 2px",
+          alignSelf: "center",
+        }}
+        aria-hidden="true"
+      />
       {PRICE_CHIPS.map((chip) => (
         <button
           key={chip.value}

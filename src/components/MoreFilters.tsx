@@ -1,4 +1,4 @@
-import type { FilterState, HighlightRule } from "../types"
+import { DEFAULT_HIGHLIGHT, type FilterState, type HighlightRule } from "../types"
 import { toNullableNumber } from "../stock"
 
 type Props = {
@@ -26,6 +26,37 @@ function numInput(
 }
 
 export function MoreFilters({ filters, rule, onChange, onRuleChange }: Props) {
+  const activeCount = [
+    filters.pctRange !== "all",
+    filters.turnoverRange !== "all",
+    filters.pctTotalMin != null || filters.pctTotalMax != null,
+    filters.todayPctMin != null || filters.todayPctMax != null,
+    filters.priceRange !== "all",
+    filters.priceMin != null || filters.priceMax != null,
+    filters.turnTotalMin != null || filters.turnTotalMax != null,
+    filters.retailRange !== "all",
+    filters.retailMin != null || filters.retailMax != null,
+  ].filter(Boolean).length
+
+  function resetMoreFilters() {
+    onChange({
+      pctRange: "all",
+      turnoverRange: "all",
+      pctTotalMin: null,
+      pctTotalMax: null,
+      todayPctMin: null,
+      todayPctMax: null,
+      priceRange: "all",
+      priceMin: null,
+      priceMax: null,
+      turnTotalMin: null,
+      turnTotalMax: null,
+      retailRange: "all",
+      retailMin: null,
+      retailMax: null,
+    })
+  }
+
   return (
     <details className="more-filters">
       <summary>
@@ -33,11 +64,18 @@ export function MoreFilters({ filters, rule, onChange, onRuleChange }: Props) {
           <svg className="summary-arrow" viewBox="0 0 24 24">
             <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
           </svg>
-          <span>更多筛选与精选条件</span>
+          <span>更多高级筛选与精选条件</span>
+          {activeCount > 0 ? (
+            <span className="badge" style={{ fontSize: 11, padding: "1px 7px" }}>
+              {activeCount} 项已生效
+            </span>
+          ) : null}
         </div>
-        <span style={{ fontSize: 11, color: "var(--muted)", fontWeight: "normal" }}>
-          自定义涨跌幅、换手率与主力散户模型
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 11.5, color: "var(--muted)", fontWeight: "normal" }}>
+            涨跌幅、换手率区间与主力散户模型
+          </span>
+        </div>
       </summary>
       <section className="filters">
         <div className="filter-item">
@@ -127,38 +165,63 @@ export function MoreFilters({ filters, rule, onChange, onRuleChange }: Props) {
           </div>
         </div>
         <div className="filter-item filter-wide">
-          <label>精选条件</label>
-          <div className="filter-range" style={{ marginTop: 6 }}>
-            <span>散户指数 &lt;</span>
-            <input
-              type="number"
-              step="0.1"
-              value={rule.retailMax}
-              onChange={(e) => onRuleChange({ retailMax: Number(e.target.value) })}
-            />
-            <span>%</span>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <label style={{ fontWeight: 650, color: "var(--text)" }}>⭐️ 精选判定规则</label>
+            <button
+              type="button"
+              className="btn"
+              style={{ padding: "2px 8px", fontSize: 11 }}
+              onClick={() => onRuleChange(DEFAULT_HIGHLIGHT)}
+              title="恢复为系统推荐的精选阈值"
+            >
+              恢复默认规则
+            </button>
           </div>
-          <div className="filter-range" style={{ marginTop: 8 }}>
-            <span>当日换手率 &lt;</span>
-            <input
-              type="number"
-              step="0.1"
-              value={rule.todayTurnoverMax}
-              onChange={(e) => onRuleChange({ todayTurnoverMax: Number(e.target.value) })}
-            />
-            <span>%</span>
-          </div>
-          <div className="filter-range" style={{ marginTop: 8 }}>
-            <span>平均日涨幅 &gt;</span>
-            <input
-              type="number"
-              step="0.1"
-              value={rule.avgPctMin}
-              onChange={(e) => onRuleChange({ avgPctMin: Number(e.target.value) })}
-            />
-            <span>%</span>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10, marginTop: 8 }}>
+            <div className="filter-range">
+              <span>散户指数 &lt;</span>
+              <input
+                type="number"
+                step="0.1"
+                value={rule.retailMax}
+                onChange={(e) => onRuleChange({ retailMax: Number(e.target.value) })}
+              />
+              <span>%</span>
+            </div>
+            <div className="filter-range">
+              <span>当日换手率 &lt;</span>
+              <input
+                type="number"
+                step="0.1"
+                value={rule.todayTurnoverMax}
+                onChange={(e) => onRuleChange({ todayTurnoverMax: Number(e.target.value) })}
+              />
+              <span>%</span>
+            </div>
+            <div className="filter-range">
+              <span>平均日涨幅 &gt;</span>
+              <input
+                type="number"
+                step="0.1"
+                value={rule.avgPctMin}
+                onChange={(e) => onRuleChange({ avgPctMin: Number(e.target.value) })}
+              />
+              <span>%</span>
+            </div>
           </div>
         </div>
+        {activeCount > 0 ? (
+          <div style={{ gridColumn: "1 / -1", display: "flex", justifyContent: "flex-end", marginTop: 4 }}>
+            <button
+              type="button"
+              className="btn danger"
+              style={{ fontSize: 12, padding: "4px 10px" }}
+              onClick={resetMoreFilters}
+            >
+              重置上述高级筛选
+            </button>
+          </div>
+        ) : null}
       </section>
     </details>
   )

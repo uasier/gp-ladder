@@ -77,6 +77,7 @@ export function Ladder({
               <th className="num">散户指数</th>
               <th className="num">今日换手</th>
               <th>所属行业</th>
+              <th style={{ width: 44, textAlign: "center" }}>操作</th>
             </tr>
           </thead>
           <tbody>
@@ -198,6 +199,24 @@ function StockTableRow({
           {item["所属行业"] || ""}
         </span>
       </td>
+      <td style={{ textAlign: "center" }}>
+        <button
+          type="button"
+          className="card-more-btn"
+          title="更多操作 / AI 短线分析"
+          onClick={(e) => {
+            e.stopPropagation()
+            const rect = e.currentTarget.getBoundingClientRect()
+            onContextStock(item, rect.left, rect.bottom + 4)
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="12" cy="5" r="2" />
+            <circle cx="12" cy="12" r="2" />
+            <circle cx="12" cy="19" r="2" />
+          </svg>
+        </button>
+      </td>
     </tr>
   )
 }
@@ -226,9 +245,17 @@ function StockCard({
   const retailIcon = retail === null ? "" : retail > 0 ? "▲ 净流入" : "▼ 净流出"
   const press = useLongPress((x, y) => onContextStock(item, x, y))
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       className={`stock-card${hl ? " highlight" : ""}${active ? " active" : ""}`}
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault()
+          onSelect(item["股票代码"])
+        }
+      }}
       onPointerDown={press.onPointerDown}
       onPointerMove={press.onPointerMove}
       onPointerUp={press.onPointerUp}
@@ -250,7 +277,25 @@ function StockCard({
           </div>
           <div className="name">{item["股票简称"]}</div>
         </div>
-        {hl ? <span className="badge">⭐️ 精选</span> : null}
+        <div className="card-top-right">
+          {hl ? <span className="badge">⭐️ 精选</span> : null}
+          <button
+            type="button"
+            className="card-more-btn"
+            title="更多操作 / AI 短线分析"
+            onClick={(e) => {
+              e.stopPropagation()
+              const rect = e.currentTarget.getBoundingClientRect()
+              onContextStock(item, rect.left, rect.bottom + 4)
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <circle cx="12" cy="5" r="2" />
+              <circle cx="12" cy="12" r="2" />
+              <circle cx="12" cy="19" r="2" />
+            </svg>
+          </button>
+        </div>
       </div>
       <div className="card-main-stat">
         <span className="pct-label">
@@ -276,7 +321,25 @@ function StockCard({
         <span className={`tag ${retailClass}`}>
           散户 {item["散户指数"] || "--"} {retailIcon}
         </span>
+        {board === "zt" && item["首次封板"] ? (
+          <span className="tag" style={{ color: "var(--gold)", borderColor: "var(--gold-border)" }}>
+            首封 {item["首次封板"].length > 5 ? item["首次封板"].slice(0, 5) : item["首次封板"]}
+          </span>
+        ) : null}
+        {board === "zt" && item["炸板次数"] && item["炸板次数"] !== "0" ? (
+          <span className="tag" style={{ color: "var(--up)", borderColor: "var(--up-border)" }}>
+            炸 {item["炸板次数"]} 次
+          </span>
+        ) : null}
+        {board === "jjzt" && item["今开涨幅"] ? (
+          <span className="tag" style={{ color: "var(--gold)", borderColor: "var(--gold-border)" }}>
+            今开 {item["今开涨幅"]}
+          </span>
+        ) : null}
+        {board === "lxsz" && item["今日换手率"] ? (
+          <span className="tag">换手 {item["今日换手率"]}</span>
+        ) : null}
       </div>
-    </button>
+    </div>
   )
 }

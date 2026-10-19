@@ -18,6 +18,7 @@ src-tauri/target/
 # Android 本地构建（工程源码 src-tauri/gen/android 需入库）
 src-tauri/gen/android/local.properties
 src-tauri/gen/android/.gradle/
+src-tauri/gen/android/**/.kotlin/
 src-tauri/gen/android/.idea/
 src-tauri/gen/android/**/build/
 src-tauri/gen/android/app/src/main/assets/
