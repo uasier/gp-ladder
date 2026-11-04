@@ -1,7 +1,53 @@
 {
-  "latest": "v0.2.5",
-  "updatedAt": "2026-10-19T13:29:10.417Z",
+  "latest": "v0.2.6",
+  "updatedAt": "2026-11-04T02:50:50.717Z",
   "releases": [
+    {
+      "tag_name": "v0.2.6",
+      "name": "连涨天梯 v0.2.6",
+      "body": "# 连涨天梯 v0.2.6\n\n## 自选池\n\n- 新增独立页面「自选池」。可从榜单星标、右键菜单、个股详情加入，也可在页面里手动填写代码。\n- 记录自选日期、自选价格和自选原因。同一只股票不会重复加入，之后可以编辑日期、价格和原因。\n- 支持搜索，以及按自选日期、自选价格、自选以来涨跌、今日涨跌、名称和原因排序。\n- 移除前需要再次确认。刷新现价只更新当前行情，不会改写当时记下的自选价格。\n- 记录保存在本机应用目录的 `watchlist.json`，不会上传。卸载应用或清除数据会一并删除。\n\n## 安装包\n\n- macOS Apple Silicon：`gp-ladder_0.2.6_aarch64.dmg`\n- macOS Intel：`gp-ladder_0.2.6_x64.dmg`\n- Windows 64 位：`gp-ladder_0.2.6_x64-setup.exe`\n- Android ARM64：`gp-ladder_0.2.6_aarch64.apk`\n\n官网下载：https://gp.uasier.com/\n\n应用内「设置 → 关于」可检查更新并下载当前系统的安装包。\n\nmacOS 安装包已做临时签名，尚未 Apple 公证。如系统提示「文件已损坏」，将 App 拖到「应用程序」后，在终端执行：\n\n```bash\nxattr -cr /Applications/连涨天梯.app\ncodesign --force --deep --sign - /Applications/连涨天梯.app\nopen /Applications/连涨天梯.app\n```\n\nWindows 如遇 SmartScreen，选择「仍要运行」。Android 需允许安装未知来源；当前 APK 使用构建时生成的测试签名，覆盖安装旧版可能提示签名冲突。遇到该情况需先卸载旧版；卸载会清除应用设置、自选记录和本地缓存，请提前保留需要的配置。\n\n完整变更：https://github.com/uasier/gp-ladder/compare/v0.2.5...v0.2.6\n",
+      "published_at": "2026-11-04T02:14:49Z",
+      "prerelease": false,
+      "html_url": "https://github.com/uasier/gp-ladder/releases/tag/v0.2.6",
+      "assets": [
+        {
+          "name": "gp-ladder_0.2.6_aarch64.apk",
+          "browser_download_url": "https://github.com/uasier/gp-ladder/releases/download/v0.2.6/gp-ladder_0.2.6_aarch64.apk",
+          "size": 21178634,
+          "digest": "sha256:0ffa1aa7d264b104d754a1dfcb4a5424d9aad2a0fc16878835fb8f0625be4908"
+        },
+        {
+          "name": "gp-ladder_0.2.6_aarch64.app.tar.gz",
+          "browser_download_url": "https://github.com/uasier/gp-ladder/releases/download/v0.2.6/gp-ladder_0.2.6_aarch64.app.tar.gz",
+          "size": 6123221,
+          "digest": "sha256:e95739107bd6e61ca8066783c01a9ca6bd44fc329f64412b20ddfa33f64475df"
+        },
+        {
+          "name": "gp-ladder_0.2.6_aarch64.dmg",
+          "browser_download_url": "https://github.com/uasier/gp-ladder/releases/download/v0.2.6/gp-ladder_0.2.6_aarch64.dmg",
+          "size": 6638654,
+          "digest": "sha256:04e4ecb3269593dbb4ed97164292f44aadca85ed5c4e0895474d6ac0372156c7"
+        },
+        {
+          "name": "gp-ladder_0.2.6_x64-setup.exe",
+          "browser_download_url": "https://github.com/uasier/gp-ladder/releases/download/v0.2.6/gp-ladder_0.2.6_x64-setup.exe",
+          "size": 4131042,
+          "digest": "sha256:6fe715704e00256f45e47751c656f8e767573a6d827f218707fa8e876cd0eb23"
+        },
+        {
+          "name": "gp-ladder_0.2.6_x64.app.tar.gz",
+          "browser_download_url": "https://github.com/uasier/gp-ladder/releases/download/v0.2.6/gp-ladder_0.2.6_x64.app.tar.gz",
+          "size": 6537375,
+          "digest": "sha256:c66e65ee4307db3cce592bd08b93613d2d6ac44ffb1c01769fab240f10367b7c"
+        },
+        {
+          "name": "gp-ladder_0.2.6_x64.dmg",
+          "browser_download_url": "https://github.com/uasier/gp-ladder/releases/download/v0.2.6/gp-ladder_0.2.6_x64.dmg",
+          "size": 7044369,
+          "digest": "sha256:414e2484d7e19e5afa1f7a2e070bcbb188afa7ba59d227fe93f3b74ccefc651d"
+        }
+      ]
+    },
     {
       "tag_name": "v0.2.5",
       "name": "连涨天梯 v0.2.5",
