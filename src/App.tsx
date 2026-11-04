@@ -2,6 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   analyzeStock,
   pickStocks,
+  addWatchlist,
+  getWatchlist,
+  refreshWatchlistQuotes,
+  removeWatchlist,
+  updateWatchlist,
   cancelRefresh,
   checkUpdate,
   exportSnapshot,
@@ -33,6 +38,8 @@ import { StockContextMenu } from "./components/StockContextMenu"
 import { StockDrawer } from "./components/StockDrawer"
 import { StockPickModal } from "./components/StockPickModal"
 import { Toolbar } from "./components/Toolbar"
+import { WatchlistEditor } from "./components/WatchlistEditor"
+import { WatchlistPage } from "./components/WatchlistPage"
 import { UpdateBanner } from "./components/UpdateBanner"
 import { downloadText, rowsToCsv, rowsToJson, timestampName } from "./files"
 import { isMobileApp } from "./platform"
@@ -44,6 +51,7 @@ import {
   filterAndSort,
   filtersWithoutFacet,
   hasActiveFilters,
+  normalizeStockCode,
   topIndustries,
 } from "./stock"
 import {
@@ -54,6 +62,7 @@ import {
   type FilterState,
   type AnalyzeResult,
   type HighlightRule,
+  type AppPage,
   type BoardKind,
   type SettingsView,
   type Snapshot,
@@ -62,6 +71,19 @@ import {
   type StockPickResult,
   type UpdateCheck,
 } from "./types"
+import {
+  blankDraft,
+  draftFromStock,
+  draftToInput,
+  entryToDraft,
+  isWatchCode,
+  newestQuoteAt,
+  validateWatchDraft,
+  watchEntryToRow,
+  type WatchDraft,
+  type WatchEntry,
+  type WatchQuote,
+} from "./watchlist"
 
 type BannerState = {
   text: string
@@ -82,6 +104,7 @@ function preferredTheme(): "dark" | "light" {
 
 export default function App() {
   const [theme, setTheme] = useState<"dark" | "light">(preferredTheme)
+  const [page, setPage] = useState<AppPage>("lxsz")
   const [board, setBoard] = useState<BoardKind>("lxsz")
   const [snapshot, setSnapshot] = useState<Snapshot>(EMPTY_SNAPSHOT)
   const [snapshotBoard, setSnapshotBoard] = useState<BoardKind>("lxsz")
@@ -174,6 +197,21 @@ export default function App() {
   const bannerTimer = useRef<number | null>(null)
   const boardRef = useRef(board)
   boardRef.current = board
+  const pageRef = useRef(page)
+  pageRef.current = page
+  const [watchlist, setWatchlist] = useState<WatchEntry[]>([])
+  const [watchLoaded, setWatchLoaded] = useState(false)
+  const [watchError, setWatchError] = useState<string | null>(null)
+  const [watchQuotes, setWatchQuotes] = useState<Record<string, WatchQuote>>({})
+  const [quoteRefreshing, setQuoteRefreshing] = useState(false)
+  const [quoteError, setQuoteError] = useState<string | null>(null)
+  const [watchEditor, setWatchEditor] = useState<{ mode: "add" | "edit"; draft: WatchDraft } | null>(null)
+  const [watchEditorSession, setWatchEditorSession] = useState(0)
+  const [watchSaving, setWatchSaving] = useState(false)
+  const [watchEditorError, setWatchEditorError] = useState<string | null>(null)
+  const [watchSelectedCode, setWatchSelectedCode] = useState<string | null>(null)
+  const quoteBusy = useRef(false)
+  const watchedCodes = useMemo(() => new Set(watchlist.map((item) => item.code)), [watchlist])
 
   const filtered = useMemo(
     () => filterAndSort(snapshot.rows, filters, rule),
@@ -207,6 +245,18 @@ export default function App() {
     () => snapshot.rows.find((row) => row["股票代码"] === selectedCode) ?? null,
     [snapshot.rows, selectedCode],
   )
+  const watchSelectedEntry = useMemo(
+    () => watchlist.find((item) => item.code === watchSelectedCode) ?? null,
+    [watchlist, watchSelectedCode],
+  )
+  const watchSelected = useMemo(
+    () => (watchSelectedEntry ? watchEntryToRow(watchSelectedEntry, watchQuotes[watchSelectedEntry.code]) : null),
+    [watchSelectedEntry, watchQuotes],
+  )
+  const drawerItem = page === "watch" ? watchSelected : selected
+  const drawerCode = normalizeStockCode(drawerItem?.["股票代码"])
+  const drawerWatch = watchlist.find((item) => item.code === drawerCode) ?? null
+  const quoteUpdatedAt = newestQuoteAt(Object.values(watchQuotes))
 
   const showBanner = useCallback((text: string, tone: BannerState["tone"], reason?: BannerState["reason"]) => {
     if (bannerTimer.current != null) window.clearTimeout(bannerTimer.current)
@@ -214,6 +264,43 @@ export default function App() {
     if (tone === "success") {
       bannerTimer.current = window.setTimeout(() => setBanner({ text: "", tone: null }), 1800)
     }
+  }, [])
+
+  const loadWatchlist = useCallback(async () => {
+    try {
+      const view = await getWatchlist()
+      setWatchlist(view.items)
+      setWatchError(null)
+    } catch (error) {
+      setWatchError(String(error))
+    } finally {
+      setWatchLoaded(true)
+    }
+  }, [])
+
+  const refreshWatchQuotes = useCallback(async (notify = false) => {
+    if (quoteBusy.current) return
+    quoteBusy.current = true
+    setQuoteRefreshing(true)
+    setQuoteError(null)
+    try {
+      const rows = await refreshWatchlistQuotes()
+      const next: Record<string, WatchQuote> = {}
+      for (const row of rows) next[row.code] = row
+      setWatchQuotes(next)
+    } catch (error) {
+      const message = String(error)
+      setQuoteError(message)
+      if (notify) showBanner(message, "error")
+    } finally {
+      quoteBusy.current = false
+      setQuoteRefreshing(false)
+    }
+  }, [showBanner])
+
+  const lookupWatchQuote = useCallback(async (code: string) => {
+    const rows = await refreshWatchlistQuotes([code])
+    return rows.find((row) => row.code === code) ?? null
   }, [])
 
   useEffect(() => {
@@ -285,15 +372,23 @@ export default function App() {
   }, [theme])
 
   useEffect(() => {
-    applyDocumentSeo(board)
-  }, [board])
+    applyDocumentSeo(page)
+  }, [page])
+
+  useEffect(() => {
+    if (page !== "watch" || !watchLoaded || watchlist.length === 0) return
+    void refreshWatchQuotes(false)
+  }, [page, watchLoaded, watchlist.length, refreshWatchQuotes])
 
   useEffect(() => {
     let cancelled = false
     ;(async () => {
       try {
         await loadSettings()
-        if (!cancelled) await loadSnapshot("lxsz")
+        if (!cancelled) {
+          await loadSnapshot("lxsz")
+          void loadWatchlist()
+        }
         if (cancelled) return
         const last = Number(localStorage.getItem(UPDATE_CHECKED_KEY) || 0)
         const stale = !last || Date.now() - last > UPDATE_CHECK_EVERY_MS
@@ -305,7 +400,7 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [loadSettings, loadSnapshot, runUpdateCheck])
+  }, [loadSettings, loadSnapshot, loadWatchlist, runUpdateCheck])
 
   useEffect(() => {
     const unlisten = onRefreshEvent(async (event) => {
@@ -340,6 +435,8 @@ export default function App() {
         setAnalyzeOpen(false)
         setPickOpen(false)
         setSelectedCode(null)
+        setWatchSelectedCode(null)
+        if (!watchSaving) setWatchEditor(null)
         return
       }
       if (typing) return
@@ -361,7 +458,7 @@ export default function App() {
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [board, refreshing, setFilters])
+  }, [board, page, refreshing, quoteRefreshing, watchSaving, setFilters])
 
   async function pollUntilSettled() {
     const started = await getRefreshSnapshot()
@@ -393,7 +490,85 @@ export default function App() {
     showBanner("刷新超时，请稍后重试", "error")
   }
 
+  function openPage(next: AppPage) {
+    if (next === page) return
+    setPage(next)
+    setSelectedCode(null)
+    setWatchSelectedCode(null)
+    setMenu(null)
+    setMoreFiltersOpen(false)
+    if (next === "watch" || next === board) return
+    boardRef.current = next
+    setBoard(next)
+    void loadSnapshot(next).catch((error) => showBanner(String(error), "error"))
+  }
+
+  function openWatchEditor(next: { mode: "add" | "edit"; draft: WatchDraft }) {
+    setWatchEditorError(null)
+    setWatchEditorSession((value) => value + 1)
+    setWatchEditor(next)
+    setMenu(null)
+  }
+
+  function openWatchFromStock(item: StockRow) {
+    const code = normalizeStockCode(item["股票代码"])
+    if (!isWatchCode(code)) {
+      showBanner("暂不支持该股票代码", "error")
+      return
+    }
+    const existing = watchlist.find((row) => row.code === code)
+    openWatchEditor(
+      existing
+        ? { mode: "edit", draft: entryToDraft(existing) }
+        : { mode: "add", draft: draftFromStock(item, board) },
+    )
+  }
+
+  async function saveWatch(draft: WatchDraft) {
+    const invalid = validateWatchDraft(draft)
+    if (invalid) {
+      setWatchEditorError(invalid)
+      return
+    }
+    const input = draftToInput(draft)
+    const mode = watchEditor?.mode ?? "add"
+    setWatchSaving(true)
+    setWatchEditorError(null)
+    try {
+      const view = mode === "edit" ? await updateWatchlist(input) : await addWatchlist(input)
+      setWatchlist(view.items)
+      setWatchEditor(null)
+      showBanner(mode === "edit" ? `已更新自选 ${input.name}` : `已加入自选 ${input.name}`, "success")
+    } catch (error) {
+      setWatchEditorError(String(error))
+    } finally {
+      setWatchSaving(false)
+    }
+  }
+
+  async function removeWatch(code: string) {
+    try {
+      const view = await removeWatchlist(code)
+      setWatchlist(view.items)
+      setWatchQuotes((current) => {
+        const next = { ...current }
+        delete next[code]
+        return next
+      })
+      if (selectedCode === code) setSelectedCode(null)
+      if (watchSelectedCode === code) setWatchSelectedCode(null)
+      showBanner("已移出自选", "success")
+    } catch (error) {
+      showBanner(String(error), "error")
+      throw error
+    }
+  }
+
   async function handleRefresh() {
+    if (pageRef.current === "watch") {
+      await refreshWatchQuotes(true)
+      return
+    }
     if (refreshing) return
     setRefreshing(true)
     showBanner(
@@ -423,6 +598,10 @@ export default function App() {
   }
 
   async function handleExport(format: "html" | "csv" | "json") {
+    if (pageRef.current === "watch") {
+      showBanner("请先回到榜单再导出", "error")
+      return
+    }
     try {
       const mobile = isMobileApp(isTauri())
       if (!mobile && format === "csv") {
@@ -514,6 +693,10 @@ export default function App() {
       setPickOpen(true)
       return
     }
+    if (!retrySource && pageRef.current === "watch") {
+      showBanner("请先回到榜单，再使用 AI 快速选股", "error")
+      return
+    }
     if (!retrySource && snapshotBoard !== board) {
       showBanner("请等待当前榜单加载完成", "error")
       return
@@ -597,16 +780,13 @@ export default function App() {
         <div className="app">
           <Toolbar
             settings={settings}
-            board={board}
-            onBoardChange={(next) => {
-              if (next === board) return
-              boardRef.current = next
-              setBoard(next)
-              setSelectedCode(null)
-              void loadSnapshot(next).catch((e) => showBanner(String(e), "error"))
-            }}
-            updatedAt={snapshot.updatedAt}
-            refreshing={refreshing}
+            page={page}
+            watchCount={watchlist.length}
+            onPageChange={openPage}
+            updatedAt={page === "watch" ? quoteUpdatedAt : snapshot.updatedAt}
+            refreshing={page === "watch" ? quoteRefreshing : refreshing}
+            refreshLabel={page === "watch" ? "刷新现价" : "刷新行情"}
+            cancelable={page !== "watch"}
             onRefresh={() => void handleRefresh()}
             onCancel={() => void handleCancel()}
             onOpenSettings={() => {
@@ -629,6 +809,27 @@ export default function App() {
             />
           ) : null}
           <RefreshBanner text={banner.text} tone={banner.tone} />
+          {page === "watch" ? (
+            <main>
+              <WatchlistPage
+                items={watchlist}
+                quotes={watchQuotes}
+                loaded={watchLoaded}
+                error={watchError}
+                refreshing={quoteRefreshing}
+                quoteError={quoteError}
+                searchRef={keywordRef}
+                onAdd={() => openWatchEditor({ mode: "add", draft: blankDraft() })}
+                onEdit={(entry) => openWatchEditor({ mode: "edit", draft: entryToDraft(entry) })}
+                onRemove={removeWatch}
+                onOpen={(entry) => setWatchSelectedCode(entry.code)}
+                onRefresh={() => void refreshWatchQuotes(true)}
+                onRetry={() => void loadWatchlist()}
+                onOpenPage={openPage}
+              />
+            </main>
+          ) : (
+            <>
           {showKpi ? <KpiGrid snapshot={snapshot} board={board} /> : null}
           <FilterBar
             filters={filters}
@@ -686,8 +887,12 @@ export default function App() {
               onSelect={setSelectedCode}
               onContextStock={(item, x, y) => setMenu({ x, y, item })}
               board={board}
+              isWatched={(code) => watchedCodes.has(normalizeStockCode(code))}
+              onWatch={openWatchFromStock}
             />
           </main>
+            </>
+          )}
         </div>
       </div>
       <FloatingToolbox
@@ -723,11 +928,22 @@ export default function App() {
         showBackTop={showBackTop}
       />
       <StockDrawer
-        item={selected}
+        item={drawerItem}
         rule={rule}
-        onClose={() => setSelectedCode(null)}
+        onClose={() => {
+          setSelectedCode(null)
+          setWatchSelectedCode(null)
+        }}
         onAnalyze={(stock) => void handleAnalyze(stock)}
         analyzeLabel={board === "jjzt" ? "昨涨今红分析" : "AI 短线分析"}
+        watchEntry={drawerWatch}
+        onWatch={() => {
+          if (drawerItem) openWatchFromStock(drawerItem)
+          else if (drawerWatch) openWatchEditor({ mode: "edit", draft: entryToDraft(drawerWatch) })
+        }}
+        onRemoveWatch={drawerWatch ? () => {
+          void removeWatch(drawerWatch.code).catch(() => undefined)
+        } : undefined}
       />
       {menu ? (
         <StockContextMenu
@@ -735,6 +951,8 @@ export default function App() {
           y={menu.y}
           name={menu.item["股票简称"] || ""}
           code={menu.item["股票代码"] || ""}
+          watched={watchedCodes.has(normalizeStockCode(menu.item["股票代码"]))}
+          onWatch={() => openWatchFromStock(menu.item)}
           onClose={() => setMenu(null)}
           onDetail={() => {
             setSelectedCode(menu.item["股票代码"])
@@ -766,6 +984,19 @@ export default function App() {
         onClose={() => setPickOpen(false)}
         onRetry={() => { if (pickSource) void handleStockPick(pickSource) }}
         onSettings={openPickSettings}
+      />
+      <WatchlistEditor
+        open={watchEditor != null}
+        mode={watchEditor?.mode ?? "add"}
+        session={watchEditorSession}
+        initial={watchEditor?.draft ?? blankDraft()}
+        saving={watchSaving}
+        error={watchEditorError}
+        onClose={() => {
+          if (!watchSaving) setWatchEditor(null)
+        }}
+        onSubmit={(draft) => void saveWatch(draft)}
+        onLookup={lookupWatchQuote}
       />
       <LogPanel open={logOpen} onToggle={() => setLogOpen((v) => !v)} />
       <SettingsModal

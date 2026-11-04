@@ -1,12 +1,15 @@
-import type { BoardKind, SettingsView, UpdateCheck } from "../types"
+import type { AppPage, SettingsView, UpdateCheck } from "../types"
 import { RelativeTime } from "./RelativeTime"
 
 type Props = {
   settings: SettingsView | null
-  board: BoardKind
-  onBoardChange: (board: BoardKind) => void
+  page: AppPage
+  watchCount: number
+  onPageChange: (page: AppPage) => void
   updatedAt: string | null
   refreshing: boolean
+  refreshLabel?: string
+  cancelable?: boolean
   onRefresh: () => void
   onCancel: () => void
   onOpenSettings: () => void
@@ -18,10 +21,13 @@ type Props = {
 
 export function Toolbar({
   settings,
-  board,
-  onBoardChange,
+  page,
+  watchCount,
+  onPageChange,
   updatedAt,
   refreshing,
+  refreshLabel = "刷新行情",
+  cancelable = true,
   onRefresh,
   onCancel,
   onOpenSettings,
@@ -31,11 +37,13 @@ export function Toolbar({
   update,
 }: Props) {
   const boardSubtitle =
-    board === "zt"
-      ? "东方财富涨停池 · 连板接力"
-      : board === "jjzt"
-        ? "昨日涨停 · 今开2%–8% 弱转强"
-        : "同花顺连涨池 · 动能多头"
+    page === "watch"
+      ? "本机记录 · 自选日期、价格与原因"
+      : page === "zt"
+        ? "东方财富涨停池 · 连板接力"
+        : page === "jjzt"
+          ? "昨日涨停 · 今开2%–8% 弱转强"
+          : "同花顺连涨池 · 动能多头"
 
   return (
     <header className="top-nav">
@@ -49,7 +57,7 @@ export function Toolbar({
         </div>
         <div className="brand-title-wrap">
           <div className="brand-header-row">
-            <h1>{board === "zt" ? "涨停天梯" : board === "jjzt" ? "昨日涨停" : "连涨天梯"}</h1>
+            <h1>{page === "watch" ? "自选池" : page === "zt" ? "涨停天梯" : page === "jjzt" ? "昨日涨停" : "连涨天梯"}</h1>
             {settings?.version ? <span className="version-pill">v{settings.version}</span> : null}
           </div>
           <div className="brand-desc">{boardSubtitle}</div>
@@ -60,9 +68,9 @@ export function Toolbar({
           <button
             type="button"
             role="tab"
-            aria-selected={board === "lxsz"}
-            className={board === "lxsz" ? "on" : ""}
-            onClick={() => onBoardChange("lxsz")}
+            aria-selected={page === "lxsz"}
+            className={page === "lxsz" ? "on" : ""}
+            onClick={() => onPageChange("lxsz")}
           >
             <span className="tab-dot" aria-hidden="true" />
             <span>连涨天梯</span>
@@ -70,9 +78,9 @@ export function Toolbar({
           <button
             type="button"
             role="tab"
-            aria-selected={board === "zt"}
-            className={board === "zt" ? "on" : ""}
-            onClick={() => onBoardChange("zt")}
+            aria-selected={page === "zt"}
+            className={page === "zt" ? "on" : ""}
+            onClick={() => onPageChange("zt")}
           >
             <span className="tab-dot" aria-hidden="true" />
             <span>涨停连板</span>
@@ -80,12 +88,23 @@ export function Toolbar({
           <button
             type="button"
             role="tab"
-            aria-selected={board === "jjzt"}
-            className={board === "jjzt" ? "on" : ""}
-            onClick={() => onBoardChange("jjzt")}
+            aria-selected={page === "jjzt"}
+            className={page === "jjzt" ? "on" : ""}
+            onClick={() => onPageChange("jjzt")}
           >
             <span className="tab-dot" aria-hidden="true" />
             <span>昨日涨停</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={page === "watch"}
+            className={page === "watch" ? "on" : ""}
+            onClick={() => onPageChange("watch")}
+          >
+            <span className="tab-dot" aria-hidden="true" />
+            <span>自选池</span>
+            {watchCount > 0 ? <em className="tab-count">{watchCount > 99 ? "99+" : watchCount}</em> : null}
           </button>
         </div>
       </div>
@@ -119,7 +138,7 @@ export function Toolbar({
             <span className="refresh-label">同步</span>
             <RelativeTime value={updatedAt} />
           </div>
-          {refreshing ? (
+          {refreshing && cancelable ? (
             <button
               type="button"
               className="refresh-btn is-loading"
@@ -135,9 +154,10 @@ export function Toolbar({
           ) : (
             <button
               type="button"
-              className="refresh-btn"
+              className={`refresh-btn${refreshing ? " is-loading" : ""}`}
               onClick={onRefresh}
-              title="重新抓取榜单与东财实时行情"
+              disabled={refreshing}
+              title={page === "watch" ? "刷新自选股票的当前现价" : "重新抓取榜单与东财实时行情"}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
                 <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
@@ -145,7 +165,7 @@ export function Toolbar({
                 <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
                 <path d="M16 16h5v5" />
               </svg>
-              <span>刷新行情</span>
+              <span>{refreshing ? "刷新中" : refreshLabel}</span>
             </button>
           )}
         </div>

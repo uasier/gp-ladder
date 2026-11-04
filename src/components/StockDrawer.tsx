@@ -1,8 +1,9 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { isTauri } from "../api"
 import { isPhoneUi } from "../platform"
 import { TonghuashunButton } from "./TonghuashunButton"
 import type { HighlightRule, StockRow } from "../types"
+import { formatWatchPrice, sourceLabel, type WatchEntry } from "../watchlist"
 import {
   buildDetailUrl,
   formatVolumeRatio,
@@ -22,10 +23,18 @@ type Props = {
   onClose: () => void
   onAnalyze?: (item: StockRow) => void
   analyzeLabel?: string
+  watchEntry?: WatchEntry | null
+  onWatch?: () => void
+  onRemoveWatch?: () => void
 }
 
-export function StockDrawer({ item, rule, onClose, onAnalyze, analyzeLabel = "AI 短线复盘" }: Props) {
+export function StockDrawer({ item, rule, onClose, onAnalyze, analyzeLabel = "AI 短线复盘", watchEntry = null, onWatch, onRemoveWatch }: Props) {
+  const [confirmRemove, setConfirmRemove] = useState(false)
   const [copied, setCopied] = useState(false)
+  const itemCode = item?.["股票代码"]
+  useEffect(() => {
+    setConfirmRemove(false)
+  }, [itemCode, watchEntry?.code])
   if (!item) {
     return (
       <>
@@ -96,6 +105,38 @@ export function StockDrawer({ item, rule, onClose, onAnalyze, analyzeLabel = "AI
         </div>
 
         <div className="drawer-body-scroll">
+          {watchEntry ? (
+            <div className="drawer-card-group watch-drawer-card">
+              <div className="drawer-group-title">
+                <span>自选记录</span>
+                <em>{sourceLabel(watchEntry.source)}</em>
+              </div>
+              <div className="modern-kv-grid">
+                <div className="kv-box">
+                  <span className="kv-k">自选日期</span>
+                  <span className="kv-v font-mono">{watchEntry.addedDate}</span>
+                </div>
+                <div className="kv-box">
+                  <span className="kv-k">自选价格</span>
+                  <span className="kv-v font-mono">{formatWatchPrice(watchEntry.addedPrice)}</span>
+                </div>
+                <div className="kv-box full-col">
+                  <span className="kv-k">自选原因</span>
+                  <span className="kv-v watch-drawer-reason">{watchEntry.reason}</span>
+                </div>
+              </div>
+              <div className="watch-drawer-actions">
+                {onWatch ? <button type="button" className="btn" onClick={onWatch}>编辑自选</button> : null}
+                {onRemoveWatch ? (
+                  confirmRemove ? (
+                    <button type="button" className="btn danger" onClick={onRemoveWatch}>确认移除</button>
+                  ) : (
+                    <button type="button" className="btn danger" onClick={() => setConfirmRemove(true)}>移出自选</button>
+                  )
+                ) : null}
+              </div>
+            </div>
+          ) : null}
           {/* 行情看板 */}
           <div className="drawer-card-group">
             <div className="drawer-group-title">
@@ -249,6 +290,11 @@ export function StockDrawer({ item, rule, onClose, onAnalyze, analyzeLabel = "AI
 
         {/* 底部功能栏 */}
         <div className="drawer-actions modern-drawer-actions">
+          {!watchEntry && onWatch ? (
+            <button type="button" className="btn primary" onClick={onWatch}>
+              加入自选
+            </button>
+          ) : null}
           <button
             type="button"
             className="btn primary glow-btn"

@@ -16,6 +16,7 @@ import type {
   ReleaseInfo,
   UpdateCheck,
 } from "./types"
+import type { WatchInput, WatchlistView, WatchQuote } from "./watchlist"
 
 type TauriWindow = Window & {
   __TAURI_INTERNALS__?: unknown
@@ -141,6 +142,44 @@ export function pickStocks(request: StockPickRequest) {
   return http<StockPickResult>("/api/stocks/pick", {
     method: "POST",
     body: JSON.stringify(request),
+  })
+}
+
+export function getWatchlist() {
+  if (isTauri()) return invoke<WatchlistView>("get_watchlist")
+  return http<WatchlistView>("/api/watchlist")
+}
+
+export function addWatchlist(input: WatchInput) {
+  if (isTauri()) return invoke<WatchlistView>("add_watchlist", { input })
+  return http<WatchlistView>("/api/watchlist", {
+    method: "POST",
+    body: JSON.stringify(input),
+  })
+}
+
+export function updateWatchlist(input: WatchInput) {
+  if (isTauri()) return invoke<WatchlistView>("update_watchlist", { input })
+  return http<WatchlistView>("/api/watchlist/update", {
+    method: "POST",
+    body: JSON.stringify(input),
+  })
+}
+
+export function removeWatchlist(code: string) {
+  if (isTauri()) return invoke<WatchlistView>("remove_watchlist", { code })
+  return http<WatchlistView>("/api/watchlist/remove", {
+    method: "POST",
+    body: JSON.stringify({ code }),
+  })
+}
+
+export function refreshWatchlistQuotes(codes?: string[]) {
+  const payload = { codes: codes ?? [] }
+  if (isTauri()) return invoke<WatchQuote[]>("refresh_watchlist_quotes", payload)
+  return http<WatchQuote[]>("/api/watchlist/quotes", {
+    method: "POST",
+    body: JSON.stringify(payload),
   })
 }
 

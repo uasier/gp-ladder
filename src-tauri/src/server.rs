@@ -7,6 +7,7 @@ use crate::settings::{self, SettingsPatch, SettingsState};
 use crate::stock_pick;
 use crate::types::{ExportRequest, Snapshot};
 use crate::update;
+use crate::watchlist;
 use crate::workspace;
 use axum::extract::{DefaultBodyLimit, Query, State};
 use axum::http::StatusCode;
@@ -26,6 +27,7 @@ pub struct AppState {
     refresh: Arc<RefreshState>,
     settings: Arc<SettingsState>,
     settings_path: PathBuf,
+    watchlist: Arc<watchlist::WatchlistStore>,
 }
 
 #[derive(Debug)]
@@ -117,6 +119,55 @@ async fn refresh_snapshot(State(st): State<AppState>) -> Json<refresh::RefreshSn
 
 async fn get_settings(State(st): State<AppState>) -> Result<Json<settings::SettingsView>, ApiError> {
     Ok(Json(settings::view(&st.settings.get()?)))
+}
+
+async fn get_watchlist(
+    State(st): State<AppState>,
+) -> Result<Json<watchlist::WatchlistView>, ApiError> {
+    Ok(Json(st.watchlist.list()?))
+}
+
+async fn add_watchlist(
+    State(st): State<AppState>,
+    Json(input): Json<watchlist::AddWatchInput>,
+) -> Result<Json<watchlist::WatchlistView>, ApiError> {
+    Ok(Json(st.watchlist.add(input)?))
+}
+
+async fn update_watchlist(
+    State(st): State<AppState>,
+    Json(input): Json<watchlist::UpdateWatchInput>,
+) -> Result<Json<watchlist::WatchlistView>, ApiError> {
+    Ok(Json(st.watchlist.update(input)?))
+}
+
+#[derive(Deserialize)]
+struct RemoveWatchBody {
+    code: String,
+}
+
+async fn remove_watchlist(
+    State(st): State<AppState>,
+    Json(body): Json<RemoveWatchBody>,
+) -> Result<Json<watchlist::WatchlistView>, ApiError> {
+    Ok(Json(st.watchlist.remove(&body.code)?))
+}
+
+#[derive(Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct WatchQuoteBody {
+    #[serde(default)]
+    codes: Vec<String>,
+}
+
+async fn watchlist_quotes(
+    State(st): State<AppState>,
+    Json(body): Json<WatchQuoteBody>,
+) -> Result<Json<Vec<crate::quotes::CodeQuote>>, ApiError> {
+    let codes = st.watchlist.quote_targets(&body.codes)?;
+    block_in(move || crate::quotes::fetch_code_quotes(&codes))
+        .await
+        .map(Json)
 }
 
 async fn save_settings(
@@ -278,6 +329,10 @@ fn api_router() -> Router<AppState> {
         .route("/refresh/cancel", post(cancel_refresh))
         .route("/refresh/snapshot", get(refresh_snapshot))
         .route("/settings", get(get_settings).post(save_settings))
+        .route("/watchlist", get(get_watchlist).post(add_watchlist))
+        .route("/watchlist/update", post(update_watchlist))
+        .route("/watchlist/remove", post(remove_watchlist))
+        .route("/watchlist/quotes", post(watchlist_quotes))
         .route("/runtime", get(probe_runtime))
         .route("/export", post(export_snapshot))
         .route("/analyze", post(analyze_stock))
@@ -328,6 +383,7 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         refresh,
         settings: Arc::new(SettingsState::new(loaded)),
         settings_path,
+        watchlist: Arc::new(watchlist::WatchlistStore::open(data_dir.join("watchlist.json"))),
     };
 
     let mut app = Router::new().nest("/api", api_router());

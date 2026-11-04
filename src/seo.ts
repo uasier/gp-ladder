@@ -1,4 +1,4 @@
-import type { BoardKind } from "./types"
+import type { AppPage } from "./types"
 
 /** 对外下载官网，搜索引擎与社交分享以此为准。 */
 export const SITE_URL = "https://gp.uasier.com"
@@ -66,16 +66,18 @@ export const OG_IMAGE_ALT = "连涨天梯：A股连涨榜、涨停天梯与昨�
 
 export const OG_IMAGE_URL = `${SITE_URL}/og.png`
 
-const BOARD_TITLE: Record<BoardKind, string> = {
+const BOARD_TITLE: Record<AppPage, string> = {
   lxsz: "连涨天梯 · 同花顺连涨榜",
   zt: "涨停天梯 · 东方财富涨停池",
   jjzt: "昨日涨停 · 竞价红盘 2%–8%",
+  watch: "自选池 · 连涨天梯",
 }
 
-const BOARD_DESCRIPTION: Record<BoardKind, string> = {
+const BOARD_DESCRIPTION: Record<AppPage, string> = {
   lxsz: "查看同花顺连续上涨榜，叠加东方财富现价、涨跌幅、换手、成交额与散户资金，按天数和行业筛选。",
   zt: "查看东方财富涨停池连板梯队，按连板高度分档，叠加当日行情与筛选。",
   jjzt: "查看昨天涨停、今日竞价后红盘且涨幅 2%–8% 的标的，跟踪回封与竞价强度。",
+  watch: "查看本机自选池，记录加入日期、加入价格和自选原因，并对比当前现价。",
 }
 
 type MetaNode = { setAttribute: (name: string, value: string) => void }
@@ -85,16 +87,16 @@ export type DocumentLike = {
   querySelector: (selector: string) => MetaNode | null
 }
 
-export function documentTitle(board: BoardKind): string {
+export function documentTitle(board: AppPage): string {
   return BOARD_TITLE[board]
 }
 
-export function documentDescription(board: BoardKind): string {
+export function documentDescription(board: AppPage): string {
   return BOARD_DESCRIPTION[board]
 }
 
 /** 切换榜单时同步浏览器标题与 description，便于分享与历史记录。 */
-export function applyDocumentSeo(board: BoardKind, doc?: DocumentLike | null): void {
+export function applyDocumentSeo(board: AppPage, doc?: DocumentLike | null): void {
   const target = doc ?? (typeof document === "undefined" ? null : document)
   if (!target) return
   target.title = documentTitle(board)

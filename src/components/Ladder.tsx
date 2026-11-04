@@ -25,9 +25,12 @@ type Props = {
   onSelect: (code: string) => void
   onContextStock: (item: StockRow, x: number, y: number) => void
   board?: BoardKind
+  isWatched?: (code: string) => boolean
+  onWatch?: (item: StockRow) => void
 }
 
 export function Ladder({
+
   rows,
   filtered,
   viewMode,
@@ -39,6 +42,8 @@ export function Ladder({
   onSelect,
   onContextStock,
   board = "lxsz",
+  isWatched,
+  onWatch,
 }: Props) {
   if (!rows.length) {
     return (
@@ -102,7 +107,7 @@ export function Ladder({
               <th className="num">换手率</th>
               <th className="num">量比</th>
               <th>所属板块</th>
-              <th style={{ width: 68, textAlign: "center" }}>操作</th>
+              <th style={{ width: 92, textAlign: "center" }}>操作</th>
             </tr>
           </thead>
           <tbody>
@@ -115,6 +120,8 @@ export function Ladder({
                 board={board}
                 onSelect={onSelect}
                 onContextStock={onContextStock}
+                watched={Boolean(isWatched?.(item["股票代码"]))}
+                onWatch={onWatch}
               />
             ))}
           </tbody>
@@ -161,6 +168,8 @@ export function Ladder({
                   onSelect={onSelect}
                   onContextStock={onContextStock}
                   board={board}
+                  watched={Boolean(isWatched?.(item["股票代码"]))}
+                  onWatch={onWatch}
                 />
               ))}
             </div>
@@ -178,6 +187,8 @@ function StockTableRow({
   board,
   onSelect,
   onContextStock,
+  watched = false,
+  onWatch,
 }: {
   item: StockRow
   rule: HighlightRule
@@ -185,6 +196,8 @@ function StockTableRow({
   board: BoardKind
   onSelect: (code: string) => void
   onContextStock: (item: StockRow, x: number, y: number) => void
+  watched?: boolean
+  onWatch?: (item: StockRow) => void
 }) {
   const todayPct = getTodayPct(item)
   const bodyPct = getBodyPct(item)
@@ -246,20 +259,23 @@ function StockTableRow({
         </span>
       </td>
       <td style={{ textAlign: "center" }}>
-        <button
-          type="button"
-          className="row-ai-btn"
-          title="DeepSeek AI 短线分析"
-          onClick={(e) => {
-            e.stopPropagation()
-            const rect = e.currentTarget.getBoundingClientRect()
-            onContextStock(item, rect.left, rect.bottom + 4)
-          }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-          </svg>
-        </button>
+        <div className="row-actions">
+          {onWatch ? <WatchStar watched={watched} onWatch={() => onWatch(item)} /> : null}
+          <button
+            type="button"
+            className="row-ai-btn"
+            title="DeepSeek AI 短线分析"
+            onClick={(e) => {
+              e.stopPropagation()
+              const rect = e.currentTarget.getBoundingClientRect()
+              onContextStock(item, rect.left, rect.bottom + 4)
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+            </svg>
+          </button>
+        </div>
       </td>
     </tr>
   )
@@ -272,6 +288,8 @@ function StockCard({
   onSelect,
   onContextStock,
   board = "lxsz",
+  watched = false,
+  onWatch,
 }: {
   item: StockRow
   rule: HighlightRule
@@ -279,6 +297,8 @@ function StockCard({
   onSelect: (code: string) => void
   onContextStock: (item: StockRow, x: number, y: number) => void
   board?: BoardKind
+  watched?: boolean
+  onWatch?: (item: StockRow) => void
 }) {
   const pctValue = normalizeNumber(item["连续涨跌幅"])
   const todayPct = getTodayPct(item)
@@ -354,6 +374,7 @@ function StockCard({
 
         {/* 快捷操作：手机端同花顺 + AI 分析 */}
         <div className="card-actions-quick">
+          {onWatch ? <WatchStar watched={watched} onWatch={() => onWatch(item)} /> : null}
           <TonghuashunButton code={item["股票代码"]} name={item["股票简称"]} />
           <button
             type="button"
@@ -443,5 +464,26 @@ function StockCard({
         ) : null}
       </div>
     </div>
+  )
+}
+
+function WatchStar({ watched, onWatch }: { watched: boolean; onWatch: () => void }) {
+  return (
+    <button
+      type="button"
+      className={`watch-star${watched ? " is-on" : ""}`}
+      aria-pressed={watched}
+      aria-label={watched ? "编辑自选" : "加入自选"}
+      title={watched ? "已在自选池，点击编辑" : "加入自选池"}
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => {
+        event.stopPropagation()
+        onWatch()
+      }}
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill={watched ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+      </svg>
+    </button>
   )
 }

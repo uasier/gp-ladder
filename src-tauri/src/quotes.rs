@@ -6,6 +6,7 @@ use crate::format::{
 };
 use crate::http::{self, USER_AGENT};
 use crate::types::StockRow;
+use serde::Serialize;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -81,6 +82,13 @@ fn parse_diff(payload: &Value) -> Vec<Value> {
 }
 
 pub fn fetch_eastmoney_ulist(query: &[(&str, String)], timeout: Duration) -> Vec<Value> {
+    fetch_eastmoney_ulist_result(query, timeout).unwrap_or_default()
+}
+
+pub fn fetch_eastmoney_ulist_result(
+    query: &[(&str, String)],
+    timeout: Duration,
+) -> Result<Vec<Value>, String> {
     let mut candidates: Vec<(String, bool)> = Vec::new();
     if let Ok(g) = WORKING.lock() {
         if let Some(pair) = g.clone() {
@@ -100,6 +108,7 @@ pub fn fetch_eastmoney_ulist(query: &[(&str, String)], timeout: Duration) -> Vec
         ("User-Agent", USER_AGENT),
         ("Referer", "https://quote.eastmoney.com/"),
     ];
+    let mut last_error = "东方财富行情暂时不可用".to_string();
     for (url, trust_env) in candidates {
         match http::get_json(&url, query, &headers, timeout, trust_env) {
             Ok(payload) => {
@@ -110,9 +119,10 @@ pub fn fetch_eastmoney_ulist(query: &[(&str, String)], timeout: Duration) -> Vec
                 if let Ok(mut g) = WORKING.lock() {
                     *g = Some((url, trust_env));
                 }
-                return rows;
+                return Ok(rows);
             }
-            Err(_) => {
+            Err(err) => {
+                last_error = err;
                 if let Ok(mut g) = WORKING.lock() {
                     if g.as_ref() == Some(&(url.clone(), trust_env)) {
                         *g = None;
@@ -121,7 +131,7 @@ pub fn fetch_eastmoney_ulist(query: &[(&str, String)], timeout: Duration) -> Vec
             }
         }
     }
-    Vec::new()
+    Err(last_error)
 }
 
 pub fn fetch_eastmoney_snapshots(
@@ -231,6 +241,93 @@ fn apply_quote_metrics(rows: &mut [StockRow], snapshots: &HashMap<String, QuoteM
     }
 }
 
+const WATCH_QUOTE_FIELDS: &str = "f12,f14,f2,f3,f124";
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct CodeQuote {
+    pub code: String,
+    pub name: String,
+    pub price: Option<f64>,
+    pub change_pct: Option<f64>,
+    pub quote_at: String,
+}
+
+/// 自选池支持的 A 股代码：沪市 6、深市 0/3、北交所 4/8/92。
+pub fn quote_secid(code: &str) -> Option<String> {
+    let code = code.trim();
+    if code.len() != 6 || !code.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
+    }
+    if code.starts_with("92")
+        || code.starts_with('4')
+        || code.starts_with('8')
+        || code.starts_with('0')
+        || code.starts_with('3')
+    {
+        Some(format!("0.{code}"))
+    } else if code.starts_with('6') {
+        Some(format!("1.{code}"))
+    } else {
+        None
+    }
+}
+
+pub fn parse_code_quote(item: &Value) -> Option<CodeQuote> {
+    let code = json_text(&item["f12"]);
+    if quote_secid(&code).is_none() {
+        return None;
+    }
+    Some(CodeQuote {
+        code,
+        name: json_text(&item["f14"]),
+        price: json_to_optional_float(&item["f2"]).filter(|value| value.is_finite() && *value > 0.0),
+        change_pct: json_to_optional_float(&item["f3"]).filter(|value| value.is_finite()),
+        quote_at: format_quote_time(json_to_optional_float(&item["f124"])),
+    })
+}
+
+fn json_text(value: &Value) -> String {
+    match value {
+        Value::String(text) => text.trim().to_string(),
+        Value::Number(number) => number.to_string(),
+        _ => String::new(),
+    }
+}
+
+pub fn fetch_code_quotes(codes: &[String]) -> Result<Vec<CodeQuote>, String> {
+    let pairs: Vec<(String, String)> = codes
+        .iter()
+        .filter_map(|code| quote_secid(code).map(|secid| (code.trim().to_string(), secid)))
+        .collect();
+    if pairs.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut quotes = Vec::new();
+    for chunk in pairs.chunks(50) {
+        let secids = chunk
+            .iter()
+            .map(|(_, secid)| secid.as_str())
+            .collect::<Vec<_>>()
+            .join(",");
+        let query = [
+            ("fltt", "2".into()),
+            ("invt", "2".into()),
+            ("fields", WATCH_QUOTE_FIELDS.into()),
+            ("secids", secids),
+        ];
+        for item in fetch_eastmoney_ulist_result(&query, Duration::from_secs(10))? {
+            if let Some(quote) = parse_code_quote(&item) {
+                quotes.push(quote);
+            }
+        }
+    }
+    if quotes.is_empty() {
+        return Err("未获取到这些股票的现价".into());
+    }
+    Ok(quotes)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -284,5 +381,36 @@ mod tests {
         assert_eq!(build_eastmoney_secid("600519").as_deref(), Some("1.600519"));
         assert_eq!(build_eastmoney_secid("300741").as_deref(), Some("0.300741"));
         assert_eq!(build_eastmoney_secid(""), None);
+    }
+
+    #[test]
+    fn watch_quote_secid_covers_beijing_codes() {
+        assert_eq!(quote_secid("600519").as_deref(), Some("1.600519"));
+        assert_eq!(quote_secid("688001").as_deref(), Some("1.688001"));
+        assert_eq!(quote_secid("000001").as_deref(), Some("0.000001"));
+        assert_eq!(quote_secid("300750").as_deref(), Some("0.300750"));
+        assert_eq!(quote_secid("920001").as_deref(), Some("0.920001"));
+        assert_eq!(quote_secid("830001").as_deref(), Some("0.830001"));
+        assert_eq!(quote_secid("111111"), None);
+        assert!(fetch_code_quotes(&[]).unwrap().is_empty());
+        assert!(fetch_code_quotes(&["abc".into(), "111111".into()]).unwrap().is_empty());
+    }
+
+    #[test]
+    fn parses_a_single_code_quote() {
+        let quote = parse_code_quote(&serde_json::json!({
+            "f12": "600519",
+            "f14": " 贵州茅台 ",
+            "f2": 1688.5,
+            "f3": 1.25,
+            "f124": 1700000000
+        }))
+        .unwrap();
+        assert_eq!(quote.code, "600519");
+        assert_eq!(quote.name, "贵州茅台");
+        assert_eq!(quote.price, Some(1688.5));
+        assert_eq!(quote.change_pct, Some(1.25));
+        assert!(quote.quote_at.contains('-'));
+        assert!(parse_code_quote(&serde_json::json!({"f12": "111111"})).is_none());
     }
 }

@@ -33,6 +33,7 @@ describe("documentTitle", () => {
     expect(documentTitle("lxsz")).toContain("连涨天梯")
     expect(documentTitle("zt")).toContain("涨停天梯")
     expect(documentTitle("jjzt")).toContain("昨日涨停")
+    expect(documentTitle("watch")).toContain("自选池")
   })
 })
 

@@ -16,6 +16,7 @@ mod snapshot;
 mod stock_pick;
 mod types;
 mod update;
+mod watchlist;
 mod workspace;
 mod zt;
 
@@ -143,6 +144,51 @@ fn save_settings(
         ),
     );
     Ok(settings::view(&next))
+}
+
+#[cfg(feature = "desktop")]
+#[tauri::command]
+fn get_watchlist(
+    store: tauri::State<watchlist::WatchlistStore>,
+) -> Result<watchlist::WatchlistView, String> {
+    store.list()
+}
+
+#[cfg(feature = "desktop")]
+#[tauri::command]
+fn add_watchlist(
+    store: tauri::State<watchlist::WatchlistStore>,
+    input: watchlist::AddWatchInput,
+) -> Result<watchlist::WatchlistView, String> {
+    store.add(input)
+}
+
+#[cfg(feature = "desktop")]
+#[tauri::command]
+fn update_watchlist(
+    store: tauri::State<watchlist::WatchlistStore>,
+    input: watchlist::UpdateWatchInput,
+) -> Result<watchlist::WatchlistView, String> {
+    store.update(input)
+}
+
+#[cfg(feature = "desktop")]
+#[tauri::command]
+fn remove_watchlist(
+    store: tauri::State<watchlist::WatchlistStore>,
+    code: String,
+) -> Result<watchlist::WatchlistView, String> {
+    store.remove(&code)
+}
+
+#[cfg(feature = "desktop")]
+#[tauri::command]
+async fn refresh_watchlist_quotes(
+    store: tauri::State<'_, watchlist::WatchlistStore>,
+    codes: Option<Vec<String>>,
+) -> Result<Vec<quotes::CodeQuote>, String> {
+    let targets = store.quote_targets(codes.unwrap_or_default().as_slice())?;
+    block_in(move || quotes::fetch_code_quotes(&targets)).await
 }
 
 #[cfg(feature = "desktop")]
@@ -359,6 +405,15 @@ pub fn run() {
             let _ = refresh::load_ladder(refresh_state.as_ref(), &loaded, board::BoardKind::Zt);
             let _ = refresh::load_ladder(refresh_state.as_ref(), &loaded, board::BoardKind::Jjzt);
             app.manage(SettingsState::new(loaded));
+            let watch_path = match app.path().app_data_dir() {
+                Ok(dir) => {
+                    let _ = std::fs::create_dir_all(&dir);
+                    dir.join("watchlist.json")
+                }
+                Err(_) => std::env::temp_dir().join("gp-ladder").join("watchlist.json"),
+            };
+            applog::info("watchlist", format!("自选池 {}", watch_path.display()));
+            app.manage(watchlist::WatchlistStore::open(watch_path));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -369,6 +424,11 @@ pub fn run() {
             probe_runtime,
             get_settings,
             save_settings,
+            get_watchlist,
+            add_watchlist,
+            update_watchlist,
+            remove_watchlist,
+            refresh_watchlist_quotes,
             export_snapshot,
             analyze_stock,
             pick_stocks,

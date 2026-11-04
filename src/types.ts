@@ -2,6 +2,8 @@ export type StockRow = Record<string, string>
 
 export type BoardKind = "lxsz" | "zt" | "jjzt"
 
+export type AppPage = BoardKind | "watch"
+
 export type Snapshot = {
   rows: StockRow[]
   updatedAt: string | null

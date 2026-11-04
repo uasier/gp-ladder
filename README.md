@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/github/license/uasier/gp-ladder)](LICENSE)
 [![platform](https://img.shields.io/badge/macOS%20%7C%20Windows%20%7C%20Android-0b0f17)](https://github.com/uasier/gp-ladder/releases)
 
-开源的 A 股**连涨榜 / 涨停天梯 / 昨日涨停**工作台（macOS · Windows · Android）。从同花顺抓取连续上涨榜，叠加东方财富当日行情（现价、涨跌幅、今开高低、换手、成交额、市盈率、散户资金），在窗口里筛选、精选并导出。
+开源的 A 股**连涨榜 / 涨停天梯 / 昨日涨停**工作台（macOS · Windows · Android）。从同花顺抓取连续上涨榜，叠加东方财富当日行情（现价、涨跌幅、今开高低、换手、成交额、市盈率、散户资金），在窗口里筛选、精选、加入自选并导出。
 
 Tonghuashun consecutive-gain rankings, East Money limit-up boards, and yesterday’s limit-up watchlist — a local A-share desktop / Android app.
 
@@ -105,6 +105,7 @@ npm run server
 - 个股抽屉详情
 - 右键或长按股票按短线视角调用 DeepSeek 看盘（动能、量价、买点止损），并给出 0–100 短线评分
 - 工具箱内「AI 快速选股」：基于当前筛选结果，推荐最多 4 只短线观察候选，展示理由、风险与观察条件
+- 自选池：独立页面记录自选日期、自选价格和自选原因，支持编辑、移除和按日期、价格、现价涨跌排序；记录保存在本机应用目录，刷新现价不会改写自选价格
 - 导出 HTML / CSV / JSON
 - 刷新进度与运行日志
 - 检查 GitHub Release 更新并下载安装包
