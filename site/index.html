@@ -665,8 +665,9 @@
 codesign --force --deep --sign - /Applications/连涨天梯.app
 open /Applications/连涨天梯.app</code></pre>
             <p>
-              Windows 如遇 SmartScreen，请先确认安装包来源；Android
-              安装时可能需要允许浏览器安装应用。
+              Windows 如遇 SmartScreen，请先确认安装包来源。Android
+              需允许安装未知来源。从 v0.2.7 起可直接覆盖安装；从 v0.2.6
+              及更早版本升级时，因旧包签名每次都不同，仍需卸载一次。
             </p>
           </details>
           <details class="faq">

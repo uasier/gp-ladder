@@ -13,6 +13,21 @@ val tauriProperties = Properties().apply {
     }
 }
 
+fun releaseSigningProperties(): Properties {
+    val props = Properties()
+    val propFile = file("${System.getProperty("user.home")}/.android/gp-ladder-signing.properties")
+    if (propFile.isFile) {
+        propFile.inputStream().use { props.load(it) }
+    }
+    return props
+}
+
+fun releaseSigningValue(envName: String, propName: String, props: Properties): String? {
+    val fromEnv = System.getenv(envName)?.takeIf { it.isNotBlank() }
+    if (fromEnv != null) return fromEnv
+    return props.getProperty(propName)?.takeIf { it.isNotBlank() }
+}
+
 android {
     compileSdk = 36
     namespace = "com.gp.ladder.app"
@@ -24,14 +39,18 @@ android {
         versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()
         versionName = tauriProperties.getProperty("tauri.android.versionName", "1.0")
     }
+    val releaseSigningProps = releaseSigningProperties()
     signingConfigs {
-        create("sideload") {
-            val debugStore = file("${System.getProperty("user.home")}/.android/debug.keystore")
-            if (debugStore.exists()) {
-                storeFile = debugStore
-                storePassword = "android"
-                keyAlias = "androiddebugkey"
-                keyPassword = "android"
+        // 发布包必须使用同一张证书。每次构建都生成 debug keystore 时，Android 会拒绝覆盖安装。
+        create("release") {
+            val storePath = System.getenv("ANDROID_KEYSTORE_PATH")?.takeIf { it.isNotBlank() }
+                ?: "${System.getProperty("user.home")}/.android/gp-ladder-release.keystore"
+            val store = file(storePath)
+            if (store.isFile) {
+                storeFile = store
+                storePassword = releaseSigningValue("ANDROID_KEYSTORE_PASSWORD", "storePassword", releaseSigningProps)
+                keyAlias = releaseSigningValue("ANDROID_KEY_ALIAS", "keyAlias", releaseSigningProps) ?: "gp-ladder"
+                keyPassword = releaseSigningValue("ANDROID_KEY_PASSWORD", "keyPassword", releaseSigningProps)
             }
         }
     }
@@ -48,9 +67,11 @@ android {
             }
         }
         getByName("release") {
-            val sideload = signingConfigs.getByName("sideload")
-            if (sideload.storeFile?.exists() == true) {
-                signingConfig = sideload
+            val releaseSigning = signingConfigs.getByName("release")
+            if (releaseSigning.storeFile?.isFile == true &&
+                !releaseSigning.storePassword.isNullOrBlank() &&
+                !releaseSigning.keyPassword.isNullOrBlank()) {
+                signingConfig = releaseSigning
             }
             isMinifyEnabled = true
             proguardFiles(

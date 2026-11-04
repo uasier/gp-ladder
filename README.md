@@ -20,7 +20,7 @@ Tonghuashun consecutive-gain rankings, East Money limit-up boards, and yesterday
 
 - macOS：`gp-ladder_*_aarch64.dmg`（Apple Silicon）/ `gp-ladder_*_x64.dmg`（Intel）
 - Windows：`gp-ladder_*_x64-setup.exe`（未签名，SmartScreen 可能提示「仍要运行」）
-- Android：`gp-ladder_*_aarch64.apk`（未签名，需允许「安装未知来源」）
+- Android：`gp-ladder_*_aarch64.apk`（固定发布证书签名，需允许「安装未知来源」）
 
 应用内 **设置 → 关于** 可检查更新，并下载当前系统对应的安装包。
 
@@ -35,6 +35,14 @@ open /Applications/连涨天梯.app
 ```
 
 旧系统上的「右键 → 打开」在新系统上已经无效。`xattr` 去掉浏览器下载带来的隔离标记；`codesign` 给整个 `.app` 补上临时签名（v0.2.0 包里只有链接器签过可执行文件，Gatekeeper 会当成损坏）。
+
+### Android 覆盖安装
+
+从 v0.2.7 起，发布的 APK 使用同一张发布证书。已安装该版本或更新版本时，可以直接覆盖安装，应用设置和自选记录会保留。
+
+v0.2.6 及更早的安装包在每次构建时生成新的测试证书，系统会提示签名冲突。从这些版本升级到 v0.2.7 时，仍需要卸载一次。卸载会清除本机数据，请先自行保留需要的配置。之后的版本不再需要为签名卸载。
+
+发布证书的 SHA-256 指纹见 `src-tauri/gen/android/release-cert.sha256`。私钥只保存在维护者本机和 GitHub Actions Secrets 中，不进入仓库。丢失私钥后无法再覆盖安装，必须重新卸载。
 
 ## 界面预览
 
@@ -171,7 +179,7 @@ git push origin HEAD && git push origin v0.2.0
 
 - 需要能访问 `data.10jqka.com.cn` 与 `push2delay.eastmoney.com`。
 - 页面结构若变更，解析可能失败；可在设置里把「最多抓取页数」设为 1 试跑。
-- 安装包未做 Apple / Microsoft 公证。macOS 若提示「文件已损坏」，按上文终端命令处理，不要丢进废纸篓。Windows 如遇 SmartScreen，选择「仍要运行」。Android APK 需允许「安装未知来源」；若为 debug keystore 签名，仅供自用/测试。
+- 安装包未做 Apple / Microsoft 公证。macOS 若提示「文件已损坏」，按上文终端命令处理，不要丢进废纸篓。Windows 如遇 SmartScreen，选择「仍要运行」。Android APK 需允许「安装未知来源」；发布包使用固定证书，从 v0.2.6 及更早版本升级仍需卸载一次，之后可覆盖安装。
 
 ## 免责说明
 

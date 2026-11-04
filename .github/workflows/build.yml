@@ -171,7 +171,7 @@ jobs:
 
             安装包未做 Apple / Microsoft 公证。macOS 15+ 若提示「文件已损坏」，不是下载坏了：把 App 拖到「应用程序」后执行
             `xattr -cr /Applications/连涨天梯.app && codesign --force --deep --sign - /Applications/连涨天梯.app && open /Applications/连涨天梯.app`。
-            Windows 如遇 SmartScreen，选择「仍要运行」；Android 需允许安装未知来源。
+            Windows 如遇 SmartScreen，选择「仍要运行」。Android 需允许安装未知来源；v0.2.6 及更早版本升级到固定签名包时需卸载一次，之后的版本可直接覆盖安装。
 
             应用内「设置 → 关于」可检查更新并下载当前系统对应安装包。
           releaseDraft: true
@@ -272,15 +272,29 @@ jobs:
             npx tauri android init --ci
           fi
 
-      - name: Create debug keystore for sideload APK
+      - name: Restore Android release keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          mkdir -p "$HOME/.android"
-          if [ ! -f "$HOME/.android/debug.keystore" ]; then
-            keytool -genkeypair -v -keystore "$HOME/.android/debug.keystore" \
-              -storepass android -alias androiddebugkey -keypass android \
-              -keyalg RSA -keysize 2048 -validity 10000 \
-              -dname "CN=Android Debug,O=Android,C=US"
+          set -euo pipefail
+          if [ -z "${ANDROID_KEYSTORE_BASE64}" ] || [ -z "${ANDROID_KEYSTORE_PASSWORD}" ] || [ -z "${ANDROID_KEY_PASSWORD}" ]; then
+            echo "缺少 Android 发布签名密钥。请配置 ANDROID_KEYSTORE_BASE64、ANDROID_KEYSTORE_PASSWORD、ANDROID_KEY_PASSWORD。" >&2
+            exit 1
           fi
+          install -d -m 700 "$RUNNER_TEMP/android-signing"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/android-signing/release.keystore"
+          chmod 600 "$RUNNER_TEMP/android-signing/release.keystore"
+          test -s "$RUNNER_TEMP/android-signing/release.keystore"
+          keytool -list -keystore "$RUNNER_TEMP/android-signing/release.keystore" \
+            -alias gp-ladder -storepass "$ANDROID_KEYSTORE_PASSWORD" >/dev/null
+          {
+            echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/android-signing/release.keystore"
+            echo "ANDROID_KEYSTORE_PASSWORD=$ANDROID_KEYSTORE_PASSWORD"
+            echo "ANDROID_KEY_PASSWORD=$ANDROID_KEY_PASSWORD"
+            echo "ANDROID_KEY_ALIAS=gp-ladder"
+          } >> "$GITHUB_ENV"
 
       - name: Build APK
         run: npx tauri android build --apk --target aarch64
@@ -298,10 +312,12 @@ jobs:
             break
           done < <(find src-tauri/gen/android/app/build/outputs/apk src-tauri/target -name "*.apk" 2>/dev/null)
           if [ -z "$SRC" ]; then
-            SRC="$(find src-tauri/gen/android/app/build/outputs/apk -name "*.apk" | head -n 1)"
+            echo "未找到已签名 APK，拒绝上传未签名或一次性调试签名包" >&2
+            find src-tauri/gen/android/app/build/outputs/apk -name "*.apk" -print >&2 || true
+            exit 1
           fi
-          test -n "$SRC"
           cp "$SRC" "dist-android/gp-ladder_${VER}_aarch64.apk"
+          node scripts/verify-android-apk.mjs "dist-android/gp-ladder_${VER}_aarch64.apk"
           ls -la dist-android
 
       - name: Upload workflow artifacts
