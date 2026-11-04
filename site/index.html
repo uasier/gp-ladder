@@ -106,7 +106,7 @@
                 "name": "如何下载连涨天梯？",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "在官网下载区选择版本与系统，下载 macOS DMG、Windows 安装包或 Android APK。安装包来自 GitHub Releases，应用内「设置 → 关于」也可检查更新。"
+                  "text": "在官网下载区选择版本与系统，下载 macOS DMG、Windows 安装包或 Android APK。安装包由官网服务器提供，应用内「设置 → 关于」也可检查更新。"
                 }
               },
               {
@@ -125,7 +125,6 @@
   </head>
   <body
     data-releases-api="./api/releases"
-    data-releases-source="https://api.github.com/repos/uasier/gp-ladder/releases"
   >
     <svg
       class="icon-defs"
@@ -505,8 +504,8 @@
               ><a
                 class="btn download-button"
                 id="dl-mac-arm"
-                href="https://github.com/uasier/gp-ladder/releases"
-                >查看发布资源
+                aria-disabled="true" tabindex="-1"
+                >正在加载
                 <svg class="icon"><use href="#i-download" /></svg></a
               ><span class="filename" data-file="mac-arm"
                 >gp-ladder_*_aarch64.dmg</span
@@ -520,8 +519,8 @@
               ><a
                 class="btn download-button"
                 id="dl-mac-intel"
-                href="https://github.com/uasier/gp-ladder/releases"
-                >查看发布资源
+                aria-disabled="true" tabindex="-1"
+                >正在加载
                 <svg class="icon"><use href="#i-download" /></svg></a
               ><span class="filename" data-file="mac-intel"
                 >gp-ladder_*_x64.dmg</span
@@ -535,8 +534,8 @@
               ><a
                 class="btn download-button"
                 id="dl-win"
-                href="https://github.com/uasier/gp-ladder/releases"
-                >查看发布资源
+                aria-disabled="true" tabindex="-1"
+                >正在加载
                 <svg class="icon"><use href="#i-download" /></svg></a
               ><span class="filename" data-file="win"
                 >gp-ladder_*_x64-setup.exe</span
@@ -550,8 +549,8 @@
               ><a
                 class="btn download-button"
                 id="dl-android"
-                href="https://github.com/uasier/gp-ladder/releases"
-                >查看发布资源
+                aria-disabled="true" tabindex="-1"
+                >正在加载
                 <svg class="icon"><use href="#i-download" /></svg></a
               ><span class="filename" data-file="android"
                 >gp-ladder_*_aarch64.apk</span
@@ -559,18 +558,14 @@
             </article>
           </div>
           <div class="download-footer">
-            <span>安装包由 GitHub Releases 提供</span
+            <span>安装包由官网服务器提供</span
             ><a href="#install-help"
               >安装遇到问题？ <span aria-hidden="true">↘</span></a
             >
           </div>
           <noscript
             ><p>
-              请到
-              <a href="https://github.com/uasier/gp-ladder/releases"
-                >GitHub Releases</a
-              >
-              查看所有版本与安装包。
+              请启用 JavaScript 加载版本与系统选项，安装包由官网服务器直接提供。
             </p></noscript
           >
         </div>
@@ -650,7 +645,7 @@
             <summary>如何下载连涨天梯？</summary>
             <p>
               在官网下载区选择版本与系统，下载 macOS DMG、Windows 安装包或
-              Android APK。安装包来自 GitHub Releases，应用内「设置 →
+              Android APK。安装包由官网服务器提供，应用内「设置 →
               关于」也可检查更新。
             </p>
             <p>

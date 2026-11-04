@@ -1,6 +1,6 @@
 import {
   PLATFORMS,
-  REPO,
+  DOWNLOAD_ORIGIN,
   normalizeReleases,
   latestStable,
   assetFor,
@@ -145,7 +145,7 @@ function selectRelease(tag) {
     const filename = $(`[data-file="${platform.id}"]`);
     const meta = $(`[data-meta="${platform.id}"]`);
     if (asset) {
-      link.href = asset.browser_download_url;
+      link.href = new URL(asset.browser_download_url, DOWNLOAD_ORIGIN).href;
       link.removeAttribute("aria-disabled");
       link.removeAttribute("tabindex");
       link.setAttribute(
@@ -185,10 +185,10 @@ function renderHistory() {
       const downloads = PLATFORMS.map((platform) => {
         const asset = assetFor(release, platform.id);
         return asset
-          ? `<a href="${esc(asset.browser_download_url)}" aria-label="下载 ${esc(release.tag_name)} ${esc(platform.label)}" title="${esc(asset.name)}"><span>${esc(platform.label)}</span><small>${esc(sizeLabel(asset.size))} ↓</small></a>`
+          ? `<a href="${esc(new URL(asset.browser_download_url, DOWNLOAD_ORIGIN).href)}" aria-label="下载 ${esc(release.tag_name)} ${esc(platform.label)}" title="${esc(asset.name)}"><span>${esc(platform.label)}</span><small>${esc(sizeLabel(asset.size))} ↓</small></a>`
           : `<span class="history-missing">${esc(platform.label)} · 未提供</span>`;
       }).join("");
-      return `<details class="history-item"${isLatest ? " open" : ""}><summary class="history-head"><span class="history-version">${esc(release.tag_name)}</span>${badge}<time class="history-date" datetime="${esc(release.published_at)}">${esc(dateLabel(release.published_at))}</time></summary><div class="history-content"><div class="history-notes">${renderNotes(release.body)}</div><div class="history-assets">${downloads}<a class="release-link" href="${esc(release.html_url)}" target="_blank" rel="noopener noreferrer">完整发布说明与附件 ↗</a></div></div></details>`;
+      return `<details class="history-item"${isLatest ? " open" : ""}><summary class="history-head"><span class="history-version">${esc(release.tag_name)}</span>${badge}<time class="history-date" datetime="${esc(release.published_at)}">${esc(dateLabel(release.published_at))}</time></summary><div class="history-content"><div class="history-notes">${renderNotes(release.body)}</div><div class="history-assets">${downloads}<a class="release-link" href="${esc(release.html_url)}" target="_blank" rel="noopener noreferrer">完整发布说明 ↗</a></div></div></details>`;
     })
     .join("");
 }
@@ -209,11 +209,14 @@ async function fetchJson(url, timeout = 7000) {
 }
 
 async function loadReleases() {
-  const sources = [document.body.dataset.releasesApi, "./releases.json"];
+  const sources = [
+    location.hostname.endsWith(".github.io") ? `${DOWNLOAD_ORIGIN}/api/releases` : document.body.dataset.releasesApi,
+    "./releases.json",
+  ];
   for (const [index, source] of sources.entries()) {
     try {
       const payload = await fetchJson(source);
-      releases = normalizeReleases(payload);
+      releases = normalizeReleases(payload, { localDownloads: true });
       if (!releases.length) throw new Error("No published releases");
       latest = latestStable(releases, payload.latest);
       const selected = latest || releases[0];
@@ -233,7 +236,7 @@ async function loadReleases() {
       const cached = index > 0 || payload.stale;
       status.classList.toggle("is-warning", Boolean(cached));
       status.textContent = cached
-        ? `显示已缓存的版本${payload.updatedAt ? `（${dateLabel(payload.updatedAt)}）` : ""}。最新发布以 GitHub 为准。`
+        ? `显示已缓存的版本${payload.updatedAt ? `（${dateLabel(payload.updatedAt)}）` : ""}。安装包由官网服务器提供。`
         : "";
       return;
     } catch {
@@ -242,11 +245,13 @@ async function loadReleases() {
   }
   selector.innerHTML = "<option>版本列表暂不可用</option>";
   status.classList.add("is-warning");
-  status.innerHTML = `暂时无法获取版本，请前往 <a href="${REPO}/releases">GitHub Releases ↗</a> 下载。`;
-  $("#release-history").innerHTML =
-    `<p class="history-empty">更新记录暂不可用。<a class="text-link" href="${REPO}/releases">前往 GitHub 查看 ↗</a></p>`;
+  status.textContent = "暂时无法获取版本，请稍后刷新重试。";
+  $("#release-history").innerHTML = '<p class="history-empty">更新记录暂不可用，请稍后重试。</p>';
   document.querySelectorAll(".download-button").forEach((link) => {
-    link.textContent = "前往 GitHub ↗";
+    link.removeAttribute("href");
+    link.setAttribute("aria-disabled", "true");
+    link.setAttribute("tabindex", "-1");
+    link.textContent = "暂不可用";
   });
 }
 loadReleases();

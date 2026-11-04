@@ -1,191 +1,125 @@
 import http from "node:http";
 import { createReadStream } from "node:fs";
-import { readFile, writeFile, rename, stat, mkdir } from "node:fs/promises";
+import { stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { normalizeReleases } from "../../site/releases.js";
+import { isSafeAssetName, isSafeTag } from "../../site/releases.js";
+import { ReleaseCache, REFRESH_MS } from "./release-cache.mjs";
+import { parseRange } from "./ranges.mjs";
 
-const root = path.resolve(
-  process.env.SITE_ROOT ||
-    fileURLToPath(new URL("../../.site-dist", import.meta.url)),
-);
-const dataDir = path.resolve(process.env.SITE_DATA || "/data");
-const port = Number(process.env.PORT || 40500);
-const host = process.env.HOST || "127.0.0.1";
-const refreshMs = 15 * 60 * 1000;
-const cachePath = path.join(dataDir, "releases.json");
-let cache = null;
-let refreshFailed = false;
-let refreshing = null;
+const root = path.resolve(process.env.SITE_ROOT || fileURLToPath(new URL("../../.site-dist", import.meta.url)));
+const cache = new ReleaseCache({
+  dataDir: path.resolve(process.env.SITE_DATA || "/data"),
+  bootstrapPath: path.join(root, "releases.json"),
+});
+await cache.init();
 
-for (const filename of [cachePath, path.join(root, "releases.json")]) {
-  try {
-    const payload = JSON.parse(await readFile(filename, "utf8"));
-    const releases = normalizeReleases(payload);
-    if (releases.length) {
-      cache = { ...payload, releases };
-      break;
-    }
-  } catch {
-    /* A bundled manifest is available on a fresh deployment. */
-  }
-}
-if (!cache)
-  throw new Error("No usable release manifest; run npm run site:build first");
-
-async function github(endpoint) {
-  const response = await fetch(
-    `https://api.github.com/repos/uasier/gp-ladder/${endpoint}`,
-    {
-      headers: {
-        Accept: "application/vnd.github+json",
-        "User-Agent": "gp-ladder-download-site",
-        "X-GitHub-Api-Version": "2022-11-28",
-      },
-      signal: AbortSignal.timeout(12000),
-    },
-  );
-  if (!response.ok) throw new Error(`GitHub ${response.status}`);
-  return {
-    data: await response.json(),
-    hasNext: /rel="next"/.test(response.headers.get("link") || ""),
+if (process.argv.includes("--sync-only")) {
+  process.exitCode = await cache.refresh() ? 0 : 1;
+} else {
+  const types = {
+    ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8",
+    ".css": "text/css; charset=utf-8", ".json": "application/json; charset=utf-8",
+    ".webmanifest": "application/manifest+json", ".txt": "text/plain; charset=utf-8",
+    ".xml": "application/xml; charset=utf-8", ".png": "image/png", ".jpg": "image/jpeg",
+    ".svg": "image/svg+xml", ".ico": "image/x-icon",
   };
-}
-
-async function refresh() {
-  if (refreshing) return refreshing;
-  refreshing = (async () => {
-    const rows = [];
-    for (let page = 1; page <= 20; page++) {
-      const result = await github(`releases?per_page=100&page=${page}`);
-      if (!Array.isArray(result.data))
-        throw new Error("Invalid GitHub release response");
-      rows.push(...result.data);
-      if (!result.hasNext) break;
-      if (page === 20)
-        throw new Error(
-          "Release pagination limit reached; preserving the last complete manifest",
-        );
-    }
-    const releases = normalizeReleases(rows);
-    if (!releases.length)
-      throw new Error("Empty release response; preserving cache");
-    const latest = await github("releases/latest");
-    const next = {
-      releases,
-      latest: latest.data.tag_name,
-      updatedAt: new Date().toISOString(),
-    };
-    cache = next;
-    refreshFailed = false;
-    await mkdir(dataDir, { recursive: true });
-    const temporary = `${cachePath}.tmp`;
-    await writeFile(temporary, JSON.stringify(next), { mode: 0o644 });
-    await rename(temporary, cachePath);
-    console.log(
-      `Release cache updated: ${releases.length} releases; latest ${next.latest}`,
-    );
-  })()
-    .catch((error) => {
-      refreshFailed = true;
-      console.warn(
-        `Release refresh failed; using saved manifest: ${error.message}`,
-      );
-    })
-    .finally(() => {
-      refreshing = null;
-    });
-  return refreshing;
-}
-
-const types = {
-  ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".webmanifest": "application/manifest+json",
-  ".txt": "text/plain; charset=utf-8",
-  ".xml": "application/xml; charset=utf-8",
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".svg": "image/svg+xml",
-  ".ico": "image/x-icon",
-};
-const json = (res, req, value, status = 200, cacheControl = "no-store") => {
-  const body = JSON.stringify(value);
-  res.writeHead(status, {
-    "Content-Type": "application/json; charset=utf-8",
-    "Content-Length": Buffer.byteLength(body),
-    "Cache-Control": cacheControl,
-  });
-  res.end(req.method === "HEAD" ? undefined : body);
-};
-
-const server = http.createServer(async (req, res) => {
-  res.setHeader("X-Content-Type-Options", "nosniff");
-  if (!["GET", "HEAD"].includes(req.method)) {
-    res.setHeader("Allow", "GET, HEAD");
-    return json(res, req, { error: "Method not allowed" }, 405);
+  const downloadTypes = {
+    ".apk": "application/vnd.android.package-archive", ".dmg": "application/x-apple-diskimage",
+    ".exe": "application/vnd.microsoft.portable-executable", ".gz": "application/gzip",
+  };
+  function json(req, res, value, status = 200, control = "no-store") {
+    const body = JSON.stringify(value);
+    res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Content-Length": Buffer.byteLength(body), "Cache-Control": control });
+    res.end(req.method === "HEAD" ? undefined : body);
   }
-  try {
-    const pathname = decodeURIComponent((req.url || "/").split("?")[0]);
-    if (pathname === "/healthz")
-      return json(res, req, { ok: true, releases: cache.releases.length });
-    if (pathname === "/api/releases") {
-      const stale =
-        refreshFailed ||
-        !cache.updatedAt ||
-        Date.now() - Date.parse(cache.updatedAt) > refreshMs * 2;
-      return json(
-        res,
-        req,
-        { ...cache, stale },
-        200,
-        "public, max-age=60, stale-if-error=86400",
-      );
-    }
-    if (
-      pathname.includes("\0") ||
-      pathname.includes("\\") ||
-      pathname.split("/").some((part) => part.startsWith("."))
-    )
-      return json(res, req, { error: "Not found" }, 404);
-    const relative =
-      pathname === "/" ? "index.html" : pathname.replace(/^\/+/, "");
-    const filename = path.resolve(root, relative);
-    const type = types[path.extname(filename)];
-    if (!filename.startsWith(`${root}${path.sep}`) || !type)
-      return json(res, req, { error: "Not found" }, 404);
-    const info = await stat(filename);
-    if (!info.isFile()) return json(res, req, { error: "Not found" }, 404);
-    res.writeHead(200, {
-      "Content-Type": type,
-      "Content-Length": info.size,
-      "Cache-Control": /\.(png|jpg|ico)$/.test(filename)
-        ? "public, max-age=86400"
-        : "no-cache",
+  function sendFile(req, res, filename, info, contentType, asset) {
+    const etag = asset ? `"${asset.digest}"` : null;
+    const headers = {
+      "Content-Type": contentType,
+      "Cache-Control": asset ? "public, max-age=3600, must-revalidate" : /\.(png|jpg|ico)$/.test(filename) ? "public, max-age=86400" : "no-cache",
       "Last-Modified": info.mtime.toUTCString(),
-    });
+    };
+    if (asset) {
+      headers.ETag = etag;
+      headers["Accept-Ranges"] = "bytes";
+      headers["Content-Disposition"] = `attachment; filename*=UTF-8''${encodeURIComponent(asset.name).replace(/['()*]/g, character => `%${character.charCodeAt(0).toString(16).toUpperCase()}`)}`;
+      if (req.headers["if-none-match"]?.split(/,\s*/).some(value => value === etag || value === `W/${etag}` || value === "*")) {
+        res.writeHead(304, headers);
+        return res.end();
+      }
+    }
+    const ifRange = req.headers["if-range"];
+    const matchesRange = !ifRange || ifRange === etag ||
+      (!ifRange.startsWith('"') && Date.parse(ifRange) >= Math.floor(info.mtimeMs / 1000) * 1000);
+    const range = asset && req.method === "GET" && matchesRange ? parseRange(req.headers.range, info.size) : null;
+    if (range === "invalid") {
+      res.writeHead(416, { ...headers, "Content-Range": `bytes */${info.size}`, "Content-Length": 0 });
+      return res.end();
+    }
+    headers["Content-Length"] = range ? range.end - range.start + 1 : info.size;
+    if (range) headers["Content-Range"] = `bytes ${range.start}-${range.end}/${info.size}`;
+    res.writeHead(range ? 206 : 200, headers);
     if (req.method === "HEAD") return res.end();
-    const stream = createReadStream(filename);
+    const stream = createReadStream(filename, range || undefined);
     stream.on("error", () => res.destroy());
     res.on("close", () => stream.destroy());
     stream.pipe(res);
-  } catch (error) {
-    json(
-      res,
-      req,
-      { error: "Not found" },
-      error instanceof URIError ? 400 : 404,
-    );
   }
-});
-server.requestTimeout = 15000;
-server.headersTimeout = 10000;
-server.listen(port, host, () => {
-  console.log(`Download site listening at http://${host}:${port}`);
-  refresh();
-});
-setInterval(refresh, refreshMs).unref();
-for (const signal of ["SIGTERM", "SIGINT"])
-  process.on(signal, () => server.close(() => process.exit(0)));
+
+  const server = http.createServer(async (req, res) => {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    if (!["GET", "HEAD"].includes(req.method)) {
+      res.setHeader("Allow", "GET, HEAD");
+      return json(req, res, { error: "Method not allowed" }, 405);
+    }
+    try {
+      const pathname = decodeURIComponent((req.url || "/").split("?")[0]);
+      if (pathname === "/healthz")
+        return json(req, res, { ok: cache.ready, releases: cache.manifest?.releases.length || 0, assetsReady: cache.ready }, cache.ready ? 200 : 503);
+      if (pathname === "/api/releases" || pathname === "/releases.json") {
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        return cache.ready
+          ? json(req, res, cache.publicManifest(), 200, "public, max-age=60, stale-if-error=86400")
+          : json(req, res, { error: "Release cache is synchronizing" }, 503);
+      }
+      if (pathname.startsWith("/downloads/")) {
+        const parts = pathname.slice("/downloads/".length).split("/");
+        if (parts.length !== 2 || !isSafeTag(parts[0]) || !isSafeAssetName(parts[1]))
+          return json(req, res, { error: "Not found" }, 404);
+        const download = await cache.getDownload(...parts);
+        if (!download) return json(req, res, { error: "Not found" }, 404);
+        const info = await stat(download.filename);
+        return sendFile(req, res, download.filename, info, downloadTypes[path.extname(download.filename)] || "application/octet-stream", download.asset);
+      }
+      if (pathname.includes("\0") || pathname.includes("\\") || pathname.split("/").some(part => part.startsWith(".")))
+        return json(req, res, { error: "Not found" }, 404);
+      const filename = path.resolve(root, pathname === "/" ? "index.html" : pathname.replace(/^\/+/, ""));
+      const type = types[path.extname(filename)];
+      if (!filename.startsWith(`${root}${path.sep}`) || !type)
+        return json(req, res, { error: "Not found" }, 404);
+      const info = await stat(filename);
+      if (!info.isFile()) return json(req, res, { error: "Not found" }, 404);
+      sendFile(req, res, filename, info, type);
+    } catch (error) {
+      if (res.headersSent) return res.destroy();
+      json(req, res, { error: "Not found" }, error instanceof URIError ? 400 : 404);
+    }
+  });
+  server.requestTimeout = 15000;
+  server.headersTimeout = 10000;
+  const port = Number(process.env.PORT || 40500);
+  const host = process.env.HOST || "127.0.0.1";
+  server.listen(port, host, () => {
+    console.log(`Download site listening at http://${host}:${port}`);
+    void cache.refresh();
+  });
+  const timer = setInterval(() => void cache.refresh(), REFRESH_MS);
+  timer.unref();
+  for (const signal of ["SIGTERM", "SIGINT"])
+    process.on(signal, () => {
+      clearInterval(timer);
+      server.close(() => process.exit(0));
+      setTimeout(() => process.exit(0), 5000).unref();
+    });
+}

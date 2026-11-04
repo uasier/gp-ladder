@@ -44,11 +44,33 @@ describe("download version catalog", () => {
     expect(latestStable(rows, "v1.1.0-beta.1")?.prerelease).toBe(false);
   });
   it("does not label a preview-only catalog as stable", () => {
+    expect(latestStable(normalizeReleases([release("v1.0.0-beta.1", { prerelease: true })]))).toBeNull();
+  });
+  it("rejects local paths with mismatched versions, filenames or traversal", () => {
+    const good = asset("v0.2.5", "gp-ladder_0.2.5_aarch64.dmg");
+    const [row] = normalizeReleases([release("v0.2.5", { assets: [
+      { ...good, browser_download_url: "/downloads/v0.2.4/" + good.name },
+      { ...good, browser_download_url: "/downloads/v0.2.5/other.dmg" },
+      { ...good, name: "../private.key", browser_download_url: "/downloads/v0.2.5/..%2Fprivate.key" },
+      { ...good, browser_download_url: "//evil.test/downloads/v0.2.5/" + good.name },
+      { ...good, browser_download_url: "/downloads/v0.2.5/" + good.name },
+    ] })], { localDownloads: true });
+    expect(row.assets).toHaveLength(1);
+    expect(row.assets[0].browser_download_url).toBe("/downloads/v0.2.5/" + good.name);
+  });
+  it("rewrites downloads to the website cache when requested", () => {
+    const [row] = normalizeReleases(
+      [release("v0.2.5", { assets: [asset("v0.2.5", "gp-ladder_0.2.5_aarch64.dmg")] })],
+      { localDownloads: true },
+    );
+    expect(row.assets[0].browser_download_url).toBe(
+      "/downloads/v0.2.5/gp-ladder_0.2.5_aarch64.dmg",
+    );
     expect(
-      latestStable(
-        normalizeReleases([release("v1.0.0-beta.1", { prerelease: true })]),
-      ),
-    ).toBeNull();
+      normalizeReleases({
+        releases: [{ ...row, assets: [{ ...row.assets[0], browser_download_url: "/downloads/v0.2.5/gp-ladder_0.2.5_aarch64.dmg" }] }],
+      }, { localDownloads: true })[0].assets,
+    ).toHaveLength(1);
   });
   it("never substitutes a newer installer for a missing platform in an older release", () => {
     const [row] = normalizeReleases([

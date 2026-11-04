@@ -154,7 +154,7 @@ export const FAQ_ITEMS: { question: string; answer: string }[] = [
   {
     question: "如何下载连涨天梯？",
     answer:
-      "在官网下载区选择版本与系统，下载 macOS DMG、Windows 安装包或 Android APK。安装包来自 GitHub Releases，应用内「设置 → 关于」也可检查更新。",
+      "在官网下载区选择版本与系统，下载 macOS DMG、Windows 安装包或 Android APK。安装包由官网服务器提供，应用内「设置 → 关于」也可检查更新。",
   },
   {
     question: "连涨天梯会给出买入卖出建议吗？",

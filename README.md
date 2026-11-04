@@ -142,7 +142,7 @@ npm run server
 
 ## 下载官网
 
-官网地址：<https://gp.uasier.com/>。提供 macOS、Windows、Android 安装包、历史版本、更新说明和安装帮助。服务端每 15 分钟同步 GitHub Releases，保留缓存；尚未发布的应用功能不会自动成为可下载安装包的一部分。
+官网地址：<https://gp.uasier.com/>。提供 macOS、Windows、Android 安装包、历史版本、更新说明和安装帮助。服务器会缓存 GitHub Releases 的版本元数据和附件，页面下载直接从官网服务器提供；尚未发布的应用功能不会自动成为可下载安装包的一部分。
 
 运行 `npm run site:build` 生成 `.site-dist/` 静态产物，不编译桌面安装包。服务器部署、端口、证书更新与回滚见 [官网部署说明](deploy/website/README.md)。GitHub Pages 保留为静态镜像，规范地址指向新官网。
 

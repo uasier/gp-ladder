@@ -30,7 +30,22 @@ export const PLATFORMS = [
   },
 ];
 
-export function normalizeReleases(payload) {
+export const DOWNLOAD_ORIGIN = "https://gp.uasier.com";
+
+export function isSafeTag(tag) {
+  return typeof tag === "string" && /^v?\d+\.\d+\.\d+(?:[-+][\w.-]+)?$/.test(tag);
+}
+
+export function isSafeAssetName(name) {
+  return typeof name === "string" && name.length > 0 && name.length <= 255 &&
+    !name.startsWith(".") && !/[\\/\x00-\x1f\x7f]/.test(name);
+}
+
+export function localDownloadUrl(tag, name) {
+  return `/downloads/${encodeURIComponent(tag)}/${encodeURIComponent(name)}`;
+}
+
+export function normalizeReleases(payload, options = {}) {
   const rows = Array.isArray(payload) ? payload : payload?.releases;
   if (!Array.isArray(rows)) throw new Error("Invalid release response");
   const seen = new Set();
@@ -39,7 +54,7 @@ export function normalizeReleases(payload) {
       if (
         !row ||
         row.draft ||
-        !/^v?\d+\.\d+\.\d+(?:[-+][\w.-]+)?$/.test(row.tag_name) ||
+        !isSafeTag(row.tag_name) ||
         seen.has(row.tag_name)
       )
         return false;
@@ -55,29 +70,28 @@ export function normalizeReleases(payload) {
       html_url: `${REPO}/releases/tag/${encodeURIComponent(row.tag_name)}`,
       assets: (Array.isArray(row.assets) ? row.assets : [])
         .filter((asset) => {
-          if (!asset || (asset.state && asset.state !== "uploaded"))
+          if (!asset || !isSafeAssetName(asset.name) || (asset.state && asset.state !== "uploaded"))
             return false;
+          const sourceUrl = String(asset.browser_download_url || "");
+          if ((options.allowLocalDownloads || options.localDownloads) &&
+            sourceUrl === localDownloadUrl(row.tag_name, asset.name))
+            return true;
           try {
-            const url = new URL(asset.browser_download_url);
-            return (
-              url.origin === "https://github.com" &&
-              !url.username &&
-              !url.password &&
-              url.pathname.startsWith(
-                `/uasier/gp-ladder/releases/download/${encodeURIComponent(row.tag_name)}/`,
-              )
-            );
+            const url = new URL(sourceUrl);
+            return url.origin === "https://github.com" && !url.username && !url.password &&
+              !url.search && !url.hash && decodeURIComponent(url.pathname) ===
+                `/uasier/gp-ladder/releases/download/${row.tag_name}/${asset.name}`;
           } catch {
             return false;
           }
         })
         .map((asset) => ({
-          name: String(asset.name || ""),
-          browser_download_url: asset.browser_download_url,
+          name: asset.name,
+          browser_download_url: options.localDownloads
+            ? localDownloadUrl(row.tag_name, asset.name)
+            : asset.browser_download_url,
           size: Number(asset.size) || 0,
-          digest: /^sha256:[a-f\d]{64}$/.test(asset.digest || "")
-            ? asset.digest
-            : null,
+          digest: /^sha256:[a-f\d]{64}$/.test(asset.digest || "") ? asset.digest : null,
         })),
     }))
     .sort(
