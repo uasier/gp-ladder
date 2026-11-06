@@ -120,7 +120,7 @@ export function WatchlistEditor({
 
   return (
     <div
-      className="modal-backdrop"
+      className="modal-backdrop watch-editor-backdrop"
       onClick={() => {
         if (!saving) onClose()
       }}

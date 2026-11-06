@@ -104,6 +104,7 @@
 .stock-pick-card-heading {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 11px;
   padding-bottom: 13px;
   border-bottom: 1px solid var(--border);
@@ -124,11 +125,36 @@
   color: var(--muted);
   font: 11px var(--font-mono);
 }
+.stock-pick-side {
+  margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+  max-width: 100%;
+}
 .stock-pick-score {
   display: grid;
   text-align: right;
-  margin-left: auto;
   flex-shrink: 0;
+}
+.stock-pick-watch {
+  min-height: 32px;
+  padding: 5px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.stock-pick-watch.is-added {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+.stock-pick-watch-note {
+  margin: 8px 0 0;
+  color: var(--gold);
+  font-size: 11px;
+  line-height: 1.5;
 }
 .stock-pick-score strong {
   color: var(--accent);
@@ -194,6 +220,15 @@
   }
   .stock-pick-card {
     padding: 15px;
+  }
+  .stock-pick-side {
+    flex-basis: 100%;
+    margin-left: 0;
+    align-items: stretch;
+  }
+  .stock-pick-watch {
+    width: 100%;
+    min-height: 40px;
   }
   .stock-pick-context {
     font-size: 10px;

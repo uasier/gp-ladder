@@ -4564,6 +4564,10 @@ html.is-mobile .more-filters-modal {
   font-variant-numeric: tabular-nums;
 }
 
+.modal-backdrop.watch-editor-backdrop {
+  z-index: 120;
+}
+
 .watch-editor {
   width: min(560px, calc(100vw - 32px));
   max-height: min(88vh, 820px);

@@ -67,10 +67,12 @@ import {
   type SettingsView,
   type Snapshot,
   type StockRow,
+  type StockPick,
   type StockPickRequest,
   type StockPickResult,
   type UpdateCheck,
 } from "./types"
+import { resolveStockPickWatch } from "./stockPickWatch"
 import {
   blankDraft,
   draftFromStock,
@@ -521,6 +523,18 @@ export default function App() {
       existing
         ? { mode: "edit", draft: entryToDraft(existing) }
         : { mode: "add", draft: draftFromStock(item, board) },
+    )
+  }
+
+  function openWatchFromPick(pick: StockPick) {
+    const scene = pickSource?.scene ?? board
+    const resolved = resolveStockPickWatch(pick, pickSource?.rows ?? [], scene)
+    if (!resolved.ok) return
+    const existing = watchlist.find((row) => row.code === resolved.code)
+    openWatchEditor(
+      existing
+        ? { mode: "edit", draft: entryToDraft(existing) }
+        : { mode: "add", draft: resolved.draft },
     )
   }
 
@@ -984,6 +998,8 @@ export default function App() {
         onClose={() => setPickOpen(false)}
         onRetry={() => { if (pickSource) void handleStockPick(pickSource) }}
         onSettings={openPickSettings}
+        isWatched={(code) => watchedCodes.has(code)}
+        onAddWatch={openWatchFromPick}
       />
       <WatchlistEditor
         open={watchEditor != null}
