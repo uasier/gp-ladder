@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react"
-import type { BoardKind, StockPickRequest, StockPickResult } from "../types"
+import type { BoardKind, StockPick, StockPickRequest, StockPickResult } from "../types"
+import { resolveStockPickWatch } from "../stockPickWatch"
 import "./StockPickModal.css"
 
 const BOARD_LABELS: Record<BoardKind, string> = {
@@ -17,9 +18,11 @@ type Props = {
   onClose: () => void
   onRetry: () => void
   onSettings: () => void
+  isWatched?: (code: string) => boolean
+  onAddWatch?: (pick: StockPick) => void
 }
 
-export function StockPickModal({ open, loading, error, source, result, onClose, onRetry, onSettings }: Props) {
+export function StockPickModal({ open, loading, error, source, result, onClose, onRetry, onSettings, isWatched, onAddWatch }: Props) {
   const panel = useRef<HTMLDivElement>(null)
   const closeButton = useRef<HTMLButtonElement>(null)
 
@@ -97,23 +100,50 @@ export function StockPickModal({ open, loading, error, source, result, onClose, 
               <p className="stock-pick-summary">{result.summary}</p>
               {count < 4 ? <p className="stock-pick-note">候选不足 4 只，已按实际数量分析。</p> : null}
               <div className="stock-pick-grid">
-                {result.picks.map((pick, index) => (
-                  <article className="stock-pick-card" key={pick.code}>
-                    <div className="stock-pick-card-heading">
-                      <span className="stock-pick-rank">{String(index + 1).padStart(2, "0")}</span>
-                      <div className="stock-pick-identity">
-                        <h3>{pick.name}</h3>
-                        <span>{pick.code}</span>
+                {result.picks.map((pick, index) => {
+                  const resolved = resolveStockPickWatch(pick, source.rows, scene)
+                  const added = resolved.ok && (isWatched?.(resolved.code) ?? false)
+                  const identity = resolved.ok ? `${resolved.name} ${resolved.code} ${resolved.marketLabel}` : ""
+                  return (
+                    <article className="stock-pick-card" key={`${pick.code}-${index}`}>
+                      <div className="stock-pick-card-heading">
+                        <span className="stock-pick-rank">{String(index + 1).padStart(2, "0")}</span>
+                        <div className="stock-pick-identity">
+                          <h3>{pick.name}</h3>
+                          <span>{pick.code}</span>
+                        </div>
+                        <div className="stock-pick-side">
+                          <div className="stock-pick-score"><strong>{pick.score}</strong><span>相对评分</span></div>
+                          {onAddWatch ? (
+                            resolved.ok ? (
+                              <button
+                                type="button"
+                                className={`btn stock-pick-watch${added ? " is-added" : ""}`}
+                                aria-pressed={added}
+                                aria-label={added ? `已加入自选 ${identity}，点击编辑` : `加入自选 ${identity}`}
+                                title={added ? `已在自选池，点击编辑 · ${identity}` : `加入自选池 · ${identity}`}
+                                onClick={() => onAddWatch(pick)}
+                              >
+                                <WatchMark added={added} />
+                                {added ? "已加入" : "加入自选"}
+                              </button>
+                            ) : (
+                              <button type="button" className="btn stock-pick-watch" disabled title={resolved.message} aria-label={resolved.message}>
+                                无法加入
+                              </button>
+                            )
+                          ) : null}
+                        </div>
                       </div>
-                      <div className="stock-pick-score"><strong>{pick.score}</strong><span>相对评分</span></div>
-                    </div>
-                    <dl>
-                      <div><dt>入选理由</dt><dd>{pick.reason}</dd></div>
-                      <div className="stock-pick-risk"><dt>主要风险</dt><dd>{pick.risk}</dd></div>
-                      <div><dt>观察条件</dt><dd>{pick.watch}</dd></div>
-                    </dl>
-                  </article>
-                ))}
+                      {onAddWatch && !resolved.ok ? <p className="stock-pick-watch-note">{resolved.message}</p> : null}
+                      <dl>
+                        <div><dt>入选理由</dt><dd>{pick.reason}</dd></div>
+                        <div className="stock-pick-risk"><dt>主要风险</dt><dd>{pick.risk}</dd></div>
+                        <div><dt>观察条件</dt><dd>{pick.watch}</dd></div>
+                      </dl>
+                    </article>
+                  )
+                })}
               </div>
               <p className="stock-pick-meta">{result.model} · 生成于 {result.createdAt}</p>
             </>
@@ -125,5 +155,13 @@ export function StockPickModal({ open, loading, error, source, result, onClose, 
         </footer>
       </div>
     </div>
+  )
+}
+
+function WatchMark({ added }: { added: boolean }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill={added ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
   )
 }
