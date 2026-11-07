@@ -258,6 +258,18 @@ async fn reveal_app_log() -> Result<Json<Value>, ApiError> {
 }
 
 #[derive(Deserialize, Default)]
+struct HolderQuery {
+    code: Option<String>,
+}
+
+async fn get_holder_count(Query(q): Query<HolderQuery>) -> Result<Json<crate::holders::HolderCountView>, ApiError> {
+    let code = q.code.unwrap_or_default();
+    block_in(move || crate::holders::lookup_holder_count(&code))
+        .await
+        .map(Json)
+}
+
+#[derive(Deserialize, Default)]
 struct UpdateQuery {
     force: Option<u8>,
 }
@@ -335,6 +347,7 @@ fn api_router() -> Router<AppState> {
         .route("/watchlist/quotes", post(watchlist_quotes))
         .route("/runtime", get(probe_runtime))
         .route("/export", post(export_snapshot))
+        .route("/holders", get(get_holder_count))
         .route("/analyze", post(analyze_stock))
         .route("/stocks/pick", post(pick_stocks).layer(DefaultBodyLimit::max(16 * 1024 * 1024)))
         .route("/logs", get(get_app_logs).post(write_app_log))
