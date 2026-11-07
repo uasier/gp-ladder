@@ -16,6 +16,7 @@ import type {
   ReleaseInfo,
   UpdateCheck,
 } from "./types"
+import type { HolderCount } from "./holders"
 import type { WatchInput, WatchlistView, WatchQuote } from "./watchlist"
 
 type TauriWindow = Window & {
@@ -206,6 +207,11 @@ export async function revealAppLog() {
   if (isTauri()) return invoke<string>("reveal_app_log")
   const data = await http<{ path: string }>("/api/logs/reveal", { method: "POST" })
   return data.path
+}
+
+export function getHolderCount(code: string) {
+  if (isTauri()) return invoke<HolderCount>("get_holder_count", { code })
+  return http<HolderCount>(`/api/holders?code=${encodeURIComponent(code)}`)
 }
 
 export function checkUpdate(force = false) {

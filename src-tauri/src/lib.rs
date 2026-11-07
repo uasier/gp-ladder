@@ -6,6 +6,7 @@ mod enrich;
 mod export;
 mod format;
 mod highlight;
+mod holders;
 mod http;
 mod jjzt;
 mod pipeline;
@@ -237,6 +238,12 @@ async fn export_snapshot(
 
 #[cfg(feature = "desktop")]
 #[tauri::command]
+async fn get_holder_count(code: String) -> Result<holders::HolderCountView, String> {
+    block_in(move || holders::lookup_holder_count(&code)).await
+}
+
+#[cfg(feature = "desktop")]
+#[tauri::command]
 async fn analyze_stock(
     settings: tauri::State<'_, SettingsState>,
     request: deepseek::AnalyzeRequest,
@@ -430,6 +437,7 @@ pub fn run() {
             remove_watchlist,
             refresh_watchlist_quotes,
             export_snapshot,
+            get_holder_count,
             analyze_stock,
             pick_stocks,
             get_app_logs,

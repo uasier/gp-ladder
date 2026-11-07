@@ -4068,6 +4068,27 @@ html.is-mobile .modern-drawer-actions {
   border-top: 1px dashed var(--border);
 }
 
+.holder-card .holder-note,
+.holder-card .holder-retry {
+  grid-column: 1 / -1;
+}
+
+.holder-card .holder-note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.holder-card .kv-v {
+  overflow-wrap: anywhere;
+}
+
+.holder-card .holder-retry {
+  justify-self: start;
+}
+
 .kv-k {
   font-size: 11px;
   color: var(--muted);
