@@ -165,9 +165,14 @@ async fn watchlist_quotes(
     Json(body): Json<WatchQuoteBody>,
 ) -> Result<Json<Vec<crate::quotes::CodeQuote>>, ApiError> {
     let codes = st.watchlist.quote_targets(&body.codes)?;
-    block_in(move || crate::quotes::fetch_code_quotes(&codes))
-        .await
-        .map(Json)
+    let dir = st.watchlist.market_db_dir();
+    block_in(move || {
+        let mut quotes = crate::quotes::fetch_code_quotes(&codes)?;
+        crate::quotes::attach_local_moves(&dir, &mut quotes);
+        Ok(quotes)
+    })
+    .await
+    .map(Json)
 }
 
 async fn save_settings(
@@ -270,6 +275,20 @@ async fn get_holder_count(Query(q): Query<HolderQuery>) -> Result<Json<crate::ho
 }
 
 #[derive(Deserialize, Default)]
+struct DailyQuoteQuery {
+    date: Option<String>,
+}
+
+async fn get_daily_quotes(
+    Query(q): Query<DailyQuoteQuery>,
+) -> Result<Json<crate::daily_quotes::DailyQuotes>, ApiError> {
+    let date = q.date.unwrap_or_default();
+    block_in(move || crate::daily_quotes::fetch_daily_quotes(&date))
+        .await
+        .map(Json)
+}
+
+#[derive(Deserialize, Default)]
 struct UpdateQuery {
     force: Option<u8>,
 }
@@ -348,6 +367,7 @@ fn api_router() -> Router<AppState> {
         .route("/runtime", get(probe_runtime))
         .route("/export", post(export_snapshot))
         .route("/holders", get(get_holder_count))
+        .route("/quotes/daily", get(get_daily_quotes))
         .route("/analyze", post(analyze_stock))
         .route("/stocks/pick", post(pick_stocks).layer(DefaultBodyLimit::max(16 * 1024 * 1024)))
         .route("/logs", get(get_app_logs).post(write_app_log))

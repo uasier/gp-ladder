@@ -85,6 +85,13 @@ impl WatchlistStore {
         }
     }
 
+    pub fn market_db_dir(&self) -> PathBuf {
+        self.path
+            .parent()
+            .unwrap_or_else(|| Path::new("."))
+            .join("market-db")
+    }
+
     pub fn list(&self) -> Result<WatchlistView, String> {
         let file = self.lock()?;
         Ok(view(&file))

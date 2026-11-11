@@ -799,7 +799,7 @@ export default function App() {
             onPageChange={openPage}
             updatedAt={page === "watch" ? quoteUpdatedAt : snapshot.updatedAt}
             refreshing={page === "watch" ? quoteRefreshing : refreshing}
-            refreshLabel={page === "watch" ? "刷新现价" : "刷新行情"}
+            refreshLabel="刷新行情"
             cancelable={page !== "watch"}
             onRefresh={() => void handleRefresh()}
             onCancel={() => void handleCancel()}

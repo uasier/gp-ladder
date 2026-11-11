@@ -1,14 +1,13 @@
-//! 内置抓取管线：同花顺连涨榜 / 东财涨停池 + 行情 + 本地快照。
+//! 内置刷新管线：本地行情库计算连涨和涨停连板，昨日涨停仍走涨停池。
 
 use crate::board::BoardKind;
-use crate::crawl;
 use crate::enrich;
 use crate::format::now_stamp;
 use crate::settings::AppSettings;
 use crate::snapshot;
 use crate::types::Snapshot;
 use crate::jjzt;
-use crate::zt;
+use crate::market_db;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -25,20 +24,20 @@ pub fn run_refresh(
     if cancel.load(Ordering::SeqCst) {
         return Err("已取消".into());
     }
+    let cache = cache_path(settings, board);
     let rows = match board {
-        BoardKind::Lxsz => {
-            let max_pages = if settings.max_pages == 0 {
-                None
-            } else {
-                Some(settings.max_pages)
-            };
-            crawl::crawl_all_pages(max_pages, Some(cancel), &on_progress)?
-        }
-        BoardKind::Zt => {
-            let (rows, date) = zt::crawl_limit_up(&on_progress)?;
-            on_progress(&format!("涨停池日期 {date}，共 {} 只", rows.len()));
-            rows
-        }
+        BoardKind::Lxsz => market_db::build_ladder(
+            &market_db::db_dir_near(&cache),
+            settings.max_pages,
+            cancel,
+            &on_progress,
+        )?,
+        BoardKind::Zt => market_db::build_limit_up(
+            &market_db::db_dir_near(&cache),
+            settings.max_pages,
+            cancel,
+            &on_progress,
+        )?,
         BoardKind::Jjzt => {
             let (rows, date) = jjzt::crawl_yesterday_red(&on_progress)?;
             on_progress(&format!("昨日涨停池 {date}，共 {} 只，正在看今日竞价", rows.len()));
@@ -61,8 +60,7 @@ pub fn run_refresh(
     }
     on_progress("正在保存快照…");
     let updated = now_stamp();
-    let path = cache_path(settings, board);
-    snapshot::save_cache(&path, &rows, &updated)?;
+    snapshot::save_cache(&cache, &rows, &updated)?;
     Ok(snapshot::build_snapshot(rows, Some(updated)))
 }
 

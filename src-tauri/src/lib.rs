@@ -1,6 +1,7 @@
 mod applog;
 mod board;
 mod crawl;
+mod daily_quotes;
 mod deepseek;
 mod enrich;
 mod export;
@@ -9,6 +10,7 @@ mod highlight;
 mod holders;
 mod http;
 mod jjzt;
+mod market_db;
 mod pipeline;
 mod quotes;
 mod refresh;
@@ -189,7 +191,13 @@ async fn refresh_watchlist_quotes(
     codes: Option<Vec<String>>,
 ) -> Result<Vec<quotes::CodeQuote>, String> {
     let targets = store.quote_targets(codes.unwrap_or_default().as_slice())?;
-    block_in(move || quotes::fetch_code_quotes(&targets)).await
+    let dir = store.market_db_dir();
+    block_in(move || {
+        let mut quotes = quotes::fetch_code_quotes(&targets)?;
+        quotes::attach_local_moves(&dir, &mut quotes);
+        Ok(quotes)
+    })
+    .await
 }
 
 #[cfg(feature = "desktop")]
@@ -240,6 +248,12 @@ async fn export_snapshot(
 #[tauri::command]
 async fn get_holder_count(code: String) -> Result<holders::HolderCountView, String> {
     block_in(move || holders::lookup_holder_count(&code)).await
+}
+
+#[cfg(feature = "desktop")]
+#[tauri::command]
+async fn get_daily_quotes(date: String) -> Result<daily_quotes::DailyQuotes, String> {
+    block_in(move || daily_quotes::fetch_daily_quotes(&date)).await
 }
 
 #[cfg(feature = "desktop")]
@@ -438,6 +452,7 @@ pub fn run() {
             refresh_watchlist_quotes,
             export_snapshot,
             get_holder_count,
+            get_daily_quotes,
             analyze_stock,
             pick_stocks,
             get_app_logs,

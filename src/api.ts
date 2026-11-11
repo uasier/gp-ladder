@@ -15,6 +15,7 @@ import type {
   BoardKind,
   ReleaseInfo,
   UpdateCheck,
+  DailyQuotes,
 } from "./types"
 import type { HolderCount } from "./holders"
 import type { WatchInput, WatchlistView, WatchQuote } from "./watchlist"
@@ -212,6 +213,11 @@ export async function revealAppLog() {
 export function getHolderCount(code: string) {
   if (isTauri()) return invoke<HolderCount>("get_holder_count", { code })
   return http<HolderCount>(`/api/holders?code=${encodeURIComponent(code)}`)
+}
+
+export function getDailyQuotes(date: string) {
+  if (isTauri()) return invoke<DailyQuotes>("get_daily_quotes", { date })
+  return http<DailyQuotes>(`/api/quotes/daily?date=${encodeURIComponent(date)}`)
 }
 
 export function checkUpdate(force = false) {

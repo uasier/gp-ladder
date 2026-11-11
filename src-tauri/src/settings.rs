@@ -10,7 +10,7 @@ use tauri::{AppHandle, Manager};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AppSettings {
-    /// 0 表示不限制页数
+    /// 连涨刷新每次最多补齐的交易日。0 表示自动补齐最近约 30 个交易日。
     #[serde(default)]
     pub max_pages: u32,
     /// 快照 JSON 绝对路径；启动时填入 App 数据目录

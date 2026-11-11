@@ -241,16 +241,52 @@ fn apply_quote_metrics(rows: &mut [StockRow], snapshots: &HashMap<String, QuoteM
     }
 }
 
-const WATCH_QUOTE_FIELDS: &str = "f12,f14,f2,f3,f124";
+const WATCH_QUOTE_FIELDS: &str = "f12,f14,f100,f2,f3,f6,f8,f9,f10,f15,f16,f17,f18,f84,f87,f124";
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CodeQuote {
     pub code: String,
     pub name: String,
+    #[serde(default)]
+    pub industry: String,
     pub price: Option<f64>,
     pub change_pct: Option<f64>,
     pub quote_at: String,
+    #[serde(default)]
+    pub open: Option<f64>,
+    #[serde(default)]
+    pub high: Option<f64>,
+    #[serde(default)]
+    pub low: Option<f64>,
+    #[serde(default)]
+    pub prev_close: Option<f64>,
+    #[serde(default)]
+    pub turnover: Option<f64>,
+    #[serde(default)]
+    pub volume_ratio: Option<f64>,
+    #[serde(default)]
+    pub amount: Option<f64>,
+    #[serde(default)]
+    pub pe: Option<f64>,
+    #[serde(default)]
+    pub retail_pct: Option<f64>,
+    #[serde(default)]
+    pub retail_amount: Option<f64>,
+    #[serde(default)]
+    pub rise_days: Option<i64>,
+    #[serde(default)]
+    pub rise_pct: Option<f64>,
+    #[serde(default)]
+    pub rise_turnover: Option<f64>,
+    #[serde(default)]
+    pub limit_days: Option<i64>,
+    #[serde(default)]
+    pub limit_pct: Option<f64>,
+    #[serde(default)]
+    pub limit_turnover: Option<f64>,
+    #[serde(default)]
+    pub limit_stat: String,
 }
 
 /// 自选池支持的 A 股代码：沪市 6、深市 0/3、北交所 4/8/92。
@@ -278,13 +314,72 @@ pub fn parse_code_quote(item: &Value) -> Option<CodeQuote> {
     if quote_secid(&code).is_none() {
         return None;
     }
+    let metrics = QuoteMetrics::from_eastmoney(item);
     Some(CodeQuote {
         code,
         name: json_text(&item["f14"]),
-        price: json_to_optional_float(&item["f2"]).filter(|value| value.is_finite() && *value > 0.0),
-        change_pct: json_to_optional_float(&item["f3"]).filter(|value| value.is_finite()),
-        quote_at: format_quote_time(json_to_optional_float(&item["f124"])),
+        industry: json_text(&item["f100"]),
+        price: metrics.price.filter(|value| value.is_finite() && *value > 0.0),
+        change_pct: metrics.change_pct.filter(|value| value.is_finite()),
+        quote_at: format_quote_time(metrics.quote_ts),
+        open: positive_metric(metrics.open),
+        high: positive_metric(metrics.high),
+        low: positive_metric(metrics.low),
+        prev_close: positive_metric(metrics.prev_close),
+        turnover: metrics.turnover.filter(|value| value.is_finite() && *value >= 0.0),
+        volume_ratio: metrics.volume_ratio,
+        amount: metrics.amount.filter(|value| value.is_finite() && *value >= 0.0),
+        pe: metrics.pe.filter(|value| value.is_finite()),
+        retail_pct: metrics.retail_pct.filter(|value| value.is_finite()),
+        retail_amount: metrics.retail_amount.filter(|value| value.is_finite()),
+        rise_days: None,
+        rise_pct: None,
+        rise_turnover: None,
+        limit_days: None,
+        limit_pct: None,
+        limit_turnover: None,
+        limit_stat: String::new(),
     })
+}
+
+fn positive_metric(value: Option<f64>) -> Option<f64> {
+    value.filter(|item| item.is_finite() && *item > 0.0)
+}
+
+pub fn attach_local_moves(dir: &std::path::Path, quotes: &mut [CodeQuote]) {
+    let live = quotes
+        .iter()
+        .filter_map(|quote| {
+            let close = quote.price?;
+            Some(crate::market_db::LivePoint {
+                code: quote.code.clone(),
+                name: quote.name.clone(),
+                date: crate::market_db::trade_date_from_quote(&quote.quote_at),
+                close,
+                high: quote.high,
+                low: quote.low,
+                prev_close: quote.prev_close,
+                change_pct: quote.change_pct,
+                turnover: quote.turnover,
+            })
+        })
+        .collect::<Vec<_>>();
+    let moves = crate::market_db::moves_for_codes(dir, &live);
+    for quote in quotes {
+        let Some(item) = moves.get(&quote.code) else {
+            continue;
+        };
+        if quote.industry.is_empty() {
+            quote.industry = item.industry.clone();
+        }
+        quote.rise_days = Some(item.rise_days);
+        quote.rise_pct = Some(item.rise_pct);
+        quote.rise_turnover = item.rise_turnover;
+        quote.limit_days = Some(item.limit_days);
+        quote.limit_pct = Some(item.limit_pct);
+        quote.limit_turnover = item.limit_turnover;
+        quote.limit_stat = item.limit_stat.clone();
+    }
 }
 
 fn json_text(value: &Value) -> String {
@@ -403,6 +498,9 @@ mod tests {
             "f14": " 贵州茅台 ",
             "f2": 1688.5,
             "f3": 1.25,
+            "f8": 2.4,
+            "f10": 1.8,
+            "f17": 1670.0,
             "f124": 1700000000
         }))
         .unwrap();
@@ -410,6 +508,9 @@ mod tests {
         assert_eq!(quote.name, "贵州茅台");
         assert_eq!(quote.price, Some(1688.5));
         assert_eq!(quote.change_pct, Some(1.25));
+        assert_eq!(quote.turnover, Some(2.4));
+        assert_eq!(quote.volume_ratio, Some(1.8));
+        assert_eq!(quote.open, Some(1670.0));
         assert!(quote.quote_at.contains('-'));
         assert!(parse_code_quote(&serde_json::json!({"f12": "111111"})).is_none());
     }

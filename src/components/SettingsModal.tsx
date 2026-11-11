@@ -290,10 +290,10 @@ export function SettingsModal({
         {tab === "crawl" ? (
           <div className="settings-pane">
             <p className="muted tip">
-              内置抓取引擎自动采集同花顺连涨动能榜与东方财富实时行情，快照安全持久化存储在本机。
+              连涨天梯和涨停连板都从本机行情库计算。刷新时补齐最近交易日，并叠加东方财富实时行情。昨日涨停仍从东方财富获取。
             </p>
             <label className="field">
-              <span>最多抓取页数（0 为全部全量翻页）</span>
+              <span>每次最多补齐交易日（0 为自动补齐最近约 30 个交易日）</span>
               <input
                 type="number"
                 min={0}

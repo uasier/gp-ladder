@@ -143,6 +143,30 @@ export type ReleaseInfo = {
   latest: boolean
 }
 
+export type DailyQuote = {
+  code: string
+  name: string
+  open: number | null
+  high: number | null
+  low: number | null
+  close: number | null
+  prevClose: number | null
+  change: number | null
+  changePct: number | null
+  volume: number | null
+  amount: number | null
+  turnover: number | null
+  pe: number | null
+}
+
+export type DailyQuotes = {
+  date: string
+  count: number
+  source: string
+  missingOhlc: number
+  rows: DailyQuote[]
+}
+
 export type HighlightRule = {
   retailMax: number
   todayTurnoverMax: number

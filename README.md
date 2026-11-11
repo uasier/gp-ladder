@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/github/license/uasier/gp-ladder)](LICENSE)
 [![platform](https://img.shields.io/badge/macOS%20%7C%20Windows%20%7C%20Android-0b0f17)](https://github.com/uasier/gp-ladder/releases)
 
-开源的 A 股**连涨榜 / 涨停天梯 / 昨日涨停**工作台（macOS · Windows · Android）。从同花顺抓取连续上涨榜，叠加东方财富当日行情（现价、涨跌幅、今开高低、换手、成交额、市盈率、散户资金），在窗口里筛选、精选、加入自选并导出。
+开源的 A 股**连涨榜 / 涨停天梯 / 昨日涨停**工作台（macOS · Windows · Android）。连涨榜与涨停连板由本机行情库按收盘价计算，昨日涨停取东方财富涨停池，再叠加东方财富当日行情（现价、涨跌幅、今开高低、换手、成交额、市盈率、散户资金），在窗口里筛选、精选、加入自选并导出。
 
 Tonghuashun consecutive-gain rankings, East Money limit-up boards, and yesterday’s limit-up watchlist — a local A-share desktop / Android app.
 
@@ -46,7 +46,7 @@ v0.2.6 及更早的安装包在每次构建时生成新的测试证书，系统�
 
 ## 界面预览
 
-**连涨天梯** — 同花顺连涨榜叠加东方财富行情，按天数、行业、精选筛选。
+**连涨天梯** — 本机行情库的连涨榜叠加东方财富行情，按天数、行业、精选筛选。
 
 ![连涨天梯](docs/screenshots/lxsz.jpg)
 
@@ -135,8 +135,9 @@ npm run server
 ├── src/                 # React 界面
 ├── src-tauri/           # Rust 宿主：抓取、行情、快照、导出
 │   ├── src/
-│   │   ├── crawl.rs     # 同花顺连涨榜
-│   │   ├── quotes.rs    # 东方财富行情
+│   │   ├── daily_quotes.rs # 指定交易日的沪深京行情
+│   │   ├── market_db.rs # 本机行情库：连涨与涨停连板
+│   │   ├── quotes.rs    # 东方财富实时行情
 │   │   ├── pipeline.rs  # 刷新管线
 │   │   └── ...
 │   ├── gen/android/     # Tauri Android 工程（首次 `tauri android init`）
@@ -177,8 +178,9 @@ git push origin HEAD && git push origin v0.2.0
 
 ## 注意事项
 
-- 需要能访问 `data.10jqka.com.cn` 与 `push2delay.eastmoney.com`。
-- 页面结构若变更，解析可能失败；可在设置里把「最多抓取页数」设为 1 试跑。
+- 需要能访问 `push2delay.eastmoney.com`、`datacenter-web.eastmoney.com` 与 `www.szse.cn`。
+- 首次刷新要补齐最近交易日，会比平时慢；之后只补缺失的日期。接口若变更，日志会说明哪一天没更新，已有行情仍可用于计算。
+- 历史行情不做逐只 K 线补全，沪市与北交所的部分历史开高低收可能缺失，缺失项显示 `--`。
 - 安装包未做 Apple / Microsoft 公证。macOS 若提示「文件已损坏」，按上文终端命令处理，不要丢进废纸篓。Windows 如遇 SmartScreen，选择「仍要运行」。Android APK 需允许「安装未知来源」；发布包使用固定证书，从 v0.2.6 及更早版本升级仍需卸载一次，之后可覆盖安装。
 
 ## 免责说明
@@ -186,7 +188,7 @@ git push origin HEAD && git push origin v0.2.0
 **本项目仅供学习交流。** 连涨天梯是开源的行情浏览与辅助分析工具，不得用于商业荐股或代客理财，**不是**证券公司、投资顾问或任何持牌金融机构提供的产品或服务。
 
 - **不构成投资建议。** 界面中的榜单、筛选、精选标记、评分以及 DeepSeek 等模型生成的文字，仅为基于公开数据的展示与讨论，不构成买入、卖出、持有或任何证券投资建议，也不能替代独立研究与专业意见。
-- **数据可能不准、延迟或中断。** 行情与榜单来自同花顺、东方财富等第三方网站或接口，本软件不保证完整性、及时性或准确性，也不对数据源变更、限制访问或解析失败负责。
+- **数据可能不准、延迟或中断。** 行情与榜单来自东方财富、深交所等第三方网站或接口，本软件不保证完整性、及时性或准确性，也不对数据源变更、限制访问或解析失败负责。
 - **模型可能出错。** 短线分析由第三方大模型生成，可能遗漏、过时或编造事实，请自行核对原始行情与公告。
 - **投资有风险。** 证券市场可能造成本金损失。是否交易、如何交易由使用者自行决定，并自行承担全部盈亏与法律责任。开发者、贡献者不对使用本软件导致的任何直接或间接损失负责。
 - **合规由使用者自行判断。** 请遵守所在地证券、数据与软件使用相关法律法规，以及数据源网站的使用条款。

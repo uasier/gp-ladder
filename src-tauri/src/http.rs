@@ -28,6 +28,7 @@ fn header_map(pairs: &[(&str, &str)]) -> Result<HeaderMap, String> {
     Ok(map)
 }
 
+#[allow(dead_code)]
 fn decode_body(bytes: &[u8], content_type: Option<&str>) -> String {
     if let Some(ct) = content_type {
         if let Some(charset) = ct.split("charset=").nth(1) {
@@ -54,6 +55,7 @@ fn decode_body(bytes: &[u8], content_type: Option<&str>) -> String {
     }
 }
 
+#[allow(dead_code)]
 pub fn get_bytes(
     url: &str,
     headers: &[(&str, &str)],
@@ -79,6 +81,7 @@ pub fn get_bytes(
     Ok((bytes.to_vec(), content_type))
 }
 
+#[allow(dead_code)]
 pub fn get_text(url: &str, headers: &[(&str, &str)], timeout: Duration) -> Result<String, String> {
     let mut last = String::new();
     for trust_env in [true, false] {

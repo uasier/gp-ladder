@@ -87,6 +87,7 @@ pub fn row_from_pool_item(item: &Value, index: usize) -> Option<StockRow> {
     Some(row)
 }
 
+#[allow(dead_code)]
 pub(crate) fn fetch_pool(date: &str) -> Result<Vec<Value>, String> {
     let query = [
         ("ut", ZT_UT.to_string()),
@@ -122,6 +123,7 @@ pub(crate) fn fetch_pool(date: &str) -> Result<Vec<Value>, String> {
     Err(last)
 }
 
+#[allow(dead_code)]
 pub fn fetch_recent_pool(on_progress: impl Fn(&str)) -> Result<(Vec<Value>, String), String> {
     let mut date = Local::now().date_naive();
     let mut last_err = String::new();
@@ -144,6 +146,7 @@ pub fn fetch_recent_pool(on_progress: impl Fn(&str)) -> Result<(Vec<Value>, Stri
     })
 }
 
+#[allow(dead_code)]
 pub fn crawl_limit_up(on_progress: impl Fn(&str)) -> Result<(Vec<StockRow>, String), String> {
     let (pool, stamp) = fetch_recent_pool(on_progress)?;
     let mut rows = Vec::new();

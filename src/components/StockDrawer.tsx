@@ -212,6 +212,12 @@ export function StockDrawer({ item, rule, onClose, onAnalyze, analyzeLabel = "AI
                 <span className="kv-k">日均换手</span>
                 <span className="kv-v font-mono">{avgTurnover.toFixed(2)}%</span>
               </div>
+              {item["涨停统计"] && !item["首次封板"] ? (
+                <div className="kv-box full-col">
+                  <span className="kv-k">涨停特征统计</span>
+                  <span className="kv-v">{item["涨停统计"]}</span>
+                </div>
+              ) : null}
               {item["首次封板"] ? (
                 <>
                   <div className="kv-box">

@@ -6,6 +6,7 @@ use regex::Regex;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::OnceLock;
 
+#[allow(dead_code)]
 pub const BASE_URL: &str = "https://data.10jqka.com.cn/rank/lxsz/field/lxts/order/desc/page/{page}/";
 pub const FIELDS: &[&str] = &[
     "序号",
@@ -78,6 +79,7 @@ pub fn parse_stock_rows(page_html: &str) -> Vec<StockRow> {
     rows
 }
 
+#[allow(dead_code)]
 pub fn fetch_page_html(page: u32) -> Result<String, String> {
     let url = BASE_URL.replace("{page}", &page.to_string());
     http::get_text(
@@ -90,6 +92,7 @@ pub fn fetch_page_html(page: u32) -> Result<String, String> {
     )
 }
 
+#[allow(dead_code)]
 pub fn crawl_all_pages(
     max_pages: Option<u32>,
     cancel: Option<&AtomicBool>,

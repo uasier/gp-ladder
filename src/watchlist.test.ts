@@ -8,6 +8,7 @@ import {
   draftToInput,
   entryToDraft,
   filterWatchEntries,
+  formatAmount,
   formatSignedPct,
   isValidDate,
   isWatchCode,
@@ -16,6 +17,7 @@ import {
   sortWatchEntries,
   sourceLabel,
   validateWatchDraft,
+  watchEntryToRow,
   type WatchEntry,
   type WatchQuote,
 } from "./watchlist"
@@ -118,5 +120,41 @@ describe("watchlist sorting", () => {
     expect(filterWatchEntries(items, "000001")).toHaveLength(1)
     expect(parseWatchSort("todayPct:asc")).toEqual({ key: "todayPct", dir: "asc" })
     expect(parseWatchSort("nope")).toEqual({ key: "addedDate", dir: "desc" })
+  })
+})
+
+describe("watchlist quote details", () => {
+  it("fills the drawer row from live quote and local streak", () => {
+    const row = watchEntryToRow(entry(), {
+      code: "600519",
+      name: "贵州茅台",
+      price: 1700,
+      changePct: 1.2,
+      quoteAt: "2026-10-20 14:00:00",
+      open: 1680,
+      high: 1710,
+      low: 1675,
+      prevClose: 1680,
+      turnover: 0.8,
+      volumeRatio: 1.25,
+      amount: 2.5e8,
+      pe: 28.5,
+      retailPct: -1.2,
+      retailAmount: -3e6,
+      riseDays: 3,
+      risePct: 8.4,
+      riseTurnover: 2.4,
+      limitDays: 0,
+      limitStat: "8天2板",
+    })
+    expect(row["今开"]).toBe("1680.00")
+    expect(row["今日换手率"]).toBe("0.80%")
+    expect(row["量比"]).toBe("1.25")
+    expect(row["成交额"]).toBe("2.50亿")
+    expect(row["连涨天数"]).toBe("3")
+    expect(row["连续涨跌幅"]).toBe("8.40%")
+    expect(row["涨停统计"]).toBe("8天2板")
+    expect(row["连板天数"]).toBe("")
+    expect(formatAmount(1.5e4)).toBe("1.50万")
   })
 })

@@ -6,6 +6,7 @@ import { TonghuashunButton } from "./TonghuashunButton"
 import {
   changeSinceAdded,
   filterWatchEntries,
+  formatAmount,
   formatSignedPct,
   formatWatchPrice,
   parseWatchSort,
@@ -112,7 +113,7 @@ export function WatchlistPage({
         </div>
         <div className="watch-head-actions">
           <button type="button" className="btn" onClick={onRefresh} disabled={refreshing || items.length === 0}>
-            {refreshing ? "刷新中…" : "刷新现价"}
+            {refreshing ? "刷新中…" : "刷新行情"}
           </button>
           <button type="button" className="btn primary" onClick={onAdd}>添加自选</button>
         </div>
@@ -196,6 +197,10 @@ export function WatchlistPage({
                       <th className="num">现价</th>
                       <th className="num"><SortButton label="自选以来" active={sortKey === "change"} dir={sortDir} onClick={() => toggleSort("change")} /></th>
                       <th className="num"><SortButton label="今日" active={sortKey === "todayPct"} dir={sortDir} onClick={() => toggleSort("todayPct")} /></th>
+                      <th className="num">连涨</th>
+                      <th className="num">连板</th>
+                      <th className="num">换手</th>
+                      <th className="num">量比</th>
                       <th><SortButton label="自选原因" active={sortKey === "reason"} dir={sortDir} onClick={() => toggleSort("reason")} /></th>
                       <th>操作</th>
                     </tr>
@@ -277,6 +282,10 @@ function WatchRow({
       <td className="num">{formatWatchPrice(quote?.price)}</td>
       <td className={`num ${pctClass(change)}`}>{formatSignedPct(change)}</td>
       <td className={`num ${pctClass(quote?.changePct)}`}>{formatSignedPct(quote?.changePct)}</td>
+      <td className="num">{quote?.riseDays == null ? "--" : `${quote.riseDays}天`}</td>
+      <td className="num">{quote?.limitDays ? `${quote.limitDays}板` : "--"}</td>
+      <td className="num">{formatSignedPct(quote?.turnover)}</td>
+      <td className="num">{quote?.volumeRatio == null ? "--" : quote.volumeRatio.toFixed(2)}</td>
       <td><span className="watch-reason" title={item.reason}>{item.reason}</span></td>
       <td><RowActions item={item} pending={pending} removing={removing} onEdit={onEdit} onAskRemove={onAskRemove} onCancelRemove={onCancelRemove} onConfirmRemove={onConfirmRemove} /></td>
     </tr>
@@ -302,7 +311,12 @@ function WatchCard(props: RowProps) {
         <div><dt>现价</dt><dd>{formatWatchPrice(quote?.price)}</dd></div>
         <div><dt>自选以来</dt><dd className={pctClass(change)}>{formatSignedPct(change)}</dd></div>
         <div><dt>今日</dt><dd className={pctClass(quote?.changePct)}>{formatSignedPct(quote?.changePct)}</dd></div>
-        <div><dt>行业</dt><dd>{item.industry || "—"}</dd></div>
+        <div><dt>连涨</dt><dd>{quote?.riseDays == null ? "--" : `${quote.riseDays}天`}</dd></div>
+        <div><dt>连板</dt><dd>{quote?.limitDays ? `${quote.limitDays}板` : "--"}</dd></div>
+        <div><dt>换手</dt><dd>{formatSignedPct(quote?.turnover)}</dd></div>
+        <div><dt>量比</dt><dd>{quote?.volumeRatio == null ? "--" : quote.volumeRatio.toFixed(2)}</dd></div>
+        <div><dt>成交额</dt><dd>{formatAmount(quote?.amount) || "--"}</dd></div>
+        <div><dt>行业</dt><dd>{quote?.industry || item.industry || "—"}</dd></div>
       </dl>
       <RowActions {...props} />
     </article>

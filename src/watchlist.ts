@@ -26,6 +26,24 @@ export type WatchQuote = {
   price: number | null
   changePct: number | null
   quoteAt: string
+  industry?: string
+  open?: number | null
+  high?: number | null
+  low?: number | null
+  prevClose?: number | null
+  turnover?: number | null
+  volumeRatio?: number | null
+  amount?: number | null
+  pe?: number | null
+  retailPct?: number | null
+  retailAmount?: number | null
+  riseDays?: number | null
+  risePct?: number | null
+  riseTurnover?: number | null
+  limitDays?: number | null
+  limitPct?: number | null
+  limitTurnover?: number | null
+  limitStat?: string
 }
 
 export type WatchInput = {
@@ -278,16 +296,61 @@ export function newestQuoteAt(quotes: Iterable<WatchQuote>): string | null {
   return best
 }
 
+export function formatAmount(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value)) return ""
+  if (Math.abs(value) >= 1e8) return `${(value / 1e8).toFixed(2)}亿`
+  return `${(value / 1e4).toFixed(2)}万`
+}
+
+function metricText(value: number | null | undefined, digits = 2): string {
+  if (value == null || !Number.isFinite(value)) return ""
+  return value.toFixed(digits)
+}
+
+function percentText(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value)) return ""
+  return `${value.toFixed(2)}%`
+}
+
+function bodyPct(quote?: WatchQuote | null): number | null {
+  if (quote?.price == null || quote.open == null) return null
+  const denom = quote.prevClose && quote.prevClose !== 0 ? quote.prevClose : quote.open
+  if (!denom) return null
+  return ((quote.price - quote.open) / denom) * 100
+}
+
+function openPct(quote?: WatchQuote | null): number | null {
+  if (quote?.open == null || quote.prevClose == null || quote.prevClose === 0) return null
+  return ((quote.open - quote.prevClose) / quote.prevClose) * 100
+}
+
 export function watchEntryToRow(entry: WatchEntry, quote?: WatchQuote | null): StockRow {
   const price = quote?.price ?? entry.addedPrice
-  const today = quote?.changePct
+  const limitDays = quote?.limitDays ?? 0
+  const useLimit = limitDays > 0
   return {
     股票代码: entry.code,
     股票简称: quote?.name || entry.name,
-    所属行业: entry.industry,
+    所属行业: quote?.industry || entry.industry,
     现价: Number.isFinite(price) ? price.toFixed(2) : "",
-    今日涨跌幅: today == null || !Number.isFinite(today) ? "" : `${today.toFixed(2)}%`,
+    今日涨跌幅: percentText(quote?.changePct),
     行情时间: quote?.quoteAt || "",
+    今开: metricText(quote?.open),
+    今高: metricText(quote?.high),
+    今低: metricText(quote?.low),
+    今日换手率: percentText(quote?.turnover),
+    量比: metricText(quote?.volumeRatio),
+    成交额: formatAmount(quote?.amount),
+    市盈率: metricText(quote?.pe),
+    散户指数: percentText(quote?.retailPct),
+    散户净额: formatAmount(quote?.retailAmount),
+    实体涨幅: percentText(bodyPct(quote)),
+    今开涨幅: percentText(openPct(quote)),
+    连涨天数: quote?.riseDays == null ? "" : String(quote.riseDays),
+    连板天数: useLimit ? String(limitDays) : "",
+    连续涨跌幅: percentText(useLimit ? quote?.limitPct : quote?.risePct),
+    累计换手率: percentText(useLimit ? quote?.limitTurnover : quote?.riseTurnover),
+    涨停统计: quote?.limitStat || "",
   }
 }
 

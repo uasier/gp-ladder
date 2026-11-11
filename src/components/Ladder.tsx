@@ -99,7 +99,7 @@ export function Ladder({
             <tr>
               <th>股票标的</th>
               <th className="num">{board === "lxsz" ? "连涨天数" : "连板身位"}</th>
-              <th className="num">{board === "jjzt" ? "今开涨幅" : board === "zt" ? "今日涨跌" : "连涨累计"}</th>
+              <th className="num">{board === "jjzt" ? "今开涨幅" : board === "zt" ? "连板累计" : "连涨累计"}</th>
               <th className="num">现价</th>
               <th className="num">今日涨跌</th>
               <th className="num">实体涨幅</th>
@@ -146,7 +146,7 @@ export function Ladder({
                 <div className="stage-info">
                   <span className="stage-title">
                     {board === "lxsz"
-                      ? `${group.day} 天连续收阳`
+                      ? `${group.day} 天连续上涨`
                       : board === "jjzt"
                         ? `昨日 ${group.day} 连板梯队`
                         : `${group.day} 连板空间板`}
