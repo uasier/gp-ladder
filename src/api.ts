@@ -18,6 +18,7 @@ import type {
   DailyQuotes,
 } from "./types"
 import type { HolderCount } from "./holders"
+import type { DiagView } from "./netdiag"
 import type { WatchInput, WatchlistView, WatchQuote } from "./watchlist"
 
 type TauriWindow = Window & {
@@ -174,6 +175,11 @@ export function removeWatchlist(code: string) {
     method: "POST",
     body: JSON.stringify({ code }),
   })
+}
+
+export function getNetworkDiagnostics() {
+  if (isTauri()) return invoke<DiagView>("network_diagnostics")
+  return http<DiagView>("/api/diagnostics/network")
 }
 
 export function refreshWatchlistQuotes(codes?: string[]) {

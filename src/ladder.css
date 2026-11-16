@@ -457,7 +457,7 @@ button:active:not(:disabled) {
 /* 状态通知条 (刷新中 / 成功 / 失败) */
 .refresh-banner {
   display: none;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
   margin: 14px 0 0;
   padding: 10px 14px;
@@ -471,6 +471,17 @@ button:active:not(:disabled) {
 
 .refresh-banner.is-visible {
   display: flex;
+}
+
+.refresh-banner-text {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.refresh-banner-action {
+  flex: none;
 }
 
 .refresh-banner.is-error {
@@ -4331,6 +4342,12 @@ html.is-mobile .more-filters-modal {
   justify-content: space-between;
   align-items: flex-start;
   gap: 16px;
+  flex-wrap: wrap;
+}
+
+.watch-head-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .watch-head h2 {
@@ -4364,6 +4381,74 @@ html.is-mobile .more-filters-modal {
 .watch-summary .warn,
 .watch-form-error {
   color: var(--up);
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.watch-quote-error {
+  display: flex;
+  flex: 1 1 220px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.network-diag {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  min-width: 0;
+}
+
+.network-diag-head,
+.network-diag-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.network-diag-head {
+  justify-content: space-between;
+}
+
+.network-diag h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.network-diag-help,
+.network-diag-note {
+  margin: 0;
+  color: var(--text-sub);
+  font-size: 13px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.network-diag-report {
+  width: 100%;
+  min-height: 180px;
+  max-height: 320px;
+  margin: 0;
+  padding: 10px;
+  resize: vertical;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
 }
 
 .watch-inline-error {

@@ -5,6 +5,7 @@ use crate::format::{
     json_to_optional_float,
 };
 use crate::http::{self, USER_AGENT};
+use crate::netdiag;
 use crate::types::StockRow;
 use serde::Serialize;
 use serde_json::Value;
@@ -82,10 +83,18 @@ fn parse_diff(payload: &Value) -> Vec<Value> {
 }
 
 pub fn fetch_eastmoney_ulist(query: &[(&str, String)], timeout: Duration) -> Vec<Value> {
-    fetch_eastmoney_ulist_result(query, timeout).unwrap_or_default()
+    fetch_ulist("榜单行情", query, timeout).unwrap_or_default()
 }
 
 pub fn fetch_eastmoney_ulist_result(
+    query: &[(&str, String)],
+    timeout: Duration,
+) -> Result<Vec<Value>, String> {
+    fetch_ulist("自选行情", query, timeout)
+}
+
+fn fetch_ulist(
+    operation: &str,
     query: &[(&str, String)],
     timeout: Duration,
 ) -> Result<Vec<Value>, String> {
@@ -108,7 +117,7 @@ pub fn fetch_eastmoney_ulist_result(
         ("User-Agent", USER_AGENT),
         ("Referer", "https://quote.eastmoney.com/"),
     ];
-    let mut last_error = "东方财富行情暂时不可用".to_string();
+    let mut failures = netdiag::AttemptBatch::new(operation);
     for (url, trust_env) in candidates {
         match http::get_json(&url, query, &headers, timeout, trust_env) {
             Ok(payload) => {
@@ -122,7 +131,7 @@ pub fn fetch_eastmoney_ulist_result(
                 return Ok(rows);
             }
             Err(err) => {
-                last_error = err;
+                failures.push(err.attempt);
                 if let Ok(mut g) = WORKING.lock() {
                     if g.as_ref() == Some(&(url.clone(), trust_env)) {
                         *g = None;
@@ -131,7 +140,7 @@ pub fn fetch_eastmoney_ulist_result(
             }
         }
     }
-    Err(last_error)
+    Err(failures.finish())
 }
 
 pub fn fetch_eastmoney_snapshots(

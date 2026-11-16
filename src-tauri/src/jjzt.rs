@@ -4,6 +4,7 @@ use crate::format::{
     format_fund_amount, format_price, format_signed_percent, json_to_optional_float, to_optional_float,
 };
 use crate::http::{self, USER_AGENT};
+use crate::netdiag;
 use crate::types::StockRow;
 use crate::zt;
 use chrono::{Days, Local};
@@ -83,7 +84,7 @@ fn fetch_yesterday_pool(date: &str) -> Result<Vec<Value>, String> {
         ("Referer", "https://quote.eastmoney.com/ztb/detail"),
     ];
     let timeout = Duration::from_secs(15);
-    let mut last = String::new();
+    let mut failures = netdiag::AttemptBatch::new("昨日涨停");
     for trust_env in [true, false] {
         match http::get_json(YZT_URL, &query, &headers, timeout, trust_env) {
             Ok(payload) => {
@@ -98,10 +99,10 @@ fn fetch_yesterday_pool(date: &str) -> Result<Vec<Value>, String> {
                     .unwrap_or_default();
                 return Ok(pool);
             }
-            Err(err) => last = err,
+            Err(err) => failures.push(err.attempt),
         }
     }
-    Err(last)
+    Err(failures.finish())
 }
 
 pub fn crawl_yesterday_red(on_progress: impl Fn(&str)) -> Result<(Vec<StockRow>, String), String> {

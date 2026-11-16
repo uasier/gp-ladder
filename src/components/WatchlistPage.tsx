@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react"
 import type { RefObject } from "react"
 import type { BoardKind } from "../types"
+import { NetworkDiag } from "./NetworkDiag"
 import { pctClass } from "../stock"
 import { TonghuashunButton } from "./TonghuashunButton"
 import {
@@ -34,6 +35,10 @@ type Props = {
   onRefresh: () => void
   onRetry: () => void
   onOpenPage: (page: BoardKind) => void
+  onOpenDiag: () => void
+  diagOpen: boolean
+  onCloseDiag: () => void
+  diagReloadKey?: string
 }
 
 const SORTS: Array<[string, string]> = [
@@ -64,6 +69,10 @@ export function WatchlistPage({
   onRefresh,
   onRetry,
   onOpenPage,
+  onOpenDiag,
+  diagOpen,
+  onCloseDiag,
+  diagReloadKey,
 }: Props) {
   const [keyword, setKeyword] = useState("")
   const [sortKey, setSortKey] = useState<WatchSortKey>("addedDate")
@@ -115,6 +124,7 @@ export function WatchlistPage({
           <button type="button" className="btn" onClick={onRefresh} disabled={refreshing || items.length === 0}>
             {refreshing ? "刷新中…" : "刷新行情"}
           </button>
+          <button type="button" className="btn" onClick={onOpenDiag}>网络诊断</button>
           <button type="button" className="btn primary" onClick={onAdd}>添加自选</button>
         </div>
       </header>
@@ -123,8 +133,14 @@ export function WatchlistPage({
         <span><strong>{items.length}</strong> 只自选</span>
         <span className="up">现价高于自选 {above}</span>
         <span className="down">现价低于自选 {below}</span>
-        {quoteError ? <span className="warn">{quoteError}</span> : null}
+        {quoteError ? (
+          <div className="warn watch-quote-error">
+            <span>{quoteError}</span>
+            <button type="button" className="btn" onClick={onOpenDiag}>查看诊断</button>
+          </div>
+        ) : null}
       </div>
+      {diagOpen ? <NetworkDiag reloadKey={diagReloadKey} onClose={onCloseDiag} /> : null}
 
       {error ? (
         <div className="watch-inline-error">

@@ -32,6 +32,7 @@ import { Ladder } from "./components/Ladder"
 import { LogPanel } from "./components/LogPanel"
 import { MoreFilters } from "./components/MoreFilters"
 import { QuickChips } from "./components/QuickChips"
+import { NetworkDiag } from "./components/NetworkDiag"
 import { RefreshBanner } from "./components/RefreshBanner"
 import { SettingsModal } from "./components/SettingsModal"
 import { StockContextMenu } from "./components/StockContextMenu"
@@ -176,6 +177,7 @@ export default function App() {
     text: "",
     tone: null,
   })
+  const [diagOpen, setDiagOpen] = useState(false)
   const [selectedCode, setSelectedCode] = useState<string | null>(null)
   const [logOpen, setLogOpen] = useState(false)
   const [bootError, setBootError] = useState<string | null>(null)
@@ -822,7 +824,14 @@ export default function App() {
               onLater={dismissUpdate}
             />
           ) : null}
-          <RefreshBanner text={banner.text} tone={banner.tone} />
+          <RefreshBanner
+            text={banner.text}
+            tone={banner.tone}
+            onDiagnose={banner.tone === "error" ? () => setDiagOpen(true) : undefined}
+          />
+          {diagOpen && page !== "watch" ? (
+            <NetworkDiag reloadKey={banner.text} onClose={() => setDiagOpen(false)} />
+          ) : null}
           {page === "watch" ? (
             <main>
               <WatchlistPage
@@ -840,6 +849,10 @@ export default function App() {
                 onRefresh={() => void refreshWatchQuotes(true)}
                 onRetry={() => void loadWatchlist()}
                 onOpenPage={openPage}
+                onOpenDiag={() => setDiagOpen(true)}
+                diagOpen={diagOpen}
+                onCloseDiag={() => setDiagOpen(false)}
+                diagReloadKey={quoteError ?? ""}
               />
             </main>
           ) : (
