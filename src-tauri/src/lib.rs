@@ -11,6 +11,7 @@ mod holders;
 mod http;
 mod jjzt;
 mod market_db;
+mod netdiag;
 mod pipeline;
 mod quotes;
 mod refresh;
@@ -182,6 +183,12 @@ fn remove_watchlist(
     code: String,
 ) -> Result<watchlist::WatchlistView, String> {
     store.remove(&code)
+}
+
+#[cfg(feature = "desktop")]
+#[tauri::command]
+fn network_diagnostics() -> netdiag::DiagnosticsView {
+    netdiag::snapshot("tauri")
 }
 
 #[cfg(feature = "desktop")]
@@ -450,6 +457,7 @@ pub fn run() {
             update_watchlist,
             remove_watchlist,
             refresh_watchlist_quotes,
+            network_diagnostics,
             export_snapshot,
             get_holder_count,
             get_daily_quotes,

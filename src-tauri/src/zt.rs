@@ -2,6 +2,7 @@
 
 use crate::format::{format_fund_amount, format_price, format_signed_percent, json_to_optional_float};
 use crate::http::{self, USER_AGENT};
+use crate::netdiag;
 use crate::types::StockRow;
 use chrono::{Days, Local};
 use serde_json::Value;
@@ -102,7 +103,7 @@ pub(crate) fn fetch_pool(date: &str) -> Result<Vec<Value>, String> {
         ("Referer", "https://quote.eastmoney.com/ztb/detail"),
     ];
     let timeout = Duration::from_secs(15);
-    let mut last = String::new();
+    let mut failures = netdiag::AttemptBatch::new("涨停池");
     for trust_env in [true, false] {
         match http::get_json(ZT_URL, &query, &headers, timeout, trust_env) {
             Ok(payload) => {
@@ -117,10 +118,10 @@ pub(crate) fn fetch_pool(date: &str) -> Result<Vec<Value>, String> {
                     .unwrap_or_default();
                 return Ok(pool);
             }
-            Err(err) => last = err,
+            Err(err) => failures.push(err.attempt),
         }
     }
-    Err(last)
+    Err(failures.finish())
 }
 
 #[allow(dead_code)]

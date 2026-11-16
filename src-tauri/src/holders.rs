@@ -6,6 +6,7 @@
 //! 同一截止日再取较新的公告日期，不依赖数组顺序。
 
 use crate::http::{self, USER_AGENT};
+use crate::netdiag;
 use serde::Serialize;
 use serde_json::Value;
 use std::time::Duration;
@@ -134,14 +135,14 @@ fn fetch_holder_page(code: &str, page: u32) -> Result<Value, String> {
         ("User-Agent", USER_AGENT),
         ("Referer", "https://data.eastmoney.com/"),
     ];
-    let mut last = "股东人数数据源暂时无法访问".to_string();
+    let mut failures = netdiag::AttemptBatch::new("股东人数");
     for trust_env in [true, false] {
         match http::get_json(HOLDER_URL, &query, &headers, Duration::from_secs(12), trust_env) {
             Ok(payload) => return Ok(payload),
-            Err(error) => last = error,
+            Err(error) => failures.push(error.attempt),
         }
     }
-    Err(format!("股东人数数据源暂时无法访问: {last}"))
+    Err(failures.finish())
 }
 
 pub fn select_latest(code: &str, rows: &[Value]) -> Result<HolderCountView, String> {

@@ -160,6 +160,10 @@ struct WatchQuoteBody {
     codes: Vec<String>,
 }
 
+async fn network_diagnostics() -> Json<crate::netdiag::DiagnosticsView> {
+    Json(crate::netdiag::snapshot("web"))
+}
+
 async fn watchlist_quotes(
     State(st): State<AppState>,
     Json(body): Json<WatchQuoteBody>,
@@ -364,6 +368,7 @@ fn api_router() -> Router<AppState> {
         .route("/watchlist/update", post(update_watchlist))
         .route("/watchlist/remove", post(remove_watchlist))
         .route("/watchlist/quotes", post(watchlist_quotes))
+        .route("/diagnostics/network", get(network_diagnostics))
         .route("/runtime", get(probe_runtime))
         .route("/export", post(export_snapshot))
         .route("/holders", get(get_holder_count))

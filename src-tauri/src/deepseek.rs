@@ -1,5 +1,6 @@
 //! DeepSeek Chat Completions：个股分析与评分。
 
+use crate::netdiag;
 use crate::settings::AppSettings;
 use crate::types::StockRow;
 use serde::{Deserialize, Serialize};
@@ -565,7 +566,7 @@ pub fn test_connection(api_key: &str, base_url: &str, model: &str) -> Result<Str
         .header("content-type", "application/json")
         .json(&body)
         .send()
-        .map_err(|e| format!("请求失败: {e}"))?;
+        .map_err(|err| netdiag::describe_transport(&err))?;
     let status = res.status();
     let text = res.text().unwrap_or_default();
     if !status.is_success() {

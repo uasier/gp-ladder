@@ -7,12 +7,13 @@
 use crate::applog;
 use crate::format::json_to_optional_float;
 use crate::http::{self, USER_AGENT};
+use crate::netdiag;
 use chrono::{FixedOffset, TimeZone};
 use serde::Serialize;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Mutex;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 const CLIST_URLS: &[&str] = &[
     "https://push2delay.eastmoney.com/api/qt/clist/get",
@@ -472,7 +473,8 @@ fn fetch_clist_page(page: u32) -> Result<(u64, Vec<Value>), String> {
         ("User-Agent", USER_AGENT),
         ("Referer", "https://quote.eastmoney.com/"),
     ];
-    let mut last = "东方财富行情暂时不可用".to_string();
+    let mut failures = netdiag::AttemptBatch::new("全市场行情");
+    let mut empty_page: Option<String> = None;
     for (url, trust_env) in candidates {
         let full = format!(
             "{url}?pn={page}&pz={PAGE_SIZE}&po=1&np=1&fltt=2&invt=2&fid=f12&fs={CLIST_FS}&fields={CLIST_FIELDS}"
@@ -485,7 +487,7 @@ fn fetch_clist_page(page: u32) -> Result<(u64, Vec<Value>), String> {
                     .unwrap_or(0);
                 let items = parse_diff(&payload);
                 if items.is_empty() && total > u64::from(PAGE_SIZE) * u64::from(page.saturating_sub(1)) {
-                    last = format!("东方财富行情第 {page} 页为空");
+                    empty_page = Some(format!("东方财富行情第 {page} 页为空"));
                     continue;
                 }
                 if let Ok(mut guard) = LIVE_HOST.lock() {
@@ -494,7 +496,7 @@ fn fetch_clist_page(page: u32) -> Result<(u64, Vec<Value>), String> {
                 return Ok((total, items));
             }
             Err(err) => {
-                last = err;
+                failures.push(err.attempt);
                 if let Ok(mut guard) = LIVE_HOST.lock() {
                     if guard.as_ref() == Some(&(url.clone(), trust_env)) {
                         *guard = None;
@@ -503,7 +505,10 @@ fn fetch_clist_page(page: u32) -> Result<(u64, Vec<Value>), String> {
             }
         }
     }
-    Err(last)
+    if failures.is_empty() {
+        return Err(empty_page.unwrap_or_else(|| "全市场行情暂时不可用".to_string()));
+    }
+    Err(failures.finish())
 }
 
 fn parse_diff(payload: &Value) -> Vec<Value> {
@@ -600,7 +605,7 @@ fn fetch_datacenter_page(report: &str, columns: &str, date: &str, page: u32) -> 
         ("User-Agent", USER_AGENT),
         ("Referer", "https://data.eastmoney.com/"),
     ];
-    let mut last = "行情数据源暂时无法访问".to_string();
+    let mut failures = netdiag::AttemptBatch::new("行情数据");
     for trust_env in [true, false] {
         match http::get_json(
             DATACENTER_URL,
@@ -610,10 +615,10 @@ fn fetch_datacenter_page(report: &str, columns: &str, date: &str, page: u32) -> 
             trust_env,
         ) {
             Ok(payload) => return Ok(payload),
-            Err(err) => last = err,
+            Err(err) => failures.push(err.attempt),
         }
     }
-    Err(format!("行情数据源暂时无法访问: {last}"))
+    Err(failures.finish())
 }
 
 fn is_explicit_empty(payload: &Value) -> bool {
@@ -775,8 +780,9 @@ fn fetch_szse_page(catalog: &str, date: &str, page: u32) -> Result<SzsePage, Str
         "{SZSE_URL}?SHOWTYPE=JSON&CATALOGID={catalog}&TABKEY=tab1&PAGENO={page}&txtBeginDate={date}&txtEndDate={date}"
     );
     // 深交所对 HTTP/2 会直接断开，只走 HTTP/1.1。
-    let mut last = "深交所行情暂时不可用".to_string();
+    let mut failures = netdiag::AttemptBatch::new("深交所行情");
     for trust_env in [true, false] {
+        let started = Instant::now();
         let mut builder = reqwest::blocking::Client::builder()
             .timeout(Duration::from_secs(15))
             .user_agent(USER_AGENT)
@@ -788,7 +794,14 @@ fn fetch_szse_page(catalog: &str, date: &str, page: u32) -> Result<SzsePage, Str
         let client = match builder.build() {
             Ok(client) => client,
             Err(err) => {
-                last = format!("创建 HTTP 客户端失败: {err}");
+                failures.push(netdiag::attempt_from_error(
+                    &url,
+                    trust_env,
+                    "客户端",
+                    None,
+                    started.elapsed(),
+                    &err,
+                ));
                 continue;
             }
         };
@@ -799,16 +812,41 @@ fn fetch_szse_page(catalog: &str, date: &str, page: u32) -> Result<SzsePage, Str
             .send()
         {
             Ok(response) if response.status().is_success() => {
+                let status = response.status().as_u16();
                 match response.json::<Value>() {
                     Ok(payload) => return parse_szse_payload(&payload, date),
-                    Err(err) => last = format!("解析深交所行情失败: {err}"),
+                    Err(err) => failures.push(netdiag::attempt_from_error(
+                        &url,
+                        trust_env,
+                        "解析",
+                        Some(status),
+                        started.elapsed(),
+                        &err,
+                    )),
                 }
             }
-            Ok(response) => last = format!("HTTP {}", response.status()),
-            Err(err) => last = format!("请求失败: {err}"),
+            Ok(response) => {
+                let status = response.status().as_u16();
+                failures.push(netdiag::attempt_from_text(
+                    &url,
+                    trust_env,
+                    "响应",
+                    Some(status),
+                    started.elapsed(),
+                    &format!("HTTP {status}"),
+                ));
+            }
+            Err(err) => failures.push(netdiag::attempt_from_error(
+                &url,
+                trust_env,
+                "发送",
+                None,
+                started.elapsed(),
+                &err,
+            )),
         }
     }
-    Err(format!("深交所行情暂时无法访问: {last}"))
+    Err(failures.finish())
 }
 
 fn parse_szse_payload(payload: &Value, date: &str) -> Result<SzsePage, String> {
