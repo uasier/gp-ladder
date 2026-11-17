@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { isTauri } from "../api"
 import { isPhoneUi } from "../platform"
 import { HolderCountCard } from "./HolderCountCard"
+import { StockCharacterCard } from "./StockCharacterCard"
 import { TonghuashunButton } from "./TonghuashunButton"
 import type { HighlightRule, StockRow } from "../types"
 import { formatWatchPrice, sourceLabel, type WatchEntry } from "../watchlist"
@@ -182,6 +183,7 @@ export function StockDrawer({ item, rule, onClose, onAnalyze, analyzeLabel = "AI
           </div>
 
           <HolderCountCard code={code} />
+          <StockCharacterCard code={code} />
 
           {/* 连板/连涨梯队数据 */}
           <div className="drawer-card-group">

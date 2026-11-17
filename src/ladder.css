@@ -4089,6 +4089,41 @@ html.is-mobile .modern-drawer-actions {
   justify-self: start;
 }
 
+.character-card .modern-kv-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.character-card .character-note,
+.character-card .character-source,
+.character-card .holder-retry {
+  grid-column: 1 / -1;
+}
+
+.character-card .character-note,
+.character-card .character-source,
+.character-card .kv-k,
+.character-card .kv-v {
+  overflow-wrap: anywhere;
+}
+
+.character-card .character-note,
+.character-card .character-source {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.character-card .holder-retry {
+  justify-self: start;
+}
+
+@media (max-width: 420px) {
+  .character-card .modern-kv-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .kv-k {
   font-size: 11px;
   color: var(--muted);

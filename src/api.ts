@@ -18,6 +18,7 @@ import type {
   DailyQuotes,
 } from "./types"
 import type { HolderCount } from "./holders"
+import type { StockCharacter } from "./stockCharacter"
 import type { WatchInput, WatchlistView, WatchQuote } from "./watchlist"
 
 type TauriWindow = Window & {
@@ -213,6 +214,11 @@ export async function revealAppLog() {
 export function getHolderCount(code: string) {
   if (isTauri()) return invoke<HolderCount>("get_holder_count", { code })
   return http<HolderCount>(`/api/holders?code=${encodeURIComponent(code)}`)
+}
+
+export function getStockCharacter(code: string) {
+  if (isTauri()) return invoke<StockCharacter>("get_stock_character", { code })
+  return http<StockCharacter>(`/api/character?code=${encodeURIComponent(code)}`)
 }
 
 export function getDailyQuotes(date: string) {
