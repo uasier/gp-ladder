@@ -267,6 +267,13 @@ struct HolderQuery {
     code: Option<String>,
 }
 
+async fn get_stock_character(Query(q): Query<HolderQuery>) -> Result<Json<crate::stock_character::CharacterView>, ApiError> {
+    let code = q.code.unwrap_or_default();
+    block_in(move || crate::stock_character::lookup_stock_character(&code))
+        .await
+        .map(Json)
+}
+
 async fn get_holder_count(Query(q): Query<HolderQuery>) -> Result<Json<crate::holders::HolderCountView>, ApiError> {
     let code = q.code.unwrap_or_default();
     block_in(move || crate::holders::lookup_holder_count(&code))
@@ -367,6 +374,7 @@ fn api_router() -> Router<AppState> {
         .route("/runtime", get(probe_runtime))
         .route("/export", post(export_snapshot))
         .route("/holders", get(get_holder_count))
+        .route("/character", get(get_stock_character))
         .route("/quotes/daily", get(get_daily_quotes))
         .route("/analyze", post(analyze_stock))
         .route("/stocks/pick", post(pick_stocks).layer(DefaultBodyLimit::max(16 * 1024 * 1024)))

@@ -16,6 +16,7 @@ mod quotes;
 mod refresh;
 mod settings;
 mod snapshot;
+mod stock_character;
 mod stock_pick;
 mod types;
 mod update;
@@ -252,6 +253,12 @@ async fn get_holder_count(code: String) -> Result<holders::HolderCountView, Stri
 
 #[cfg(feature = "desktop")]
 #[tauri::command]
+async fn get_stock_character(code: String) -> Result<stock_character::CharacterView, String> {
+    block_in(move || stock_character::lookup_stock_character(&code)).await
+}
+
+#[cfg(feature = "desktop")]
+#[tauri::command]
 async fn get_daily_quotes(date: String) -> Result<daily_quotes::DailyQuotes, String> {
     block_in(move || daily_quotes::fetch_daily_quotes(&date)).await
 }
@@ -452,6 +459,7 @@ pub fn run() {
             refresh_watchlist_quotes,
             export_snapshot,
             get_holder_count,
+            get_stock_character,
             get_daily_quotes,
             analyze_stock,
             pick_stocks,
