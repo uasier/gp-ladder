@@ -71,9 +71,31 @@ export type WatchSortKey =
   | "addedPrice"
   | "name"
   | "code"
+  | "market"
+  | "industry"
+  | "source"
   | "change"
   | "todayPct"
+  | "price"
+  | "riseDays"
+  | "limitDays"
+  | "turnover"
+  | "volumeRatio"
+  | "amount"
   | "reason"
+  | "quoteAt"
+
+const NUMERIC_SORT_KEYS = new Set<WatchSortKey>([
+  "addedPrice",
+  "change",
+  "todayPct",
+  "price",
+  "riseDays",
+  "limitDays",
+  "turnover",
+  "volumeRatio",
+  "amount",
+])
 
 export type WatchSortDir = "asc" | "desc"
 
@@ -260,30 +282,76 @@ export function sortWatchEntries(
   })
 }
 
+export function watchMetric(
+  entry: WatchEntry,
+  quote: WatchQuote | undefined,
+  key: WatchSortKey,
+): number | null {
+  if (key === "addedPrice") return Number.isFinite(entry.addedPrice) ? entry.addedPrice : null
+  if (key === "change") return changeSinceAdded(entry.addedPrice, quote?.price)
+  if (key === "todayPct") return finiteOrNull(quote?.changePct)
+  if (key === "price") return finiteOrNull(quote?.price)
+  if (key === "riseDays") return finiteOrNull(quote?.riseDays)
+  if (key === "limitDays") return finiteOrNull(quote?.limitDays)
+  if (key === "turnover") return finiteOrNull(quote?.turnover)
+  if (key === "volumeRatio") return finiteOrNull(quote?.volumeRatio)
+  if (key === "amount") return finiteOrNull(quote?.amount)
+  return null
+}
+
+function finiteOrNull(value: number | null | undefined): number | null {
+  return value == null || !Number.isFinite(value) ? null : value
+}
+
 function compareWatch(
   left: WatchEntry,
   right: WatchEntry,
   quotes: Record<string, WatchQuote | undefined>,
   key: WatchSortKey,
 ): { value: number; nulls: number } {
-  if (key === "change" || key === "todayPct") {
-    const a = key === "change"
-      ? changeSinceAdded(left.addedPrice, quotes[left.code]?.price)
-      : quotes[left.code]?.changePct ?? null
-    const b = key === "todayPct"
-      ? quotes[right.code]?.changePct ?? null
-      : changeSinceAdded(right.addedPrice, quotes[right.code]?.price)
+  if (NUMERIC_SORT_KEYS.has(key)) {
+    const a = watchMetric(left, quotes[left.code], key)
+    const b = watchMetric(right, quotes[right.code], key)
     if (a == null && b == null) return { value: 0, nulls: 0 }
     if (a == null) return { value: 0, nulls: 1 }
     if (b == null) return { value: 0, nulls: -1 }
     return { value: a - b, nulls: 0 }
   }
-  if (key === "addedPrice") return { value: left.addedPrice - right.addedPrice, nulls: 0 }
-  if (key === "name") return { value: left.name.localeCompare(right.name, "zh"), nulls: 0 }
-  if (key === "code") return { value: left.code.localeCompare(right.code), nulls: 0 }
-  if (key === "reason") return { value: left.reason.localeCompare(right.reason, "zh"), nulls: 0 }
-  const date = left.addedDate.localeCompare(right.addedDate)
-  return { value: date || left.createdAt.localeCompare(right.createdAt), nulls: 0 }
+  if (key === "addedDate") {
+    const date = left.addedDate.localeCompare(right.addedDate)
+    return { value: date || left.createdAt.localeCompare(right.createdAt), nulls: 0 }
+  }
+  const a = watchText(left, quotes[left.code], key)
+  const b = watchText(right, quotes[right.code], key)
+  if (a == null && b == null) return { value: 0, nulls: 0 }
+  if (a == null) return { value: 0, nulls: 1 }
+  if (b == null) return { value: 0, nulls: -1 }
+  return { value: a.localeCompare(b, "zh"), nulls: 0 }
+}
+
+function watchText(entry: WatchEntry, quote: WatchQuote | undefined, key: WatchSortKey): string | null {
+  if (key === "name") return entry.name
+  if (key === "code") return entry.code
+  if (key === "reason") return entry.reason
+  if (key === "source") return sourceLabel(entry.source)
+  if (key === "market") return watchMarketLabel(entry.code) || null
+  if (key === "industry") return displayedIndustry(entry, quote) || null
+  if (key === "quoteAt") return quote?.quoteAt.trim() || null
+  return null
+}
+
+export function watchMarketLabel(code: string): string {
+  const normalized = normalizeStockCode(code)
+  const market = tonghuashunMarketId(normalized)
+  if (market === "17") return "沪市"
+  if (normalized.startsWith("3")) return "创业板"
+  if (market === "33") return "深市"
+  if (market === "151" || market === "145") return "北交所"
+  return ""
+}
+
+export function displayedIndustry(entry: WatchEntry, quote?: WatchQuote | null): string {
+  return (quote?.industry || entry.industry || "").trim()
 }
 
 export function newestQuoteAt(quotes: Iterable<WatchQuote>): string | null {
@@ -358,11 +426,28 @@ export function watchSortValue(key: WatchSortKey, dir: WatchSortDir): string {
   return `${key}:${dir}`
 }
 
+const SORT_KEYS = new Set<string>([
+  "addedDate",
+  "addedPrice",
+  "name",
+  "code",
+  "market",
+  "industry",
+  "source",
+  "change",
+  "todayPct",
+  "price",
+  "riseDays",
+  "limitDays",
+  "turnover",
+  "volumeRatio",
+  "amount",
+  "reason",
+  "quoteAt",
+])
+
 export function parseWatchSort(value: string): { key: WatchSortKey; dir: WatchSortDir } {
   const [key, dir] = value.split(":")
-  const sortKey: WatchSortKey =
-    key === "addedPrice" || key === "name" || key === "code" || key === "change" || key === "todayPct" || key === "reason"
-      ? key
-      : "addedDate"
+  const sortKey: WatchSortKey = SORT_KEYS.has(key) ? key as WatchSortKey : "addedDate"
   return { key: sortKey, dir: dir === "asc" ? "asc" : "desc" }
 }

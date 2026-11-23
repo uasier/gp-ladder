@@ -247,6 +247,14 @@ async fn export_snapshot(
 
 #[cfg(feature = "desktop")]
 #[tauri::command]
+fn save_watch_export(app: tauri::AppHandle, path: String, data_hex: String) -> Result<String, String> {
+    let bytes = crate::export::decode_hex(&data_hex)?;
+    let dest = crate::export::write_xlsx_export(&export_dir(&app)?, &path, &bytes)?;
+    Ok(dest.to_string_lossy().into_owned())
+}
+
+#[cfg(feature = "desktop")]
+#[tauri::command]
 async fn get_holder_count(code: String) -> Result<holders::HolderCountView, String> {
     block_in(move || holders::lookup_holder_count(&code)).await
 }
@@ -458,6 +466,7 @@ pub fn run() {
             remove_watchlist,
             refresh_watchlist_quotes,
             export_snapshot,
+            save_watch_export,
             get_holder_count,
             get_stock_character,
             get_daily_quotes,

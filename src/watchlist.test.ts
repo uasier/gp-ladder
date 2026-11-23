@@ -113,6 +113,22 @@ describe("watchlist sorting", () => {
     expect(changeSinceAdded(1500, 1650)).toBeCloseTo(10)
     expect(changeSinceAdded(10, null)).toBeNull()
     expect(formatSignedPct(-1.2)).toBe("-1.20%")
+    expect(formatSignedPct(0)).toBe("0.00%")
+  })
+
+  it("sorts prices numerically and keeps missing values after zero", () => {
+    const priced = [
+      entry({ code: "000010", name: "十元", addedPrice: 10 }),
+      entry({ code: "000002", name: "两元", addedPrice: 2 }),
+      entry({ code: "000100", name: "百元", addedPrice: 100 }),
+    ]
+    const live: Record<string, WatchQuote> = {
+      "000010": { code: "000010", name: "十元", price: 10, changePct: 1, quoteAt: "2026-10-20 14:00:00" },
+      "000002": { code: "000002", name: "两元", price: 0, changePct: 0, quoteAt: "2026-10-20 14:00:00" },
+    }
+    expect(sortWatchEntries(priced, live, "price", "asc").map((item) => item.code)).toEqual(["000002", "000010", "000100"])
+    expect(sortWatchEntries(priced, live, "price", "desc").map((item) => item.code)).toEqual(["000010", "000002", "000100"])
+    expect(sortWatchEntries(priced, live, "code", "asc").map((item) => item.code)).toEqual(["000002", "000010", "000100"])
   })
 
   it("filters by reason and parses the sort control", () => {

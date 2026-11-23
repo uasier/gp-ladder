@@ -4463,14 +4463,129 @@ html.is-mobile .more-filters-modal {
   box-shadow: 0 0 0 3px var(--accent-bg);
 }
 
+.watch-sort {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
 .watch-sort select {
-  min-width: 150px;
+  min-width: 132px;
 }
 
 .watch-count {
   margin-left: auto;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
+}
+
+.watch-page.is-cards .watch-table-wrap {
+  display: none;
+}
+
+.watch-page.is-list .watch-cards {
+  display: none;
+}
+
+.watch-page.is-cards .watch-cards {
+  display: grid;
+}
+
+.watch-panel {
+  width: min(100%, 760px);
+  max-height: min(70vh, 560px);
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.watch-panel p,
+.watch-export-ok {
+  margin: 8px 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.watch-export-ok {
+  color: var(--text);
+}
+
+.watch-panel-head,
+.watch-export-scopes,
+.watch-column-list li,
+.watch-column-list li span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.watch-panel-head {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.watch-range-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.watch-range-grid fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.watch-range-grid label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.watch-range-grid input {
+  width: 100%;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-input);
+  color: var(--text);
+}
+
+.watch-column-list {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.watch-column-list li {
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.watch-column-list label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.watch-export-scopes {
+  flex-wrap: wrap;
+}
+
+.watch-export-scopes label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .watch-table-wrap {
@@ -4481,7 +4596,8 @@ html.is-mobile .more-filters-modal {
 }
 
 .watch-table {
-  width: 100%;
+  width: max-content;
+  min-width: 100%;
   border-collapse: collapse;
   font-size: 13px;
 }
@@ -4492,6 +4608,8 @@ html.is-mobile .more-filters-modal {
   border-bottom: 1px solid var(--border-subtle);
   text-align: left;
   vertical-align: top;
+  white-space: nowrap;
+  background: var(--surface);
 }
 
 .watch-table th {
@@ -4520,6 +4638,13 @@ html.is-mobile .more-filters-modal {
 
 .watch-table tr.is-pending td {
   background: var(--gold-bg);
+}
+
+.watch-table .sticky-actions {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  box-shadow: -8px 0 8px rgba(0, 0, 0, 0.04);
 }
 
 .watch-name {
@@ -4705,11 +4830,10 @@ html.is-mobile .more-filters-modal {
   .watch-editor-actions .btn {
     flex: 1;
   }
-  .watch-table-wrap {
-    display: none;
-  }
-  .watch-cards {
-    display: grid;
+  .watch-head-actions,
+  .watch-toolbar,
+  .watch-panel-head {
+    align-items: stretch;
   }
   .watch-card dl {
     grid-template-columns: repeat(2, minmax(0, 1fr));

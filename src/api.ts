@@ -132,6 +132,11 @@ export function exportSnapshot(format: string, path: string, board: BoardKind = 
   })
 }
 
+export function saveWatchExport(path: string, dataHex: string) {
+  if (!isTauri()) return Promise.reject(new Error("网页导出走本地下载"))
+  return invoke<string>("save_watch_export", { path, dataHex })
+}
+
 export function analyzeStock(request: AnalyzeRequest) {
   if (isTauri()) return invoke<AnalyzeResult>("analyze_stock", { request })
   return http<AnalyzeResult>("/api/analyze", {
