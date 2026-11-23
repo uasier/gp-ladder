@@ -174,6 +174,54 @@ pub fn export_from_cache(cache_path: &Path, format: &str, output_path: &Path) ->
     write_snapshot_file(&snap, output_path, format)
 }
 
+/// 把前端本地生成的 xlsx 写入用户选择的路径，或移动端应用导出目录。
+pub fn write_xlsx_export(base: &Path, path: &str, bytes: &[u8]) -> Result<PathBuf, String> {
+    if bytes.len() < 4 || bytes.len() > 4_000_000 || &bytes[..4] != b"PK\x03\x04" {
+        return Err("不是有效的 Excel 文件".into());
+    }
+    let dest = join_export_path(base, path)?;
+    let name = dest
+        .file_name()
+        .and_then(|item| item.to_str())
+        .unwrap_or("");
+    if !name.to_ascii_lowercase().ends_with(".xlsx") {
+        return Err("只能保存 .xlsx 文件".into());
+    }
+    if let Some(parent) = dest.parent() {
+        if !parent.as_os_str().is_empty() {
+            fs::create_dir_all(parent).map_err(|err| format!("无法创建导出目录: {err}"))?;
+        }
+    }
+    fs::write(&dest, bytes).map_err(|err| format!("写入 Excel 失败: {err}"))?;
+    Ok(dest)
+}
+
+pub fn decode_hex(input: &str) -> Result<Vec<u8>, String> {
+    let raw = input.trim();
+    if raw.is_empty() || raw.len() % 2 != 0 || raw.len() > 8_000_000 {
+        return Err("导出内容无效".into());
+    }
+    let mut out = Vec::with_capacity(raw.len() / 2);
+    let bytes = raw.as_bytes();
+    let mut index = 0;
+    while index < bytes.len() {
+        let hi = hex_value(bytes[index])?;
+        let lo = hex_value(bytes[index + 1])?;
+        out.push((hi << 4) | lo);
+        index += 2;
+    }
+    Ok(out)
+}
+
+fn hex_value(byte: u8) -> Result<u8, String> {
+    match byte {
+        b'0'..=b'9' => Ok(byte - b'0'),
+        b'a'..=b'f' => Ok(byte - b'a' + 10),
+        b'A'..=b'F' => Ok(byte - b'A' + 10),
+        _ => Err("导出内容无效".into()),
+    }
+}
+
 /// 绝对路径原样使用；相对路径只取文件名并放到 `base`（应用文档目录）。
 pub fn join_export_path(base: &Path, path: &str) -> Result<PathBuf, String> {
     let raw = path.trim();
@@ -246,5 +294,24 @@ mod tests {
         assert!(join_export_path(&base, "").is_err());
         let abs = join_export_path(&base, "/tmp/out.html").unwrap();
         assert_eq!(abs, PathBuf::from("/tmp/out.html"));
+    }
+
+    #[test]
+    fn xlsx_export_keeps_only_a_workbook_under_the_export_dir() {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("gp-xlsx-{nanos}"));
+        fs::create_dir_all(&dir).unwrap();
+        let bytes = b"PK\x03\x04watch".to_vec();
+        let saved = write_xlsx_export(&dir, "../gp-ladder_watch_20261123.xlsx", &bytes).unwrap();
+        assert_eq!(saved, dir.join("gp-ladder_watch_20261123.xlsx"));
+        assert_eq!(fs::read(&saved).unwrap(), bytes);
+        assert!(write_xlsx_export(&dir, "notes.txt", &bytes).is_err());
+        assert!(write_xlsx_export(&dir, "empty.xlsx", b"nope").is_err());
+        assert!(decode_hex("zz").is_err());
+        assert_eq!(decode_hex("504b").unwrap(), b"PK");
+        let _ = fs::remove_dir_all(&dir);
     }
 }
